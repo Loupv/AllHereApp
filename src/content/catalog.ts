@@ -1,0 +1,304 @@
+export type RoundsConfig = {
+  max: number;
+  roundLengthMinutes: number;
+  defaultRounds?: number;
+  breakSeconds: number;
+  roundSources?: number[];
+  introSource?: number;
+};
+
+export type AudioTrack = {
+  id: string;
+  title: string;
+  source?: number;
+  transcript?: number;
+  durationHint?: string;
+  artwork?: number;
+  description?: string;
+  rounds?: RoundsConfig;
+  comingSoon?: boolean;
+};
+
+export type Volet = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  tagline?: string;
+  description?: string;
+  image?: number;
+  tracks: AudioTrack[];
+  qmTracks?: AudioTrack[];
+  locked?: boolean;
+  lockedMessage?: string;
+};
+
+export const silentMindProgram = {
+  eyebrow: 'Silent Mind Program',
+  title: 'The Three-Part Journey',
+  intro:
+    'Our program is divided into three parts of incremental learning. Designed for those looking for their first meditative experience as well as seasoned practitioners exploring new techniques.',
+  banner: require('../../assets/images/banner-image-3.png'),
+};
+
+export const silentMindVolets: Volet[] = [
+  {
+    id: 'intro',
+    title: 'Intro',
+    subtitle: 'Welcome and orientation',
+    tagline: 'Before we begin',
+    description: 'A short welcome and a preparation of the space to settle in before your first practice.',
+    tracks: [
+      {
+        id: 'intro-1', title: 'Welcome',
+        source: require('../../assets/audio/Part0/1. Welcome.mp3'),
+        transcript: require('../../assets/audio/Part0/Words/1. Welcome.wjson'),
+        description: "Welcome to the Silent Mind program, All Here's journey into a quiet and attentive way of being. A vertical progression toward advanced meditation practice.",
+      },
+      {
+        id: 'intro-2', title: 'Silent Mind',
+        source: require('../../assets/audio/Part0/2. Silent Mind.mp3'),
+        transcript: require('../../assets/audio/Part0/Words/2. Silent Mind.wjson'),
+        description: "At the heart of our practice is the development of the Silent Mind — a practical method to reduce fluctuations of consciousness and cultivate a profound inner presence.",
+      },
+      {
+        id: 'intro-3', title: 'Prepare the space',
+        source: require('../../assets/audio/Part0/3. Prepare the space.mp3'),
+        transcript: require('../../assets/audio/Part0/Words/3. Prepare the space.wjson'),
+        description: 'Simple practical guidance for preparing your meditation space. Creating supportive conditions helps the mind settle more easily and encourages a steady practice.',
+      },
+    ],
+  },
+  {
+    id: 'part1',
+    title: 'Part 1',
+    subtitle: 'From Noise to Focal Mind',
+    tagline: 'The Earth',
+    description:
+      'Guide beginners through total relaxation and body awareness. Learn to quiet mental noise and develop basic concentration in a safe, distraction-free space.',
+    image: require('../../assets/images/circle-1.png'),
+    tracks: [
+      {
+        id: 'p1-1', title: 'Turning Inward',
+        source: require('../../assets/audio/Part1/1 - Turning Inward (Eyes-open, introductory practice).mp3'),
+        transcript: require('../../assets/audio/Part1/Words/1 - Turning Inward (Eyes-open, introductory practice).wjson'),
+        description: 'An introductory eyes-open practice. Find a suitable, comfortable location away from disturbance, then turn the attention of the mind gently inward.',
+      },
+      {
+        id: 'p1-2', title: 'Self-Observation and Breath Following',
+        source: require('../../assets/audio/Part1/2 - Self-Observation and Breath Following.mp3'),
+        transcript: require('../../assets/audio/Part1/Words/2 - Self-Observation and Breath Following.wjson'),
+        description: 'Turn the attention of the mind towards the breathing body — moving from thoughts to the breath, then to observing the breath itself.',
+      },
+      {
+        id: 'p1-3', title: 'Center of Gravity',
+        source: require('../../assets/audio/Part1/3 - Center of Gravity.mp3'),
+        transcript: require('../../assets/audio/Part1/Words/3 - Center of Gravity.wjson'),
+        description: 'The Center of Gravity practice — strongly related to the sense of self, developing internal presence and stable anchoring of attention.',
+      },
+    ],
+    qmTracks: [
+      {
+        id: 'qm1-2', title: 'Breath and Self-Observation',
+        source: require('../../assets/audio/QMPart1/QM3_7rounds_Breath and Self-Observation.mp3'),
+        transcript: require('../../assets/audio/QMPart1/Words/QM3_7rounds_Breath and Self-Observation.wjson'),
+        description: 'Turn the mind towards the breathing process — notice the body exhaling, inhaling, then resting attention on the natural breath.',
+        rounds: {
+          max: 7, roundLengthMinutes: 3, breakSeconds: 60,
+          roundSources: [
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round01.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round02.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round03.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round04.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round05.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round06.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round07.mp3'),
+          ],
+        },
+      },
+      {
+        id: 'qm1-4', title: 'Center of Gravity',
+        source: require('../../assets/audio/QMPart1/QM5_5rounds_Center of Gravity.mp3'),
+        transcript: require('../../assets/audio/QMPart1/Words/QM5_5rounds_Center of Gravity.wjson'),
+        description: 'Start with a long exhalation — empty yourself of air, then let the body inhale freely. Deepen into the Center of Gravity practice.',
+        rounds: {
+          max: 5, roundLengthMinutes: 5, breakSeconds: 60,
+          roundSources: [
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round01.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round02.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round03.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round04.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round05.mp3'),
+          ],
+        },
+      },
+    ],
+  },
+  {
+    id: 'part2',
+    title: 'Part 2',
+    subtitle: 'From Focal to Stable Mind',
+    tagline: 'The Sky',
+    description:
+      'Deepen practice with breath observation and gravity center focus. Develop sustained attention and mental stability through real-time visual feedback.',
+    image: require('../../assets/images/circle-2.png'),
+    tracks: [
+      {
+        id: 'p2-1', title: 'Follow the Air',
+        source: require('../../assets/audio/Part2/1 - Follow the Air.mp3'),
+        transcript: require('../../assets/audio/Part2/Words/1 - Follow the Air.wjson'),
+        description: 'Follow the air coming in and going out of your body. Feel the flow and settle into the natural rhythm of breathing.',
+      },
+      {
+        id: 'p2-2', title: 'Follow and witness the Air',
+        source: require('../../assets/audio/Part2/2 - Follow and witness the Air.mp3'),
+        transcript: require('../../assets/audio/Part2/Words/2 - Follow and witness the Air.wjson'),
+        description: 'Follow the airflow, then step back and witness its movement. A transition from active following to quiet observation.',
+      },
+      {
+        id: 'p2-3', title: 'Unfollow and witness the air',
+        source: require('../../assets/audio/Part2/3 - Unfollow and witness the air.mp3'),
+        transcript: require('../../assets/audio/Part2/Words/3 - Unfollow and witness the air.wjson'),
+        description: 'Stabilize the mind and its attention on a single, very subtle object: the air. Observe the airflow without trying to follow it.',
+      },
+    ],
+    qmTracks: [
+      {
+        id: 'qm2-1', title: 'Cosmic Sky',
+        source: require('../../assets/audio/QMPart2/QM3_5rounds_ErkinGuidance_Cosmic Sky.mp3'),
+        transcript: require('../../assets/audio/QMPart2/Words/QM3_5rounds_ErkinGuidance_Cosmic Sky.wjson'),
+        description: 'A three-minute guided meditation training by All Here. Five rounds of three minutes each, with one-minute pauses between rounds.',
+        rounds: {
+          max: 5, roundLengthMinutes: 3, breakSeconds: 60,
+          roundSources: [
+            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round01.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round02.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round03.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round04.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round05.mp3'),
+          ],
+        },
+      },
+      {
+        id: 'qm2-2', title: 'Cosmic Sky (extended)',
+        source: require('../../assets/audio/QMPart2/QM3_6rounds_ErkinGuidance_Cosmic Sky.mp3'),
+        transcript: require('../../assets/audio/QMPart2/Words/QM3_6rounds_ErkinGuidance_Cosmic Sky.wjson'),
+        description: 'The extended Cosmic Sky training — six rounds of three minutes each, with one-minute pauses to consolidate presence and stability.',
+        rounds: {
+          max: 6, roundLengthMinutes: 3, breakSeconds: 60,
+          roundSources: [
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round01.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round02.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round03.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round04.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round05.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round06.mp3'),
+          ],
+        },
+      },
+      {
+        id: 'qm2-3', title: 'Unfollow and Witness',
+        source: require('../../assets/audio/QMPart2/QM3_6rounds_ErkinGuided_UnfollowAndWitness.mp3'),
+        transcript: require('../../assets/audio/QMPart2/Words/QM3_6rounds_ErkinGuided_UnfollowAndWitness.wjson'),
+        description: "QM3 training by All Here — designed to train the ability to quickly mobilize presence. Six rounds of three minutes each with one-minute breaks in between.",
+        rounds: {
+          max: 6, roundLengthMinutes: 3, breakSeconds: 60,
+          roundSources: [
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round01.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round02.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round03.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round04.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round05.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round06.mp3'),
+          ],
+        },
+      },
+    ],
+  },
+  {
+    id: 'part3',
+    title: 'Part 3',
+    subtitle: 'From Stable to Silent Mind',
+    tagline: 'The Space',
+    description:
+      'Cultivate deep contemplative states and autonomous practice. Access profound silence and inner peace with minimal guidance and subtle tracking.',
+    image: require('../../assets/images/circle-3.png'),
+    tracks: [
+      {
+        id: 'p3-1', title: 'Emptiness',
+        source: require('../../assets/audio/Part2/4 - Emptiness.mp3'),
+        transcript: require('../../assets/audio/Part2/Words/4 - Emptiness.wjson'),
+        description: 'Building on the breathing body and presence of air, open to the practice of emptiness — witnessing the space between and behind experience.',
+      },
+      { id: 'p3-2', title: 'The Dark Practice & Vertical Axis', comingSoon: true },
+      { id: 'p3-3', title: 'The Light Practice', comingSoon: true },
+      { id: 'p3-4', title: 'In the Black Hall', comingSoon: true },
+      { id: 'p3-5', title: 'The Light & Dark Practice', comingSoon: true },
+    ],
+  },
+];
+
+export const startJourneySteps = [
+  {
+    id: 'step-1min',
+    label: '1 minute',
+    description: 'A first taste — just one minute to arrive.',
+    track: silentMindVolets[0].tracks[0],
+  },
+  {
+    id: 'step-3min',
+    label: '3 minutes',
+    description: 'Go a little deeper. Three minutes of guided attention.',
+    track: silentMindVolets[0].tracks[1],
+  },
+  {
+    id: 'step-explore',
+    label: 'Explore the Silent Mind Program',
+    description: 'Continue the journey with the full program.',
+    ctaRoute: '/silent-mind' as const,
+  },
+];
+
+export type NewsItem = { id: string; title: string; excerpt: string; date: string };
+export const newsItems: NewsItem[] = [];
+
+export type VideoItem = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  duration: string;
+  source: string;
+  poster: number;
+};
+export const videoItems: VideoItem[] = [
+  {
+    id: 'v1',
+    title: 'Introduction to the Silent Mind',
+    subtitle: 'Placeholder — replace with final cut',
+    duration: '9:56',
+    source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    poster: require('../../assets/images/banner-image-3.png'),
+  },
+  {
+    id: 'v2',
+    title: 'Inside the XR Meditation Room',
+    subtitle: 'Placeholder — replace with final cut',
+    duration: '4:30',
+    source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    poster: require('../../assets/images/xr-platform.png'),
+  },
+  {
+    id: 'v3',
+    title: 'The Science Behind',
+    subtitle: 'Placeholder — replace with final cut',
+    duration: '6:12',
+    source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    poster: require('../../assets/images/eeg-solution.png'),
+  },
+];
+
+export type FluteItem = { id: string; title: string; duration: string };
+export const fluteItems: FluteItem[] = [
+  { id: 'f1', title: 'Placeholder — Silent Flute I', duration: '4:30' },
+  { id: 'f2', title: 'Placeholder — Silent Flute II', duration: '6:12' },
+  { id: 'f3', title: 'Placeholder — Silent Flute III', duration: '7:48' },
+];

@@ -3,6 +3,7 @@
     "name": "AllHereApp",
     "slug": "AllHereApp",
     "version": "1.0.0",
+    "scheme": "allhere",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -24,7 +25,18 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "experiments": {
+      "baseUrl": "/AllHereApp"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-audio",
+      "expo-asset",
+      "expo-font",
+      "expo-video"
+    ]
   }
 }
