@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, View, Text, Image, StyleSheet } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, Easing, cancelAnimation } from 'react-native-reanimated';
 import type { AudioTrack, Volet } from '../content/catalog';
 import { usePlayerStore } from '../player/store';
 import { useProgress } from '../player/progressStore';
@@ -9,12 +10,52 @@ import { Collapse } from './Collapse';
 export function VoletAccordion({ volet, defaultOpen = false, secondary = false }: { volet: Volet; defaultOpen?: boolean; secondary?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   const openPlayer = usePlayerStore(s => s.open);
+  const nextTrackId = useProgress(s => s.nextTrackId());
   const locked = volet.locked;
   const qmTracks = volet.qmTracks ?? [];
   const hasQm = qmTracks.length > 0;
+  const containsNext = !!nextTrackId && [...volet.tracks, ...qmTracks].some(t => t.id === nextTrackId);
+
+  const pulse = useSharedValue(0);
+  useEffect(() => {
+    if (containsNext && !locked) {
+      pulse.value = withRepeat(
+        withSequence(
+          withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
+        ),
+        -1,
+        false,
+      );
+    } else {
+      cancelAnimation(pulse);
+      pulse.value = 0;
+    }
+    return () => cancelAnimation(pulse);
+  }, [containsNext, locked]);
+
+  const pulseStyle = useAnimatedStyle(() => {
+    if (!containsNext) return {};
+    const alpha = 0.25 + pulse.value * 0.55;
+    return {
+      borderColor: `rgba(158,54,148,${alpha})`,
+      shadowColor: colors.accent,
+      shadowOpacity: 0.15 + pulse.value * 0.35,
+      shadowRadius: 6 + pulse.value * 8,
+      shadowOffset: { width: 0, height: 0 },
+    };
+  });
 
   return (
-    <View style={[styles.card, secondary && styles.cardSecondary, locked && styles.cardLocked]}>
+    <Animated.View
+      style={[
+        styles.card,
+        secondary && styles.cardSecondary,
+        locked && styles.cardLocked,
+        containsNext && !locked && styles.cardActive,
+        pulseStyle,
+      ]}
+    >
       <Pressable
         onPress={() => !locked && setOpen(o => !o)}
         style={({ pressed }) => [styles.header, pressed && !locked && styles.pressed]}
@@ -78,7 +119,7 @@ export function VoletAccordion({ volet, defaultOpen = false, secondary = false }
           <Text style={styles.lockedText}>{volet.lockedMessage ?? 'Coming soon.'}</Text>
         </View>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -155,6 +196,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.07)',
     borderStyle: 'dashed',
   },
+  cardActive: { borderWidth: 2 },
   cardLocked: { opacity: 0.6 },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
   pressed: { opacity: 0.75, backgroundColor: colors.surfaceElevated },

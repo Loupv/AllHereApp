@@ -310,88 +310,54 @@ function PlayerInner() {
         ) : null}
       </View>
 
-      {!hasStarted ? (
-        <View style={styles.preplay}>
-          <Text style={styles.description}>{description}</Text>
-          {rounds ? (
-            <View style={styles.paramsCard}>
-              <View style={styles.sliderHeader}>
-                {rounds.introSource ? (
-                  <View style={styles.introToggleRow}>
-                    <Pressable onPress={() => setIncludeIntro(s => !s)} style={styles.introToggle}>
-                      <View style={[styles.switch, includeIntro && styles.switchOn]}>
-                        <View style={[styles.switchKnob, includeIntro && styles.switchKnobOn]} />
-                      </View>
-                      <Text style={styles.introToggleText}>Intro</Text>
-                    </Pressable>
-                  </View>
-                ) : null}
-                <Text style={styles.sliderLabel}>ROUNDS</Text>
-                <Text style={styles.sliderValue}>{selectedRounds}<Text style={styles.sliderMax}>/{rounds.max}</Text></Text>
+      {/* Middle content area */}
+      <View style={styles.middle}>
+        {!hasStarted ? (
+          <>
+            <Text style={styles.description}>{description}</Text>
+            {rounds ? (
+              <View style={styles.paramsCard}>
+                <View style={styles.sliderHeader}>
+                  {rounds.introSource ? (
+                    <View style={styles.introToggleRow}>
+                      <Pressable onPress={() => setIncludeIntro(s => !s)} style={styles.introToggle}>
+                        <View style={[styles.switch, includeIntro && styles.switchOn]}>
+                          <View style={[styles.switchKnob, includeIntro && styles.switchKnobOn]} />
+                        </View>
+                        <Text style={styles.introToggleText}>Intro</Text>
+                      </Pressable>
+                    </View>
+                  ) : null}
+                  <Text style={styles.sliderLabel}>ROUNDS</Text>
+                  <Text style={styles.sliderValue}>{selectedRounds}<Text style={styles.sliderMax}>/{rounds.max}</Text></Text>
+                </View>
+                <RoundsSlider max={rounds.max} value={selectedRounds} onChange={setSelectedRounds} />
+                <View style={styles.breakPickerHeader}>
+                  <Text style={styles.sliderLabel}>BREAK</Text>
+                </View>
+                <View style={styles.breakRow}>
+                  {BREAK_OPTIONS.map(opt => {
+                    const selected = opt === breakSeconds;
+                    return (
+                      <Pressable key={opt} onPress={() => setBreakSeconds(opt)} style={styles.breakOption}>
+                        <View style={[styles.radio, selected && styles.radioSelected]}>
+                          {selected ? <View style={styles.radioInner} /> : null}
+                        </View>
+                        <Text style={[styles.breakOptionText, selected && styles.breakOptionTextSelected]}>
+                          {breakLabel(opt)}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               </View>
-              <RoundsSlider max={rounds.max} value={selectedRounds} onChange={setSelectedRounds} />
-
-              <View style={styles.breakPickerHeader}>
-                <Text style={styles.sliderLabel}>BREAK</Text>
-              </View>
-              <View style={styles.breakRow}>
-                {BREAK_OPTIONS.map(opt => {
-                  const selected = opt === breakSeconds;
-                  return (
-                    <Pressable key={opt} onPress={() => setBreakSeconds(opt)} style={styles.breakOption}>
-                      <View style={[styles.radio, selected && styles.radioSelected]}>
-                        {selected ? <View style={styles.radioInner} /> : null}
-                      </View>
-                      <Text style={[styles.breakOptionText, selected && styles.breakOptionTextSelected]}>
-                        {breakLabel(opt)}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          ) : null}
-          <CircleButton mode="pre" onPress={() => {
-            const startAtIntro = rounds?.introSource && includeIntro;
-            setHasStarted(true);
-            setCurrentRound(startAtIntro ? 0 : 1);
-            endedHandled.current = false;
-            player.play();
-          }} />
-          <Text style={styles.durationHint}>
-            {rounds
-              ? `${selectedRounds} × ${rounds.roundLengthMinutes} min · break ${breakLabel(breakSeconds)}`
-              : duration > 0
-                ? `${fmt(duration)} — start when you are ready`
-                : 'Loading…'}
-          </Text>
-        </View>
-      ) : inBreak ? (
-        <View style={styles.preplay}>
-          <Text style={styles.description}>Breathe naturally. Round {currentRound + 1} in a moment.</Text>
-          <CircleButton
-            mode="break"
-            breakProgress={breakProgress}
-            breakLabel={fmt(breakRemaining)}
-          />
-          <View style={styles.breakButtons}>
-            <Pressable onPress={() => setBreakRemaining(0)} style={styles.pill}>
-              <Text style={styles.pillText}>Skip break</Text>
-            </Pressable>
-            <Pressable onPress={endBreak} style={styles.pillPrimary}>
-              <Text style={styles.pillPrimaryText}>Next round</Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : finished ? (
-        <View style={styles.preplay}>
+            ) : null}
+          </>
+        ) : inBreak ? (
+          <Text style={styles.description}>Breathe naturally.{'\n'}Round {currentRound + 1} in a moment.</Text>
+        ) : finished ? (
           <Text style={styles.breakLabel}>AUDIO ENDED</Text>
-          <Pressable onPress={close} style={styles.pillPrimary}>
-            <Text style={styles.pillPrimaryText}>Close</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <View style={styles.playView}>
+        ) : (
           <View style={styles.transcriptFrame}>
             {cues.length > 0 ? (
               <ScrollView
@@ -403,12 +369,7 @@ function PlayerInner() {
                 scrollEventThrottle={16}
               >
                 {cues.map((cue, i) => (
-                  <CueLine
-                    key={i}
-                    cue={cue}
-                    time={t}
-                    onLayout={(y) => { cueLayouts.current[i] = y; }}
-                  />
+                  <CueLine key={i} cue={cue} time={t} onLayout={(y) => { cueLayouts.current[i] = y; }} />
                 ))}
               </ScrollView>
             ) : (
@@ -419,45 +380,97 @@ function PlayerInner() {
               </View>
             )}
           </View>
+        )}
+      </View>
 
-          <View style={styles.controls}>
-            <View
-              style={styles.progressHit}
-              onLayout={(e) => { barWidth.current = e.nativeEvent.layout.width; }}
-              {...pan.panHandlers}
-            >
-              <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${Math.min(100, progress * 100)}%` }]} />
-                <View style={[styles.progressThumb, { left: `${Math.min(100, progress * 100)}%` }]} />
+      {/* Bottom area — fixed structure so the CircleButton anchors at the same Y across states */}
+      <View style={styles.bottomArea}>
+        <View style={styles.aboveCircle}>
+          {hasStarted && !inBreak && !finished ? (
+            <>
+              <View
+                style={styles.progressHit}
+                onLayout={(e) => { barWidth.current = e.nativeEvent.layout.width; }}
+                {...pan.panHandlers}
+              >
+                <View style={styles.progressTrack}>
+                  <View style={[styles.progressFill, { width: `${Math.min(100, progress * 100)}%` }]} />
+                  <View style={[styles.progressThumb, { left: `${Math.min(100, progress * 100)}%` }]} />
+                </View>
               </View>
-            </View>
-            <View style={styles.timesRow}>
-              <Text style={styles.time}>{fmt(t)}</Text>
-              <Text style={styles.time}>{fmt(duration)}</Text>
-            </View>
-            <View style={styles.playControls}>
-              <Pressable onPress={() => player.seekTo(Math.max(0, t - 15))} style={styles.sideBtn}>
-                <Text style={styles.sideBtnText}>-15s</Text>
-              </Pressable>
-              <CircleButton
-                size={80}
-                mode={playing ? 'playing' : 'paused'}
-                onPress={() => { playing ? player.pause() : player.play(); }}
-              />
-              <Pressable onPress={() => player.seekTo(Math.min(duration, t + 15))} style={styles.sideBtn}>
-                <Text style={styles.sideBtnText}>+15s</Text>
-              </Pressable>
-            </View>
-            {rounds ? (
-              <Pressable onPress={handleRoundEnd} style={styles.nextRoundBtn}>
-                <Text style={styles.nextRoundText}>
-                  {currentRound === 0 ? 'Skip intro →' : 'End this round →'}
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
+              <View style={styles.timesRow}>
+                <Text style={styles.time}>{fmt(t)}</Text>
+                <Text style={styles.time}>{fmt(duration)}</Text>
+              </View>
+            </>
+          ) : null}
         </View>
-      )}
+
+        <View style={styles.circleRow}>
+          {hasStarted && !inBreak && !finished ? (
+            <Pressable onPress={() => player.seekTo(Math.max(0, t - 15))} style={styles.sideBtn}>
+              <Text style={styles.sideBtnText}>-15s</Text>
+            </Pressable>
+          ) : <View style={styles.sideBtnPlaceholder} />}
+
+          {finished ? (
+            <View style={{ width: 80, height: 80 }} />
+          ) : !hasStarted ? (
+            <CircleButton
+              size={80}
+              mode="pre"
+              onPress={() => {
+                const startAtIntro = rounds?.introSource && includeIntro;
+                setHasStarted(true);
+                setCurrentRound(startAtIntro ? 0 : 1);
+                endedHandled.current = false;
+                player.play();
+              }}
+            />
+          ) : inBreak ? (
+            <CircleButton size={80} mode="break" breakProgress={breakProgress} breakLabel={fmt(breakRemaining)} />
+          ) : (
+            <CircleButton size={80} mode={playing ? 'playing' : 'paused'} onPress={() => { playing ? player.pause() : player.play(); }} />
+          )}
+
+          {hasStarted && !inBreak && !finished ? (
+            <Pressable onPress={() => player.seekTo(Math.min(duration, t + 15))} style={styles.sideBtn}>
+              <Text style={styles.sideBtnText}>+15s</Text>
+            </Pressable>
+          ) : <View style={styles.sideBtnPlaceholder} />}
+        </View>
+
+        <View style={styles.belowCircle}>
+          {!hasStarted ? (
+            <Text style={styles.durationHint}>
+              {rounds
+                ? `${selectedRounds} × ${rounds.roundLengthMinutes} min · break ${breakLabel(breakSeconds)}`
+                : duration > 0
+                  ? `${fmt(duration)} — start when you are ready`
+                  : 'Loading…'}
+            </Text>
+          ) : inBreak ? (
+            <View style={styles.breakButtons}>
+              <Pressable onPress={() => setBreakRemaining(0)} style={styles.pill}>
+                <Text style={styles.pillText}>Skip break</Text>
+              </Pressable>
+              <Pressable onPress={endBreak} style={styles.pillPrimary}>
+                <Text style={styles.pillPrimaryText}>Next round</Text>
+              </Pressable>
+            </View>
+          ) : finished ? (
+            <Pressable onPress={close} style={styles.pillPrimary}>
+              <Text style={styles.pillPrimaryText}>Close</Text>
+            </Pressable>
+          ) : rounds ? (
+            <Pressable onPress={handleRoundEnd} style={styles.nextRoundBtn}>
+              <Text style={styles.nextRoundText}>
+                {currentRound === 0 ? 'Skip intro →' : 'End this round →'}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
       </View>
     </View>
   );
@@ -561,6 +574,7 @@ const styles = StyleSheet.create({
   roundBarText: { ...type.overline, color: colors.accent, fontSize: 10, textAlign: 'center' },
 
   preplay: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.lg, gap: spacing.sm + 4 },
+  preplayLegacy: { display: 'none' },
   description: { ...type.body, color: colors.textMuted, textAlign: 'center', maxWidth: 360, fontSize: 13, lineHeight: 20 },
   durationHint: { ...type.overline, color: colors.textDim, fontSize: 10, textAlign: 'center' },
 
@@ -619,8 +633,19 @@ const styles = StyleSheet.create({
   pillPrimary: { paddingVertical: 12, paddingHorizontal: spacing.lg, borderRadius: radius.pill, backgroundColor: colors.accent },
   pillPrimaryText: { ...type.h3, color: colors.text, fontSize: 14 },
 
-  body: { flex: 1, justifyContent: 'center' },
-  playView: {},
+  body: { flex: 1, flexDirection: 'column' },
+  middle: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg, gap: spacing.sm + 2, minHeight: 0 },
+  bottomArea: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, alignItems: 'center' },
+  aboveCircle: { width: '100%', height: 42, justifyContent: 'center' },
+  circleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    height: 96,
+  },
+  sideBtnPlaceholder: { width: 0, height: 0 },
+  belowCircle: { minHeight: 40, alignItems: 'center', justifyContent: 'center', marginTop: spacing.xs },
   roundHeader: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: 6 },
   roundText: { ...type.overline, color: colors.accent, fontSize: 11 },
   dotsRow: { flexDirection: 'row', gap: 6 },
