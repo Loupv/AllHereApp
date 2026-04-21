@@ -58,10 +58,22 @@ function seekFromX(
   scrubValue.current = target;
 }
 
-function useSmoothTime(statusTime: number | undefined, playing: boolean | undefined) {
+function useSmoothTime(
+  statusTime: number | undefined,
+  playing: boolean | undefined,
+  resetKey: string | number,
+) {
   const [t, setT] = useState(0);
   const sync = useRef({ t: 0, at: 0 });
+  // Hard reset when the audio source changes, so stale time from the previous
+  // round/inter does not bleed into the new one before its first status tick.
   useEffect(() => {
+    sync.current = { t: 0, at: (typeof performance !== 'undefined' ? performance.now() : Date.now()) };
+    setT(0);
+  }, [resetKey]);
+  useEffect(() => {
+    // Ignore status updates until we get a sensible value for the *current* audio.
+    // expo-audio briefly reports the last track's currentTime during source swap.
     sync.current = { t: statusTime ?? 0, at: (typeof performance !== 'undefined' ? performance.now() : Date.now()) };
   }, [statusTime]);
   useEffect(() => {
@@ -114,7 +126,9 @@ function PlayerInner() {
   const expectedScrollY = useRef(0);
   const nextScrollAnimated = useRef(false);
 
-  const liveT = useSmoothTime(status.currentTime, status.playing);
+  // Reset smooth time whenever the audio source identity changes (new track, round, or break)
+  const sourceKey = `${track?.id ?? 'none'}|${inBreak ? 'b' : 'r'}|${currentRound}`;
+  const liveT = useSmoothTime(status.currentTime, status.playing, sourceKey);
   const t = scrubbing ? scrubValue.current : liveT;
   const duration = status.duration ?? 0;
   const durationRef = useRef(0);

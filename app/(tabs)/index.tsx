@@ -5,7 +5,7 @@ import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrol
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { Collapse } from '../../src/components/Collapse';
-import { startJourneySteps } from '../../src/content/catalog';
+import { startJourneySteps, silentMindVolets } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { useProgress } from '../../src/player/progressStore';
 import { colors, radius, spacing, type } from '../../src/theme';
@@ -23,6 +23,17 @@ export default function StartScreen() {
       if (!listened[s.track.id]) return i;
     }
     return startJourneySteps.length - 1;
+  }, [listened]);
+
+  // Any track from the Silent Mind program already listened? Then the user has
+  // moved past the home journey — suppress the "active" pink frame.
+  const silentMindStarted = useMemo(() => {
+    for (const v of silentMindVolets) {
+      for (const t of [...v.tracks, ...(v.qmTracks ?? [])]) {
+        if (listened[t.id]) return true;
+      }
+    }
+    return false;
   }, [listened]);
 
   const openIdx = manualIdx ?? activeIdx;
@@ -53,20 +64,21 @@ export default function StartScreen() {
             const isDone = !!(step.track && listened[step.track.id]);
             const isFirst = i === 0;
             const isActive = i === activeIdx && !isDone;
+            const isHighlighted = isActive && !silentMindStarted;
             return (
               <Pressable
                 key={step.id}
                 onPress={() => toggle(i)}
                 style={({ pressed }) => [
                   styles.step,
-                  isFirst && isActive && styles.stepFirst,
+                  isHighlighted && styles.stepFirst,
                   isDone && styles.stepDone,
                   pressed && styles.stepPressed,
                 ]}
               >
                 <View style={styles.stepHeader}>
                   <View style={{ flex: 1 }}>
-                    {isFirst && isActive ? (
+                    {isFirst && isHighlighted ? (
                       <>
                         <Text style={styles.firstEyebrow}>BEGIN YOUR PRACTICE</Text>
                         <Text style={styles.firstTitle}>60 seconds is all it takes.</Text>
@@ -88,7 +100,7 @@ export default function StartScreen() {
 
                 <Collapse open={isOpen}>
                   <View style={styles.stepBody}>
-                    {!(isFirst && isActive) ? (
+                    {!(isFirst && isHighlighted) ? (
                       <Text style={styles.stepDesc}>{step.description}</Text>
                     ) : (
                       <Text style={styles.stepDesc}>One breath to arrive. One minute to settle.</Text>
