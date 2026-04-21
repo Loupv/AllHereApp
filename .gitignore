@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Raw QM audio originals (kept locally for re-segmentation, not shipped)
+assets/audio/excluded/

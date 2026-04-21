@@ -99,7 +99,6 @@ export const silentMindVolets: Volet[] = [
     qmTracks: [
       {
         id: 'qm1-2', title: 'Breath and Self-Observation',
-        source: require('../../assets/audio/QMPart1/QM3_7rounds_Breath and Self-Observation.mp3'),
         transcript: require('../../assets/audio/QMPart1/Words/QM3_7rounds_Breath and Self-Observation.wjson'),
         description: 'Turn the mind towards the breathing process — notice the body exhaling, inhaling, then resting attention on the natural breath.',
         rounds: {
@@ -117,7 +116,6 @@ export const silentMindVolets: Volet[] = [
       },
       {
         id: 'qm1-4', title: 'Center of Gravity',
-        source: require('../../assets/audio/QMPart1/QM5_5rounds_Center of Gravity.mp3'),
         transcript: require('../../assets/audio/QMPart1/Words/QM5_5rounds_Center of Gravity.wjson'),
         description: 'Start with a long exhalation — empty yourself of air, then let the body inhale freely. Deepen into the Center of Gravity practice.',
         rounds: {
@@ -164,7 +162,6 @@ export const silentMindVolets: Volet[] = [
     qmTracks: [
       {
         id: 'qm2-1', title: 'Cosmic Sky',
-        source: require('../../assets/audio/QMPart2/QM3_5rounds_ErkinGuidance_Cosmic Sky.mp3'),
         transcript: require('../../assets/audio/QMPart2/Words/QM3_5rounds_ErkinGuidance_Cosmic Sky.wjson'),
         description: 'A three-minute guided meditation training by All Here. Five rounds of three minutes each, with one-minute pauses between rounds.',
         rounds: {
@@ -180,7 +177,6 @@ export const silentMindVolets: Volet[] = [
       },
       {
         id: 'qm2-2', title: 'Cosmic Sky (extended)',
-        source: require('../../assets/audio/QMPart2/QM3_6rounds_ErkinGuidance_Cosmic Sky.mp3'),
         transcript: require('../../assets/audio/QMPart2/Words/QM3_6rounds_ErkinGuidance_Cosmic Sky.wjson'),
         description: 'The extended Cosmic Sky training — six rounds of three minutes each, with one-minute pauses to consolidate presence and stability.',
         rounds: {
@@ -197,7 +193,6 @@ export const silentMindVolets: Volet[] = [
       },
       {
         id: 'qm2-3', title: 'Unfollow and Witness',
-        source: require('../../assets/audio/QMPart2/QM3_6rounds_ErkinGuided_UnfollowAndWitness.mp3'),
         transcript: require('../../assets/audio/QMPart2/Words/QM3_6rounds_ErkinGuided_UnfollowAndWitness.wjson'),
         description: "QM3 training by All Here — designed to train the ability to quickly mobilize presence. Six rounds of three minutes each with one-minute breaks in between.",
         rounds: {

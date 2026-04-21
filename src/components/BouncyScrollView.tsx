@@ -1,10 +1,18 @@
 import { forwardRef, useEffect, useRef, useImperativeHandle } from 'react';
 import { Platform, ScrollView, ScrollViewProps } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, cancelAnimation } from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  cancelAnimation,
+  Easing,
+} from 'react-native-reanimated';
 
 /**
  * ScrollView with iOS-style rubber-band overscroll on web.
- * Content elastically follows the user at bounds, then springs back when released.
+ * Wheel jumps are smoothed with a short timing, accumulated overscroll
+ * is mapped through a tanh saturation, and springs back when released.
  */
 export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function BouncyScrollView(
   { children, style, contentContainerStyle, bounces = true, ...rest },
@@ -13,7 +21,8 @@ export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function
   const scrollRef = useRef<ScrollView>(null);
   useImperativeHandle(ref, () => scrollRef.current as ScrollView);
 
-  const overscroll = useSharedValue(0);
+  // Raw accumulated pull (px). Displayed overscroll = softBound(raw).
+  const raw = useSharedValue(0);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -25,57 +34,48 @@ export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function
     if (!el) return;
 
     const ATBOUND = 1.5;
-    const MAX = 120;
-    const DAMP = 0.35;
-    let springTimer: any = 0;
+    // Smaller factor on wheel since each tick is a big chunk (~100)
+    const WHEEL_FACTOR = 0.25;
+    const TOUCH_FACTOR = 0.9;
+    let releaseTimer: any = 0;
 
-    const releaseSpring = () => {
-      overscroll.value = withSpring(0, {
-        damping: 18,
-        stiffness: 140,
+    const springHome = () => {
+      raw.value = withSpring(0, {
+        damping: 20,
+        stiffness: 220,
         overshootClamping: false,
-        restDisplacementThreshold: 0.5,
+        restDisplacementThreshold: 0.3,
       });
     };
 
-    const applyDelta = (delta: number, atTop: boolean, atBottom: boolean) => {
-      if ((atTop && delta < 0) || (atBottom && delta > 0)) {
-        cancelAnimation(overscroll);
-        const cur = overscroll.value;
-        // progressive resistance: further you pull, more it resists
-        const resistance = Math.max(0.15, 1 - Math.abs(cur) / MAX);
-        const next = Math.max(-MAX, Math.min(MAX, cur + delta * DAMP * resistance));
-        overscroll.value = next;
-        clearTimeout(springTimer);
-        // Small deltas = trackpad inertia winding down → spring back right away.
-        // Normal drags keep refreshing the timer so spring stays parked.
-        if (Math.abs(delta) < 4 && Math.abs(cur) > 3) {
-          releaseSpring();
-        } else {
-          springTimer = setTimeout(releaseSpring, 30);
-        }
-        return true;
-      }
-      if (Math.abs(overscroll.value) > 0.1) {
-        cancelAnimation(overscroll);
-        clearTimeout(springTimer);
-        releaseSpring();
-      }
-      return false;
+    const pull = (delta: number) => {
+      // Smooth each chunk with a tiny timing so mouse-wheel jumps don't snap
+      cancelAnimation(raw);
+      const target = raw.value + delta;
+      raw.value = withTiming(target, { duration: 70, easing: Easing.out(Easing.quad) });
     };
 
     const onWheel = (e: WheelEvent) => {
       const { scrollTop, scrollHeight, clientHeight } = el;
       const atTop = scrollTop <= ATBOUND;
       const atBottom = scrollTop + clientHeight >= scrollHeight - ATBOUND;
-      const absorbed = applyDelta(e.deltaY, atTop, atBottom);
-      if (absorbed) e.preventDefault();
+      const absorb = (atTop && e.deltaY < 0) || (atBottom && e.deltaY > 0);
+      if (absorb) {
+        e.preventDefault();
+        pull(e.deltaY * WHEEL_FACTOR);
+        clearTimeout(releaseTimer);
+        releaseTimer = setTimeout(springHome, 120);
+      } else if (Math.abs(raw.value) > 0.1) {
+        // Left the edge — release instantly
+        clearTimeout(releaseTimer);
+        springHome();
+      }
     };
 
     let touchY = 0;
     const onTouchStart = (e: TouchEvent) => {
       touchY = e.touches[0]?.clientY ?? 0;
-      clearTimeout(springTimer);
+      clearTimeout(releaseTimer);
     };
     const onTouchMove = (e: TouchEvent) => {
       const y = e.touches[0]?.clientY ?? 0;
@@ -84,11 +84,13 @@ export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function
       const { scrollTop, scrollHeight, clientHeight } = el;
       const atTop = scrollTop <= ATBOUND;
       const atBottom = scrollTop + clientHeight >= scrollHeight - ATBOUND;
-      applyDelta(dy, atTop, atBottom);
+      if ((atTop && dy < 0) || (atBottom && dy > 0)) {
+        pull(dy * TOUCH_FACTOR);
+      }
     };
     const onTouchEnd = () => {
-      clearTimeout(springTimer);
-      releaseSpring();
+      clearTimeout(releaseTimer);
+      springHome();
     };
 
     el.addEventListener('wheel', onWheel, { passive: false });
@@ -97,7 +99,7 @@ export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function
     el.addEventListener('touchend', onTouchEnd, { passive: true });
     el.addEventListener('touchcancel', onTouchEnd, { passive: true });
     return () => {
-      clearTimeout(springTimer);
+      clearTimeout(releaseTimer);
       el.removeEventListener('wheel', onWheel);
       el.removeEventListener('touchstart', onTouchStart);
       el.removeEventListener('touchmove', onTouchMove);
@@ -106,9 +108,15 @@ export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function
     };
   }, []);
 
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: -overscroll.value }],
-  }));
+  // tanh saturation: raw can grow unbounded but translate is capped to ±MAX
+  const MAX = 70;
+  const animStyle = useAnimatedStyle(() => {
+    'worklet';
+    const r = raw.value;
+    // soft-bound with tanh: linear near 0, saturates around ±MAX
+    const translate = -MAX * Math.tanh(r / MAX);
+    return { transform: [{ translateY: translate }] };
+  });
 
   return (
     <Animated.View style={[{ flex: 1 }, animStyle]}>

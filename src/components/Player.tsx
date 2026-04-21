@@ -90,6 +90,7 @@ function PlayerInner() {
   const [breakRemaining, setBreakRemaining] = useState(0);
   const [finished, setFinished] = useState(false);
   const endedHandled = useRef(false);
+  const roundChangedAt = useRef(0);
 
   const roundSource = (() => {
     if (!track) return undefined;
@@ -110,6 +111,7 @@ function PlayerInner() {
   const cueLayouts = useRef<Record<number, number>>({});
   const userScrollingUntil = useRef(0);
   const expectedScrollY = useRef(0);
+  const nextScrollAnimated = useRef(false);
 
   const liveT = useSmoothTime(status.currentTime, status.playing);
   const t = scrubbing ? scrubValue.current : liveT;
@@ -145,7 +147,9 @@ function PlayerInner() {
   useEffect(() => {
     if (!hasStarted || inBreak || finished) return;
     if (duration <= 0) return;
-    const didFinish = (status as any).didJustFinish || (t > 0 && t >= duration - 0.15 && !status.playing);
+    // Ignore end-detection briefly after a round change to avoid stale smooth-time triggers
+    if (Date.now() - roundChangedAt.current < 800) return;
+    const didFinish = (status as any).didJustFinish || (t > 2 && t >= duration - 0.15 && t < duration + 1 && !status.playing);
     if (didFinish && !endedHandled.current) {
       endedHandled.current = true;
       handleRoundEnd();
@@ -164,7 +168,7 @@ function PlayerInner() {
     if (currentRound === 0) {
       setCurrentRound(1);
       endedHandled.current = false;
-      try { player.seekTo(0); player.play(); } catch {}
+      roundChangedAt.current = Date.now();
       return;
     }
     const hasMore = track?.rounds && currentRound < selectedRounds;
@@ -180,8 +184,21 @@ function PlayerInner() {
     setInBreak(false);
     setCurrentRound(r => r + 1);
     endedHandled.current = false;
-    try { player.seekTo(0); player.play(); } catch {}
+    roundChangedAt.current = Date.now();
   };
+
+  // When the round source changes (after break or intro→round1), start playback.
+  // Retry a couple of times to catch source-load latency on web.
+  useEffect(() => {
+    if (!hasStarted || inBreak || finished) return;
+    roundChangedAt.current = Date.now();
+    endedHandled.current = false;
+    const tryPlay = () => { try { player.seekTo(0); player.play(); } catch {} };
+    tryPlay();
+    const t1 = setTimeout(tryPlay, 200);
+    const t2 = setTimeout(tryPlay, 800);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [currentRound, player]);
 
   const currentCueIdx = useMemo(() => (cues.length ? findCueIndex(cues, t) : -1), [cues, t]);
 
@@ -198,20 +215,23 @@ function PlayerInner() {
     const span = Math.max(0.01, (nextCue ? nextCue.start : cue.end) - cue.start);
     const frac = Math.max(0, Math.min(1, (t - cue.start) / span));
     const y = cur + (nextY - cur) * frac;
-    const targetY = Math.max(0, y - 180);
+    const targetY = Math.max(0, y - 140);
     expectedScrollY.current = targetY;
-    scrollRef.current?.scrollTo({ y: targetY, animated: false });
+    const animated = nextScrollAnimated.current;
+    nextScrollAnimated.current = false;
+    scrollRef.current?.scrollTo({ y: targetY, animated });
   }, [currentCueIdx, t, hasStarted, inBreak]);
 
+  const markUserScrolling = () => {
+    userScrollingUntil.current = Date.now() + 5000;
+    // Next time the auto-scroll resumes, animate the catch-up
+    nextScrollAnimated.current = true;
+  };
   const handleUserScroll = (e: any) => {
     const offset = e?.nativeEvent?.contentOffset?.y ?? 0;
-    if (Math.abs(offset - expectedScrollY.current) > 30) {
-      userScrollingUntil.current = Date.now() + 5000;
-    }
+    if (Math.abs(offset - expectedScrollY.current) > 30) markUserScrolling();
   };
-  const handleScrollBegin = () => {
-    userScrollingUntil.current = Date.now() + 5000;
-  };
+  const handleScrollBegin = () => markUserScrolling();
 
   const pan = useRef(
     PanResponder.create({
@@ -526,11 +546,11 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
   close: { ...type.caption, color: colors.text },
   eyebrow: { ...type.overline, color: colors.textMuted, fontSize: 10 },
-  top: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.md, gap: 6 },
+  top: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: 4 },
   artwork: {
-    width: 110, height: 110, borderRadius: radius.lg,
+    width: 90, height: 90, borderRadius: radius.lg,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: spacing.sm, overflow: 'hidden',
+    marginBottom: spacing.xs, overflow: 'hidden',
     borderColor: colors.border, borderWidth: 1,
   },
   artworkLarge: { width: 130, height: 130 },
@@ -609,21 +629,21 @@ const styles = StyleSheet.create({
   dotDone: { backgroundColor: colors.text, opacity: 0.7 },
 
   transcriptFrame: {
-    height: 320,
+    height: 220,
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,
     overflow: 'hidden',
   },
-  transcriptContent: { paddingHorizontal: spacing.md, paddingVertical: spacing.lg },
-  cue: { ...type.body, fontSize: 17, lineHeight: 28, marginBottom: spacing.sm + 4 },
+  transcriptContent: { paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  cue: { ...type.body, fontSize: 16, lineHeight: 26, marginBottom: spacing.sm },
   noTranscript: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
   noTranscriptText: { ...type.caption, color: colors.textDim, textAlign: 'center' },
 
-  controls: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, paddingTop: spacing.sm },
+  controls: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, paddingTop: spacing.xs },
   progressHit: { paddingVertical: spacing.sm + 4 },
   progressTrack: { height: 4, backgroundColor: colors.border, borderRadius: 2, position: 'relative' },
   progressFill: { height: '100%', backgroundColor: colors.accent, borderRadius: 2 },
