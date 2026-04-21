@@ -19,56 +19,62 @@ export function LoginScreen() {
   };
 
   return (
-    <Animated.View entering={FadeIn.duration(400)} style={styles.root}>
-      <Image source={LOGO} style={styles.logo} resizeMode="contain" />
-      <Text style={styles.tagline}>WHERE MEDITATION MEETS{'\n'}SCIENCE & TECHNOLOGY</Text>
+    <View style={styles.root}>
+      {/* Brand block — mirrors IntroSplash so the logo/tagline don't jump */}
+      <View style={styles.brand}>
+        <Image source={LOGO} style={styles.logo} resizeMode="contain" />
+        <Text style={styles.tagline}>WHERE MEDITATION MEETS{'\n'}SCIENCE & TECHNOLOGY</Text>
+      </View>
 
-      {mode === 'main' ? (
-        <View style={styles.buttons}>
-          <Pressable onPress={() => handleProvider('apple')} style={({ pressed }) => [styles.btn, styles.btnDark, pressed && styles.pressed]}>
-            <AppleIcon size={15} />
-            <Text style={styles.btnText}>Continue with Apple</Text>
-          </Pressable>
-          <Pressable onPress={() => handleProvider('google')} style={({ pressed }) => [styles.btn, styles.btnLight, pressed && styles.pressed]}>
-            <GoogleIcon size={15} />
-            <Text style={[styles.btnText, styles.btnTextDark]}>Continue with Google</Text>
-          </Pressable>
-          <Pressable onPress={() => setMode('email')} style={({ pressed }) => [styles.btn, styles.btnOutline, pressed && styles.pressed]}>
-            <MailIcon size={15} />
-            <Text style={styles.btnText}>Continue with email</Text>
-          </Pressable>
-          <Pressable onPress={() => login('email', { name: 'Guest' })} hitSlop={8}>
-            <Text style={styles.skipLink}>Skip for now</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <View style={styles.buttons}>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@allhere.org"
-            placeholderTextColor={colors.textDim}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            style={styles.input}
-          />
-          <Pressable onPress={handleEmailSubmit} style={({ pressed }) => [styles.btn, styles.btnPrimary, pressed && styles.pressed]}>
-            <Text style={styles.btnText}>Continue</Text>
-          </Pressable>
-          <Pressable onPress={() => setMode('main')}>
-            <Text style={styles.backLink}>← Back</Text>
-          </Pressable>
-        </View>
-      )}
+      {/* Fade-in the interactive part so it only arrives after the intro has wrapped up */}
+      <Animated.View entering={FadeIn.delay(2400).duration(500)} style={styles.actions}>
+        {mode === 'main' ? (
+          <View style={styles.buttons}>
+            <Pressable onPress={() => handleProvider('apple')} style={({ pressed }) => [styles.btn, styles.btnDark, pressed && styles.pressed]}>
+              <AppleIcon size={15} />
+              <Text style={styles.btnText}>Continue with Apple</Text>
+            </Pressable>
+            <Pressable onPress={() => handleProvider('google')} style={({ pressed }) => [styles.btn, styles.btnLight, pressed && styles.pressed]}>
+              <GoogleIcon size={15} />
+              <Text style={[styles.btnText, styles.btnTextDark]}>Continue with Google</Text>
+            </Pressable>
+            <Pressable onPress={() => setMode('email')} style={({ pressed }) => [styles.btn, styles.btnOutline, pressed && styles.pressed]}>
+              <MailIcon size={15} />
+              <Text style={styles.btnText}>Continue with email</Text>
+            </Pressable>
+            <Pressable onPress={() => login('email', { name: 'Guest' })} hitSlop={8}>
+              <Text style={styles.skipLink}>Skip for now</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.buttons}>
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@allhere.org"
+              placeholderTextColor={colors.textDim}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              style={styles.input}
+            />
+            <Pressable onPress={handleEmailSubmit} style={({ pressed }) => [styles.btn, styles.btnPrimary, pressed && styles.pressed]}>
+              <Text style={styles.btnText}>Continue</Text>
+            </Pressable>
+            <Pressable onPress={() => setMode('main')}>
+              <Text style={styles.backLink}>← Back</Text>
+            </Pressable>
+          </View>
+        )}
+      </Animated.View>
 
-      <Text style={styles.legal}>
+      <Animated.Text entering={FadeIn.delay(2600).duration(500)} style={styles.legal}>
         By continuing you agree to our{' '}
         <Text style={styles.legalLink}>Terms of Use</Text>
         {' '}and{' '}
         <Text style={styles.legalLink}>Privacy Policy</Text>.
-      </Text>
-    </Animated.View>
+      </Animated.Text>
+    </View>
   );
 }
 
@@ -76,16 +82,27 @@ const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-    gap: spacing.sm + 4,
     zIndex: 50,
   },
-  logo: { width: 180, height: 60, marginBottom: spacing.xs },
+  brand: {
+    position: 'absolute',
+    top: '18%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  logo: { width: 200, height: 66 },
   tagline: {
     ...type.overline, color: colors.textMuted, textAlign: 'center',
-    marginBottom: spacing.lg, lineHeight: 18, fontSize: 10,
+    marginTop: 24, fontSize: 10, lineHeight: 18,
+  },
+  actions: {
+    position: 'absolute',
+    top: '45%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
   },
   buttons: { width: '100%', maxWidth: 280, gap: spacing.sm },
   btn: {
@@ -112,9 +129,12 @@ const styles = StyleSheet.create({
   backLink: { ...type.caption, color: colors.accent, textAlign: 'center', marginTop: spacing.sm, fontSize: 11 },
   skipLink: { ...type.caption, color: colors.textDim, textAlign: 'center', marginTop: spacing.sm, textDecorationLine: 'underline', fontSize: 11 },
   legal: {
+    position: 'absolute',
+    bottom: '6%',
+    left: spacing.xl,
+    right: spacing.xl,
     ...type.overline, color: colors.textDim, fontSize: 9,
-    textAlign: 'center', marginTop: spacing.lg, lineHeight: 14,
-    maxWidth: 280,
+    textAlign: 'center', lineHeight: 14,
   },
   legalLink: { color: colors.accent, textDecorationLine: 'underline' },
 });
