@@ -91,7 +91,9 @@ function useSmoothTime(
 }
 
 function PlayerInner() {
-  const { track, close } = usePlayerStore();
+  const { track, close, playlist, index, playNext, playPrev } = usePlayerStore();
+  const hasNext = index >= 0 && index < playlist.length - 1;
+  const hasPrev = index > 0;
   const markListened = useProgress(s => s.markListened);
 
   const [selectedRounds, setSelectedRounds] = useState(track?.rounds?.max ?? 1);
@@ -308,14 +310,12 @@ function PlayerInner() {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        {!finished ? (
-          <Pressable
-            onPress={() => { try { player.pause(); } catch {} close(); }}
-            hitSlop={12}
-          >
-            <Text style={styles.close}>Close</Text>
-          </Pressable>
-        ) : <View style={{ width: 50 }} />}
+        <Pressable
+          onPress={() => { try { player.pause(); } catch {} close(); }}
+          hitSlop={12}
+        >
+          <Text style={styles.close}>Close</Text>
+        </Pressable>
         <View style={{ width: 50 }} />
       </View>
 
@@ -325,7 +325,25 @@ function PlayerInner() {
           <Image source={artwork} style={styles.artworkImage} resizeMode="cover" />
           <View style={styles.artworkOverlay} />
         </View>
-        <Text style={styles.title} numberOfLines={2}>{track.title}</Text>
+        <View style={styles.titleRow}>
+          <Pressable
+            onPress={playPrev}
+            disabled={!hasPrev}
+            hitSlop={10}
+            style={[styles.navBtn, !hasPrev && styles.navBtnDisabled]}
+          >
+            <Text style={[styles.navBtnText, !hasPrev && styles.navBtnTextDisabled]}>‹</Text>
+          </Pressable>
+          <Text style={styles.title} numberOfLines={2}>{track.title}</Text>
+          <Pressable
+            onPress={playNext}
+            disabled={!hasNext}
+            hitSlop={10}
+            style={[styles.navBtn, !hasNext && styles.navBtnDisabled]}
+          >
+            <Text style={[styles.navBtnText, !hasNext && styles.navBtnTextDisabled]}>›</Text>
+          </Pressable>
+        </View>
         {rounds ? (
           <View style={styles.roundBar}>
             {hasStarted ? (
@@ -498,11 +516,7 @@ function PlayerInner() {
             <Pressable onPress={endBreak} style={styles.nextRoundBtn}>
               <Text style={styles.nextRoundText}>Skip to round {currentRound + 1} →</Text>
             </Pressable>
-          ) : finished ? (
-            <Pressable onPress={close} style={styles.pillPrimary}>
-              <Text style={styles.pillPrimaryText}>Close</Text>
-            </Pressable>
-          ) : rounds ? (
+          ) : finished ? null : rounds ? (
             <Pressable onPress={handleRoundEnd} style={styles.nextRoundBtn}>
               <Text style={styles.nextRoundText}>
                 {currentRound === 0 ? 'Skip intro →' : 'End this round →'}
@@ -609,7 +623,17 @@ const styles = StyleSheet.create({
   artworkLarge: { width: 130, height: 130 },
   artworkImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   artworkOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.35)' },
-  title: { ...type.h1, color: colors.text, textAlign: 'center', fontSize: 18 },
+  title: { ...type.h1, color: colors.text, textAlign: 'center', fontSize: 18, flexShrink: 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md, width: '100%', paddingHorizontal: spacing.md },
+  navBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    alignItems: 'center', justifyContent: 'center',
+    borderColor: colors.border, borderWidth: 1,
+    backgroundColor: colors.surface,
+  },
+  navBtnDisabled: { opacity: 0.3 },
+  navBtnText: { ...type.display, color: colors.accent, fontSize: 22, lineHeight: 24, marginTop: -2 },
+  navBtnTextDisabled: { color: colors.textDim },
   roundBar: { alignItems: 'center', gap: 6, minHeight: 24 },
   roundBarText: { ...type.overline, color: colors.accent, fontSize: 10, textAlign: 'center' },
   roundBarBreak: {

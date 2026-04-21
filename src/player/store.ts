@@ -3,14 +3,50 @@ import type { AudioTrack } from '../content/catalog';
 
 type PlayerState = {
   track: AudioTrack | null;
+  playlist: AudioTrack[];
+  index: number;
   isOpen: boolean;
-  open: (track: AudioTrack) => void;
+  open: (track: AudioTrack, playlist?: AudioTrack[]) => void;
   close: () => void;
+  playNext: () => void;
+  playPrev: () => void;
+  hasNext: () => boolean;
+  hasPrev: () => boolean;
 };
 
-export const usePlayerStore = create<PlayerState>((set) => ({
+// Only playable tracks are useful for prev/next navigation.
+const playable = (ts: AudioTrack[] | undefined) =>
+  (ts ?? []).filter((t) => !t.comingSoon && (!!t.source || !!t.rounds));
+
+export const usePlayerStore = create<PlayerState>((set, get) => ({
   track: null,
-  isOpen: false,
-  open: (track) => set({ track, isOpen: true }),
+  playlist: [],
+  index: -1,
+  isOpen: true && false,
+  open: (track, playlist) => {
+    const pl = playable(playlist && playlist.length ? playlist : [track]);
+    const idx = Math.max(0, pl.findIndex((t) => t.id === track.id));
+    set({ track: pl[idx] ?? track, playlist: pl, index: idx, isOpen: true });
+  },
   close: () => set({ isOpen: false }),
+  playNext: () => {
+    const { playlist, index } = get();
+    if (index < 0 || index >= playlist.length - 1) return;
+    const next = playlist[index + 1];
+    if (next) set({ track: next, index: index + 1 });
+  },
+  playPrev: () => {
+    const { playlist, index } = get();
+    if (index <= 0) return;
+    const prev = playlist[index - 1];
+    if (prev) set({ track: prev, index: index - 1 });
+  },
+  hasNext: () => {
+    const { playlist, index } = get();
+    return index >= 0 && index < playlist.length - 1;
+  },
+  hasPrev: () => {
+    const { index } = get();
+    return index > 0;
+  },
 }));

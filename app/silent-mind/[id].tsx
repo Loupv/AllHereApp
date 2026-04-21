@@ -39,7 +39,7 @@ export default function VoletScreen() {
             key={t.id}
             title={t.title}
             meta={t.transcript ? 'Transcript' : undefined}
-            onPress={() => openPlayer(t)}
+            onPress={() => openPlayer(t, volet.tracks)}
           />
         ))}
       </ScrollView>

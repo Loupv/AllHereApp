@@ -115,7 +115,7 @@ export function VoletAccordion({
           {volet.tracks.length > 0 ? (
             <>
               {volet.tracks.map((t, i) => (
-                <TrackRow key={t.id} track={t} index={i} onPress={() => openPlayer(t)} />
+                <TrackRow key={t.id} track={t} index={i} onPress={() => openPlayer(t, [...volet.tracks, ...qmTracks])} />
               ))}
             </>
           ) : null}

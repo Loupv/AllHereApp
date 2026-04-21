@@ -109,7 +109,10 @@ export default function StartScreen() {
                       style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
                       onPress={(e) => {
                         e.stopPropagation?.();
-                        if (step.track) openPlayer(step.track);
+                        if (step.track) {
+                          const pl = startJourneySteps.map(s => s.track).filter(Boolean) as any;
+                          openPlayer(step.track, pl);
+                        }
                         else if (step.ctaRoute) router.push(step.ctaRoute);
                       }}
                     >
