@@ -310,12 +310,14 @@ function PlayerInner() {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Pressable
-          onPress={() => { try { player.pause(); } catch {} close(); }}
-          hitSlop={12}
-        >
-          <Text style={styles.close}>Close</Text>
-        </Pressable>
+        {!finished ? (
+          <Pressable
+            onPress={() => { try { player.pause(); } catch {} close(); }}
+            hitSlop={12}
+          >
+            <Text style={styles.close}>Close</Text>
+          </Pressable>
+        ) : <View style={{ width: 50 }} />}
         <View style={{ width: 50 }} />
       </View>
 
@@ -421,7 +423,12 @@ function PlayerInner() {
             ) : null}
           </>
         ) : finished ? (
-          <Text style={styles.breakLabel}>AUDIO ENDED</Text>
+          <View style={styles.finishedBlock}>
+            <Text style={styles.breakLabel}>AUDIO ENDED</Text>
+            <Pressable onPress={close} style={styles.pillPrimary}>
+              <Text style={styles.pillPrimaryText}>Close</Text>
+            </Pressable>
+          </View>
         ) : (
           <View style={[styles.transcriptFrame, inBreak && styles.transcriptFrameBreak]}>
             {cues.length > 0 ? (
@@ -699,6 +706,7 @@ const styles = StyleSheet.create({
   breakOptionTextSelected: { color: colors.text },
 
   breakLabel: { ...type.overline, color: colors.accent, fontSize: 13, letterSpacing: 4 },
+  finishedBlock: { alignItems: 'center', gap: spacing.lg },
   breakButtons: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md, alignItems: 'center' },
 
   pill: { paddingVertical: 12, paddingHorizontal: spacing.md, borderRadius: radius.pill, borderColor: colors.border, borderWidth: 1 },
