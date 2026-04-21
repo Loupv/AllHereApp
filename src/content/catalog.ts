@@ -4,7 +4,13 @@ export type RoundsConfig = {
   defaultRounds?: number;
   breakSeconds: number;
   roundSources?: number[];
+  roundTranscripts?: number[];
+  // Interstitial audio played during the break between rounds (optional).
+  // If present at index i, plays between round i+1 and round i+2.
+  roundInters?: (number | null)[];
+  roundInterTranscripts?: (number | null)[];
   introSource?: number;
+  introTranscript?: number;
 };
 
 export type AudioTrack = {
@@ -66,6 +72,12 @@ export const silentMindVolets: Volet[] = [
         transcript: require('../../assets/audio/Part0/Words/3. Prepare the space.wjson'),
         description: 'Simple practical guidance for preparing your meditation space. Creating supportive conditions helps the mind settle more easily and encourages a steady practice.',
       },
+      {
+        id: 'intro-4', title: 'QM Format',
+        source: require('../../assets/audio/Part0/4. QM Format.mp3'),
+        transcript: require('../../assets/audio/Part0/Words/4. QM Format.wjson'),
+        description: 'An introduction to the Quantified Meditation format — short rounds with brief breaks, a structured way to practice and track progress over time.',
+      },
     ],
   },
   {
@@ -112,6 +124,31 @@ export const silentMindVolets: Volet[] = [
             require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round06.mp3'),
             require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round07.mp3'),
           ],
+          roundTranscripts: [
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round01.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round02.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round03.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round04.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round05.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round06.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round07.wjson'),
+          ],
+          roundInters: [
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round01_inter.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round02_inter.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round03_inter.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round04_inter.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round05_inter.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round06_inter.mp3'),
+          ],
+          roundInterTranscripts: [
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round01_inter.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round02_inter.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round03_inter.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round04_inter.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round05_inter.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round06_inter.wjson'),
+          ],
         },
       },
       {
@@ -126,6 +163,25 @@ export const silentMindVolets: Volet[] = [
             require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round03.mp3'),
             require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round04.mp3'),
             require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round05.mp3'),
+          ],
+          roundTranscripts: [
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round01.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round02.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round03.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round04.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round05.wjson'),
+          ],
+          roundInters: [
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round01_inter.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round02_inter.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round03_inter.mp3'),
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round04_inter.mp3'),
+          ],
+          roundInterTranscripts: [
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round01_inter.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round02_inter.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round03_inter.wjson'),
+            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/round04_inter.wjson'),
           ],
         },
       },
@@ -173,6 +229,13 @@ export const silentMindVolets: Volet[] = [
             require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round04.mp3'),
             require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round05.mp3'),
           ],
+          roundTranscripts: [
+            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round01.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round02.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round03.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round04.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round05.wjson'),
+          ],
         },
       },
       {
@@ -189,6 +252,14 @@ export const silentMindVolets: Volet[] = [
             require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round05.mp3'),
             require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round06.mp3'),
           ],
+          roundTranscripts: [
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round01.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round02.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round03.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round04.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round05.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round06.wjson'),
+          ],
         },
       },
       {
@@ -204,6 +275,14 @@ export const silentMindVolets: Volet[] = [
             require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round04.mp3'),
             require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round05.mp3'),
             require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round06.mp3'),
+          ],
+          roundTranscripts: [
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round01.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round02.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round03.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round04.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round05.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round06.wjson'),
           ],
         },
       },
@@ -240,6 +319,14 @@ const oneMinute: AudioTrack = {
   description: 'One minute to arrive. A single breath, a moment of attention — your first taste of the practice.',
 };
 
+const threeMinutes: AudioTrack = {
+  id: 'home-3min',
+  title: 'Three minutes meditation',
+  source: require('../../assets/audio/Home/Three minutes meditation.mp3'),
+  transcript: require('../../assets/audio/Home/Words/Three minutes meditation.wjson'),
+  description: 'Three minutes of guided attention. Settle a little deeper — a steadier taste of the practice.',
+};
+
 export const startJourneySteps = [
   {
     id: 'step-1min',
@@ -251,7 +338,7 @@ export const startJourneySteps = [
     id: 'step-3min',
     label: '3 minutes',
     description: 'Go a little deeper. Three minutes of guided attention.',
-    track: silentMindVolets[0].tracks[1],
+    track: threeMinutes,
   },
   {
     id: 'step-explore',

@@ -21,6 +21,7 @@ const fmt = (s: number) => {
 };
 
 const BREAK_OPTIONS = [15, 30, 45, 60, 90];
+const CIRCLE_SIZE = 108;
 const breakLabel = (s: number) => s < 60 ? `${s}s` : s === 60 ? '1 min' : `1 min ${s - 60}`;
 
 export function Player() {
@@ -87,7 +88,6 @@ function PlayerInner() {
   const [currentRound, setCurrentRound] = useState(1);
   const [hasStarted, setHasStarted] = useState(false);
   const [inBreak, setInBreak] = useState(false);
-  const [breakRemaining, setBreakRemaining] = useState(0);
   const [finished, setFinished] = useState(false);
   const endedHandled = useRef(false);
   const roundChangedAt = useRef(0);
@@ -95,6 +95,7 @@ function PlayerInner() {
   const roundSource = (() => {
     if (!track) return undefined;
     const r = track.rounds;
+    if (inBreak) return r?.roundInters?.[currentRound - 1] ?? undefined;
     if (currentRound === 0) return r?.introSource;
     if (r?.roundSources && r.roundSources[currentRound - 1]) return r.roundSources[currentRound - 1];
     return track.source;
@@ -128,16 +129,40 @@ function PlayerInner() {
     setInBreak(false);
     setFinished(false);
     endedHandled.current = false;
+    roundChangedAt.current = 0;
     return () => { try { player.pause(); } catch {} };
   }, [track?.id]);
 
   useEffect(() => {
-    if (track?.transcript) {
-      loadTranscript(track.transcript).then(setCues).catch(() => setCues([]));
+    // Prefer round-specific transcript when playing a segmented round / inter
+    const roundTranscript = (() => {
+      const r = track?.rounds;
+      if (!r) return undefined;
+      if (inBreak) return r.roundInterTranscripts?.[currentRound - 1] ?? undefined;
+      if (currentRound === 0) return r.introTranscript;
+      return r.roundTranscripts?.[currentRound - 1];
+    })();
+    const tr = roundTranscript ?? track?.transcript;
+    // Reset scroll to top for every new audio (new track or new round)
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    expectedScrollY.current = 0;
+    userScrollingUntil.current = 0;
+    nextScrollAnimated.current = false;
+    // Clear previous layout measurements so the new cues are scrolled correctly from the top
+    cueLayouts.current = {};
+    if (tr) {
+      loadTranscript(tr).then((c) => {
+        setCues(c);
+        // Ensure scroll is parked at the top once the new cues have rendered
+        requestAnimationFrame(() => {
+          scrollRef.current?.scrollTo({ y: 0, animated: false });
+          expectedScrollY.current = 0;
+        });
+      }).catch(() => setCues([]));
     } else {
       setCues([]);
     }
-  }, [track?.id, roundSource]);
+  }, [track?.id, currentRound, inBreak]);
 
   useEffect(() => {
     if (!track || duration <= 0) return;
@@ -145,23 +170,20 @@ function PlayerInner() {
   }, [t, duration, track?.id]);
 
   useEffect(() => {
-    if (!hasStarted || inBreak || finished) return;
+    if (!hasStarted || finished) return;
     if (duration <= 0) return;
-    // Ignore end-detection briefly after a round change to avoid stale smooth-time triggers
     if (Date.now() - roundChangedAt.current < 800) return;
     const didFinish = (status as any).didJustFinish || (t > 2 && t >= duration - 0.15 && t < duration + 1 && !status.playing);
     if (didFinish && !endedHandled.current) {
       endedHandled.current = true;
-      handleRoundEnd();
+      if (inBreak) {
+        // Inter ended → advance to next round
+        endBreak();
+      } else {
+        handleRoundEnd();
+      }
     }
   }, [t, duration, status.playing, hasStarted, inBreak, finished]);
-
-  useEffect(() => {
-    if (!inBreak) return;
-    if (breakRemaining <= 0) { endBreak(); return; }
-    const id = setTimeout(() => setBreakRemaining(r => r - 1), 1000);
-    return () => clearTimeout(id);
-  }, [inBreak, breakRemaining]);
 
   const handleRoundEnd = () => {
     // After intro (round 0), go straight to round 1 with no break
@@ -172,11 +194,17 @@ function PlayerInner() {
       return;
     }
     const hasMore = track?.rounds && currentRound < selectedRounds;
-    if (hasMore) {
-      setInBreak(true);
-      setBreakRemaining(breakSeconds);
-    } else {
+    if (!hasMore) {
       setFinished(true);
+      return;
+    }
+    const hasInter = !!track?.rounds?.roundInters?.[currentRound - 1];
+    if (hasInter) {
+      setInBreak(true);
+      roundChangedAt.current = Date.now();
+      endedHandled.current = false;
+    } else {
+      setCurrentRound(r => r + 1);
     }
   };
 
@@ -187,18 +215,19 @@ function PlayerInner() {
     roundChangedAt.current = Date.now();
   };
 
-  // When the round source changes (after break or intro→round1), start playback.
-  // Retry a couple of times to catch source-load latency on web.
+  // When the audio source changes (round change or entering/leaving break), start playback.
   useEffect(() => {
-    if (!hasStarted || inBreak || finished) return;
+    if (!hasStarted || finished) return;
     roundChangedAt.current = Date.now();
     endedHandled.current = false;
-    const tryPlay = () => { try { player.seekTo(0); player.play(); } catch {} };
-    tryPlay();
-    const t1 = setTimeout(tryPlay, 200);
-    const t2 = setTimeout(tryPlay, 800);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [currentRound, player]);
+    try { player.seekTo(0); player.play(); } catch {}
+    const t1 = setTimeout(() => { try { player.play(); } catch {} }, 400);
+    return () => clearTimeout(t1);
+  }, [currentRound, inBreak, player]);
+
+  useEffect(() => {
+    if (finished) { try { player.pause(); } catch {} }
+  }, [finished]);
 
   const currentCueIdx = useMemo(() => (cues.length ? findCueIndex(cues, t) : -1), [cues, t]);
 
@@ -261,13 +290,15 @@ function PlayerInner() {
   const artwork = track.artwork ?? DEFAULT_ARTWORK;
   const description = track.description ?? (track.rounds ? QM_DESCRIPTION : DEFAULT_DESCRIPTION);
   const rounds = track.rounds;
-  const breakProgress = inBreak && breakSeconds > 0 ? (breakSeconds - breakRemaining) / breakSeconds : 0;
 
   return (
     <View style={styles.root}>
       <View style={styles.header}>
         {!finished ? (
-          <Pressable onPress={close} hitSlop={12}>
+          <Pressable
+            onPress={() => { try { player.pause(); } catch {} close(); }}
+            hitSlop={12}
+          >
             <Text style={styles.close}>Close</Text>
           </Pressable>
         ) : <View style={{ width: 50 }} />}
@@ -285,8 +316,12 @@ function PlayerInner() {
           <View style={styles.roundBar}>
             {hasStarted ? (
               <>
-                <Text style={styles.roundBarText}>
-                  {currentRound === 0 ? 'INTRO' : `ROUND ${currentRound} / ${selectedRounds}`}
+                <Text style={[styles.roundBarText, inBreak && styles.roundBarBreak]}>
+                  {currentRound === 0
+                    ? 'INTRO'
+                    : inBreak
+                      ? `· BREAK · between round ${currentRound} and ${currentRound + 1} ·`
+                      : `ROUND ${currentRound} / ${selectedRounds}`}
                 </Text>
                 <View style={styles.dotsRow}>
                   {Array.from({ length: selectedRounds }, (_, i) => {
@@ -313,7 +348,7 @@ function PlayerInner() {
       {/* Middle content area */}
       <View style={styles.middle}>
         {!hasStarted ? (
-          <>
+          <>{/* preplay content below */}
             <Text style={styles.description}>{description}</Text>
             {rounds ? (
               <View style={styles.paramsCard}>
@@ -353,12 +388,10 @@ function PlayerInner() {
               </View>
             ) : null}
           </>
-        ) : inBreak ? (
-          <Text style={styles.description}>Breathe naturally.{'\n'}Round {currentRound + 1} in a moment.</Text>
         ) : finished ? (
           <Text style={styles.breakLabel}>AUDIO ENDED</Text>
         ) : (
-          <View style={styles.transcriptFrame}>
+          <View style={[styles.transcriptFrame, inBreak && styles.transcriptFrameBreak]}>
             {cues.length > 0 ? (
               <ScrollView
                 ref={scrollRef}
@@ -375,7 +408,7 @@ function PlayerInner() {
             ) : (
               <View style={styles.noTranscript}>
                 <Text style={styles.noTranscriptText}>
-                  {track.transcript ? 'Loading transcript…' : 'No transcript for this audio.'}
+                  {track.transcript ? 'Loading transcript…' : (inBreak ? 'Interlude…' : 'No transcript for this audio.')}
                 </Text>
               </View>
             )}
@@ -385,8 +418,40 @@ function PlayerInner() {
 
       {/* Bottom area — fixed structure so the CircleButton anchors at the same Y across states */}
       <View style={styles.bottomArea}>
+        <View style={styles.circleRow}>
+          {hasStarted && !finished ? (
+            <Pressable onPress={() => player.seekTo(Math.max(0, t - 15))} style={styles.sideBtn}>
+              <Text style={styles.sideBtnText}>-15s</Text>
+            </Pressable>
+          ) : <View style={styles.sideBtnPlaceholder} />}
+
+          {finished ? (
+            <View style={{ width: CIRCLE_SIZE, height: CIRCLE_SIZE }} />
+          ) : !hasStarted ? (
+            <CircleButton
+              size={CIRCLE_SIZE}
+              mode="pre"
+              onPress={() => {
+                const startAtIntro = rounds?.introSource && includeIntro;
+                setHasStarted(true);
+                setCurrentRound(startAtIntro ? 0 : 1);
+                endedHandled.current = false;
+                player.play();
+              }}
+            />
+          ) : (
+            <CircleButton size={CIRCLE_SIZE} mode={playing ? 'playing' : 'paused'} onPress={() => { playing ? player.pause() : player.play(); }} />
+          )}
+
+          {hasStarted && !finished ? (
+            <Pressable onPress={() => player.seekTo(Math.min(duration, t + 15))} style={styles.sideBtn}>
+              <Text style={styles.sideBtnText}>+15s</Text>
+            </Pressable>
+          ) : <View style={styles.sideBtnPlaceholder} />}
+        </View>
+
         <View style={styles.aboveCircle}>
-          {hasStarted && !inBreak && !finished ? (
+          {hasStarted && !finished ? (
             <>
               <View
                 style={styles.progressHit}
@@ -406,40 +471,6 @@ function PlayerInner() {
           ) : null}
         </View>
 
-        <View style={styles.circleRow}>
-          {hasStarted && !inBreak && !finished ? (
-            <Pressable onPress={() => player.seekTo(Math.max(0, t - 15))} style={styles.sideBtn}>
-              <Text style={styles.sideBtnText}>-15s</Text>
-            </Pressable>
-          ) : <View style={styles.sideBtnPlaceholder} />}
-
-          {finished ? (
-            <View style={{ width: 80, height: 80 }} />
-          ) : !hasStarted ? (
-            <CircleButton
-              size={80}
-              mode="pre"
-              onPress={() => {
-                const startAtIntro = rounds?.introSource && includeIntro;
-                setHasStarted(true);
-                setCurrentRound(startAtIntro ? 0 : 1);
-                endedHandled.current = false;
-                player.play();
-              }}
-            />
-          ) : inBreak ? (
-            <CircleButton size={80} mode="break" breakProgress={breakProgress} breakLabel={fmt(breakRemaining)} />
-          ) : (
-            <CircleButton size={80} mode={playing ? 'playing' : 'paused'} onPress={() => { playing ? player.pause() : player.play(); }} />
-          )}
-
-          {hasStarted && !inBreak && !finished ? (
-            <Pressable onPress={() => player.seekTo(Math.min(duration, t + 15))} style={styles.sideBtn}>
-              <Text style={styles.sideBtnText}>+15s</Text>
-            </Pressable>
-          ) : <View style={styles.sideBtnPlaceholder} />}
-        </View>
-
         <View style={styles.belowCircle}>
           {!hasStarted ? (
             <Text style={styles.durationHint}>
@@ -450,14 +481,9 @@ function PlayerInner() {
                   : 'Loading…'}
             </Text>
           ) : inBreak ? (
-            <View style={styles.breakButtons}>
-              <Pressable onPress={() => setBreakRemaining(0)} style={styles.pill}>
-                <Text style={styles.pillText}>Skip break</Text>
-              </Pressable>
-              <Pressable onPress={endBreak} style={styles.pillPrimary}>
-                <Text style={styles.pillPrimaryText}>Next round</Text>
-              </Pressable>
-            </View>
+            <Pressable onPress={endBreak} style={styles.nextRoundBtn}>
+              <Text style={styles.nextRoundText}>Skip to round {currentRound + 1} →</Text>
+            </Pressable>
           ) : finished ? (
             <Pressable onPress={close} style={styles.pillPrimary}>
               <Text style={styles.pillPrimaryText}>Close</Text>
@@ -572,6 +598,15 @@ const styles = StyleSheet.create({
   title: { ...type.h1, color: colors.text, textAlign: 'center', fontSize: 18 },
   roundBar: { alignItems: 'center', gap: 6, minHeight: 24 },
   roundBarText: { ...type.overline, color: colors.accent, fontSize: 10, textAlign: 'center' },
+  roundBarBreak: {
+    color: colors.textMuted,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: radius.pill,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    letterSpacing: 2,
+    overflow: 'hidden',
+  },
 
   preplay: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.lg, gap: spacing.sm + 4 },
   preplayLegacy: { display: 'none' },
@@ -636,13 +671,13 @@ const styles = StyleSheet.create({
   body: { flex: 1, flexDirection: 'column' },
   middle: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg, gap: spacing.sm + 2, minHeight: 0 },
   bottomArea: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, alignItems: 'center' },
-  aboveCircle: { width: '100%', height: 42, justifyContent: 'center' },
+  aboveCircle: { width: '100%', minHeight: 42, justifyContent: 'center', marginTop: spacing.sm },
   circleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
-    height: 96,
+    height: CIRCLE_SIZE + 8,
   },
   sideBtnPlaceholder: { width: 0, height: 0 },
   belowCircle: { minHeight: 40, alignItems: 'center', justifyContent: 'center', marginTop: spacing.xs },
@@ -662,6 +697,11 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderWidth: 1,
     overflow: 'hidden',
+  },
+  transcriptFrameBreak: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   transcriptContent: { paddingHorizontal: spacing.md, paddingVertical: spacing.md },
   cue: { ...type.body, fontSize: 16, lineHeight: 26, marginBottom: spacing.sm },

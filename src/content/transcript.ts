@@ -39,6 +39,8 @@ const splitTrailingPunct = (s: string): [string, string] => {
 const PAIR_FIXES: Record<string, [string, string]> = {
   'all hears': ['All', "Here's"],
   'all here': ['All', 'Here'],
+  "i'm sure": ['Observe', 'how'],
+  'watching your': ['Watch', 'your'],
 };
 
 const TOKEN_FIXES: Record<string, string> = {

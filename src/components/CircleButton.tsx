@@ -16,6 +16,9 @@ type Props = {
 
 export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, size = 112 }: Props) {
   const scale = useSharedValue(1);
+  const haloScale = useSharedValue(1);
+  const haloOpacity = useSharedValue(0);
+
   useEffect(() => {
     if (mode === 'pre') {
       scale.value = withRepeat(
@@ -24,12 +27,30 @@ export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, siz
           withTiming(1, { duration: 2800, easing: Easing.inOut(Easing.sin) }),
         ), -1, false,
       );
+      haloScale.value = withRepeat(
+        withSequence(
+          withTiming(1.12, { duration: 2800, easing: Easing.inOut(Easing.sin) }),
+          withTiming(1, { duration: 2800, easing: Easing.inOut(Easing.sin) }),
+        ), -1, false,
+      );
+      haloOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.55, { duration: 2800, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0.2, { duration: 2800, easing: Easing.inOut(Easing.sin) }),
+        ), -1, false,
+      );
     } else {
       scale.value = withTiming(1, { duration: 300 });
+      haloScale.value = withTiming(1, { duration: 300 });
+      haloOpacity.value = withTiming(0, { duration: 300 });
     }
   }, [mode]);
 
   const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const haloStyle = useAnimatedStyle(() => ({
+    opacity: haloOpacity.value,
+    transform: [{ scale: haloScale.value }],
+  }));
 
   const stroke = 3;
   const r = (size - stroke) / 2;
@@ -43,7 +64,27 @@ export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, siz
   };
 
   const content = (
-    <Animated.View style={[{ width: size, height: size }, pulseStyle]}>
+    <Animated.View style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, pulseStyle]}>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: 'absolute',
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            backgroundColor: colors.accent,
+            // soft blur-like glow via shadow (RN-web translates this to box-shadow)
+            shadowColor: colors.accent,
+            shadowOpacity: 1,
+            shadowRadius: size * 0.35,
+            shadowOffset: { width: 0, height: 0 },
+            // web-only: explicit filter for a softer falloff
+            ...(typeof document !== 'undefined' ? { filter: `blur(${Math.round(size * 0.12)}px)` as any } : null),
+          },
+          haloStyle,
+        ]}
+      />
       <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
         <Circle
           cx={size / 2}

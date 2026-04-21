@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Pressable, View, Text, Image, StyleSheet } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, View, Text, Image, ScrollView, StyleSheet, LayoutChangeEvent } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, Easing, cancelAnimation } from 'react-native-reanimated';
 import type { AudioTrack, Volet } from '../content/catalog';
 import { usePlayerStore } from '../player/store';
@@ -7,7 +7,17 @@ import { useProgress } from '../player/progressStore';
 import { colors, radius, spacing, type } from '../theme';
 import { Collapse } from './Collapse';
 
-export function VoletAccordion({ volet, defaultOpen = false, secondary = false }: { volet: Volet; defaultOpen?: boolean; secondary?: boolean }) {
+export function VoletAccordion({
+  volet,
+  defaultOpen = false,
+  secondary = false,
+  scrollRef,
+}: {
+  volet: Volet;
+  defaultOpen?: boolean;
+  secondary?: boolean;
+  scrollRef?: React.RefObject<ScrollView | null>;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   const openPlayer = usePlayerStore(s => s.open);
   const nextTrackId = useProgress(s => s.nextTrackId());
@@ -15,6 +25,17 @@ export function VoletAccordion({ volet, defaultOpen = false, secondary = false }
   const qmTracks = volet.qmTracks ?? [];
   const hasQm = qmTracks.length > 0;
   const containsNext = !!nextTrackId && [...volet.tracks, ...qmTracks].some(t => t.id === nextTrackId);
+
+  const yPosRef = useRef(0);
+  const onCardLayout = (e: LayoutChangeEvent) => { yPosRef.current = e.nativeEvent.layout.y; };
+  useEffect(() => {
+    if (!open || !scrollRef?.current) return;
+    // Wait for the Collapse animation then scroll the parent so the card sits near the top
+    const id = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: Math.max(0, yPosRef.current - 12), animated: true });
+    }, 280);
+    return () => clearTimeout(id);
+  }, [open]);
 
   const pulse = useSharedValue(0);
   useEffect(() => {
@@ -48,6 +69,7 @@ export function VoletAccordion({ volet, defaultOpen = false, secondary = false }
 
   return (
     <Animated.View
+      onLayout={onCardLayout}
       style={[
         styles.card,
         secondary && styles.cardSecondary,
@@ -193,8 +215,7 @@ const styles = StyleSheet.create({
   },
   cardSecondary: {
     backgroundColor: 'transparent',
-    borderColor: 'rgba(255,255,255,0.07)',
-    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.10)',
   },
   cardActive: { borderWidth: 2 },
   cardLocked: { opacity: 0.6 },

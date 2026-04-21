@@ -4,9 +4,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
   cancelAnimation,
-  Easing,
 } from 'react-native-reanimated';
 
 /**
@@ -35,24 +33,26 @@ export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function
 
     const ATBOUND = 1.5;
     // Smaller factor on wheel since each tick is a big chunk (~100)
-    const WHEEL_FACTOR = 0.25;
+    const WHEEL_FACTOR = 0.22;
     const TOUCH_FACTOR = 0.9;
     let releaseTimer: any = 0;
 
     const springHome = () => {
+      cancelAnimation(raw);
       raw.value = withSpring(0, {
-        damping: 20,
-        stiffness: 220,
+        damping: 18,
+        stiffness: 260,
+        mass: 0.6,
         overshootClamping: false,
         restDisplacementThreshold: 0.3,
+        restSpeedThreshold: 0.5,
       });
     };
 
     const pull = (delta: number) => {
-      // Smooth each chunk with a tiny timing so mouse-wheel jumps don't snap
+      // Apply instantly: each wheel tick is ~60fps frame; smoothing adds lag.
       cancelAnimation(raw);
-      const target = raw.value + delta;
-      raw.value = withTiming(target, { duration: 70, easing: Easing.out(Easing.quad) });
+      raw.value = raw.value + delta;
     };
 
     const onWheel = (e: WheelEvent) => {
@@ -64,7 +64,8 @@ export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function
         e.preventDefault();
         pull(e.deltaY * WHEEL_FACTOR);
         clearTimeout(releaseTimer);
-        releaseTimer = setTimeout(springHome, 120);
+        // Release fast: most wheel bursts settle within ~40ms between ticks.
+        releaseTimer = setTimeout(springHome, 50);
       } else if (Math.abs(raw.value) > 0.1) {
         // Left the edge — release instantly
         clearTimeout(releaseTimer);

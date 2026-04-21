@@ -1,4 +1,5 @@
-import { ScrollView as RNScrollView, View, Text, Pressable, Image, StyleSheet } from 'react-native';
+import { useState, useMemo } from 'react';
+import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
@@ -13,16 +14,25 @@ export default function StartScreen() {
   const router = useRouter();
   const openPlayer = usePlayerStore(s => s.open);
   const listened = useProgress(s => s.listened);
+  const [manualIdx, setManualIdx] = useState<number | null>(null);
 
-  // First step whose track isn't listened yet (or the first non-track step = Explore)
-  const activeIdx = (() => {
+  const activeIdx = useMemo(() => {
     for (let i = 0; i < startJourneySteps.length; i++) {
       const s = startJourneySteps[i];
       if (!s.track) return i;
       if (!listened[s.track.id]) return i;
     }
     return startJourneySteps.length - 1;
-  })();
+  }, [listened]);
+
+  const openIdx = manualIdx ?? activeIdx;
+
+  const toggle = (i: number) => {
+    setManualIdx(prev => {
+      const current = prev ?? activeIdx;
+      return current === i ? -1 : i;
+    });
+  };
 
   return (
     <Background>
@@ -39,43 +49,65 @@ export default function StartScreen() {
 
         <View style={styles.steps}>
           {startJourneySteps.map((step, i) => {
-            const isActive = i === activeIdx;
+            const isOpen = i === openIdx;
             const isDone = !!(step.track && listened[step.track.id]);
             const isFirst = i === 0;
+            const isActive = i === activeIdx && !isDone;
             return (
-              <View key={step.id} style={[styles.step, isActive && isFirst && styles.stepFirst, isDone && styles.stepDone]}>
+              <Pressable
+                key={step.id}
+                onPress={() => toggle(i)}
+                style={({ pressed }) => [
+                  styles.step,
+                  isFirst && isActive && styles.stepFirst,
+                  isDone && styles.stepDone,
+                  pressed && styles.stepPressed,
+                ]}
+              >
                 <View style={styles.stepHeader}>
-                  {isFirst && isActive ? (
-                    <>
-                      <Text style={styles.firstEyebrow}>BEGIN YOUR PRACTICE</Text>
-                      <Text style={styles.firstTitle}>60 seconds is{'\n'}all it takes.</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={styles.stepNumber}>{String(i + 1).padStart(2, '0')}</Text>
-                      <Text style={styles.stepLabel}>{step.label}</Text>
-                    </>
-                  )}
-                  {isDone ? <Text style={styles.doneBadge}>✓ Completed</Text> : null}
+                  <View style={{ flex: 1 }}>
+                    {isFirst && isActive ? (
+                      <>
+                        <Text style={styles.firstEyebrow}>BEGIN YOUR PRACTICE</Text>
+                        <Text style={styles.firstTitle}>60 seconds is all it takes.</Text>
+                      </>
+                    ) : (
+                      <View style={styles.rowHeader}>
+                        <Text style={styles.stepNumber}>{String(i + 1).padStart(2, '0')}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.stepLabel}>{step.label}</Text>
+                          {!isOpen ? (
+                            <Text style={styles.stepHeaderDesc} numberOfLines={1}>{step.description}</Text>
+                          ) : null}
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                  {isDone ? <Text style={styles.doneBadge}>✓</Text> : <Text style={styles.chevron}>{isOpen ? '−' : '+'}</Text>}
                 </View>
 
-                <Collapse open={isActive}>
+                <Collapse open={isOpen}>
                   <View style={styles.stepBody}>
-                    <Text style={styles.stepDesc}>{step.description}</Text>
+                    {!(isFirst && isActive) ? (
+                      <Text style={styles.stepDesc}>{step.description}</Text>
+                    ) : (
+                      <Text style={styles.stepDesc}>One breath to arrive. One minute to settle.</Text>
+                    )}
                     <Pressable
                       style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
-                      onPress={() => {
+                      onPress={(e) => {
+                        e.stopPropagation?.();
                         if (step.track) openPlayer(step.track);
                         else if (step.ctaRoute) router.push(step.ctaRoute);
                       }}
                     >
                       <Text style={styles.ctaText}>
-                        {step.track ? 'Begin' : 'Explore the program'}
+                        {step.track ? (isDone ? 'Listen again' : 'Begin') : 'Explore the program'}
                       </Text>
                     </Pressable>
                   </View>
                 </Collapse>
-              </View>
+              </Pressable>
             );
           })}
         </View>
@@ -98,28 +130,33 @@ const styles = StyleSheet.create({
 
   steps: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: spacing.sm + 2 },
   step: {
-    alignItems: 'center',
-    padding: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,
   },
   stepFirst: {
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md + 2,
     borderColor: colors.accent,
     backgroundColor: 'rgba(158,54,148,0.08)',
   },
-  stepDone: { opacity: 0.55 },
-  stepHeader: { alignItems: 'center' },
-  stepNumber: { ...type.overline, color: colors.accent, marginBottom: spacing.xs },
-  stepLabel: { ...type.h2, color: colors.text, fontSize: 18, textAlign: 'center' },
-  firstEyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.sm, fontSize: 11 },
-  firstTitle: { ...type.display, color: colors.text, fontSize: 24, textAlign: 'center', lineHeight: 30, marginBottom: spacing.xs },
-  doneBadge: { ...type.overline, color: colors.accent, fontSize: 10, marginTop: 6 },
+  stepPressed: { opacity: 0.92 },
+  stepDone: { opacity: 0.6 },
 
-  stepBody: { alignItems: 'center', paddingTop: spacing.md },
-  stepDesc: { ...type.body, color: colors.textMuted, textAlign: 'center', marginBottom: spacing.md, maxWidth: 300, fontSize: 14 },
+  stepHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  rowHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  stepNumber: { ...type.overline, color: colors.accent, fontSize: 12 },
+  stepLabel: { ...type.h2, color: colors.text, fontSize: 17 },
+  stepHeaderDesc: { ...type.caption, color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  firstEyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.xs, fontSize: 11 },
+  firstTitle: { ...type.display, color: colors.text, fontSize: 22, lineHeight: 28 },
+  doneBadge: { ...type.h2, color: colors.accent, fontSize: 20 },
+  chevron: { ...type.display, color: colors.accent, fontSize: 22 },
+
+  stepBody: { alignItems: 'center', paddingTop: spacing.md, paddingBottom: spacing.xs, gap: spacing.md },
+  stepDesc: { ...type.body, color: colors.textMuted, textAlign: 'center', maxWidth: 300, fontSize: 14 },
   cta: {
     paddingVertical: spacing.sm + 4,
     paddingHorizontal: spacing.xl,

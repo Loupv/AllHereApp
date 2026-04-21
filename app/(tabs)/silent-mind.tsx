@@ -1,4 +1,5 @@
-import { Text, View, Image, StyleSheet } from 'react-native';
+import { useRef } from 'react';
+import { Text, View, Image, ScrollView as RNScrollView, StyleSheet } from 'react-native';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { VoletAccordion } from '../../src/components/VoletAccordion';
@@ -7,9 +8,10 @@ import { silentMindVolets, silentMindProgram } from '../../src/content/catalog';
 import { colors, spacing, type } from '../../src/theme';
 
 export default function SilentMindScreen() {
+  const scrollRef = useRef<RNScrollView>(null);
   return (
     <Background color={colors.bgTab}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <Image source={silentMindProgram.banner} style={styles.banner} resizeMode="cover" />
           <View style={styles.bannerOverlay} />
@@ -22,7 +24,13 @@ export default function SilentMindScreen() {
         <Text style={styles.intro}>{silentMindProgram.intro}</Text>
 
         {silentMindVolets.map((v) => (
-          <VoletAccordion key={v.id} volet={v} defaultOpen={false} secondary={v.id === 'intro'} />
+          <VoletAccordion
+            key={v.id}
+            volet={v}
+            defaultOpen={false}
+            secondary={v.id === 'intro'}
+            scrollRef={scrollRef}
+          />
         ))}
         <AboutFooter />
       </ScrollView>
