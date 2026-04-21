@@ -1,7 +1,7 @@
 import { View, Image, StyleSheet } from 'react-native';
 import { colors, spacing } from '../theme';
 
-const LOGO = require('../../assets/images/logo-header.png');
+const LOGO = require('../../assets/images/allhere-logo.png');
 
 export function BrandHeader({ right }: { right?: React.ReactNode }) {
   return (

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { ScrollView, View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { newsArticles } from '../../src/content/news';
@@ -12,11 +13,15 @@ export default function NewsScreen() {
   const markRead = useNotifications(s => s.markNewsRead);
   useEffect(() => { markRead(); }, []);
   return (
-    <Background>
+    <Background color={colors.bgTab}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>LATEST UPDATES</Text>
-          <Text style={styles.title}>News</Text>
+        <View style={styles.hero}>
+          <Image source={require('../../assets/images/eeg-banner.png')} style={styles.heroImage} resizeMode="cover" />
+          <View style={styles.heroOverlay} />
+          <View style={styles.heroText}>
+            <Text style={styles.eyebrow}>LATEST UPDATES</Text>
+            <Text style={styles.title}>News</Text>
+          </View>
         </View>
         {newsArticles.map((a) => (
           <Pressable
@@ -43,9 +48,12 @@ export default function NewsScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: spacing.md },
-  header: { padding: spacing.lg, paddingBottom: spacing.md, alignItems: 'center' },
+  hero: { height: 180, justifyContent: 'flex-end', overflow: 'hidden', marginBottom: spacing.md },
+  heroImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.55)' },
+  heroText: { padding: spacing.lg, alignItems: 'center' },
   eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.sm },
-  title: { ...type.display, color: colors.text, fontSize: 32 },
+  title: { ...type.display, color: colors.text, fontSize: 32, textAlign: 'center' },
   card: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,

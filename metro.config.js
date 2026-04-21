@@ -2,6 +2,6 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-config.resolver.assetExts = [...config.resolver.assetExts, 'txt', 'srt', 'wjson'];
+config.resolver.assetExts = [...config.resolver.assetExts, 'wjson'];
 
 module.exports = config;

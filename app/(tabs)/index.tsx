@@ -1,5 +1,6 @@
-import { ScrollView, View, Text, Pressable, Image, StyleSheet } from 'react-native';
+import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { startJourneySteps } from '../../src/content/catalog';

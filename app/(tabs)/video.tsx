@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { ScrollView, View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { videoItems } from '../../src/content/catalog';
@@ -12,11 +13,15 @@ export default function VideoScreen() {
   const markRead = useNotifications(s => s.markVideoRead);
   useEffect(() => { markRead(); }, []);
   return (
-    <Background>
+    <Background color={colors.bgTab}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>Video</Text>
-          <Text style={styles.title}>Watch & learn</Text>
+        <View style={styles.hero}>
+          <Image source={require('../../assets/images/xr-platform.png')} style={styles.heroImage} resizeMode="cover" />
+          <View style={styles.heroOverlay} />
+          <View style={styles.heroText}>
+            <Text style={styles.eyebrow}>VIDEO</Text>
+            <Text style={styles.title}>Watch & learn</Text>
+          </View>
         </View>
         {videoItems.map(v => (
           <Pressable
@@ -48,7 +53,10 @@ export default function VideoScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: spacing.xxl },
-  header: { padding: spacing.lg, paddingBottom: spacing.md, alignItems: 'center' },
+  hero: { height: 180, justifyContent: 'flex-end', overflow: 'hidden', marginBottom: spacing.md },
+  heroImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.55)' },
+  heroText: { padding: spacing.lg, alignItems: 'center' },
   eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.sm },
   title: { ...type.display, color: colors.text, fontSize: 32, textAlign: 'center' },
   card: {

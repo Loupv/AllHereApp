@@ -1,4 +1,5 @@
-import { ScrollView, Text, View, Image, StyleSheet } from 'react-native';
+import { Text, View, Image, StyleSheet } from 'react-native';
+import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { VoletAccordion } from '../../src/components/VoletAccordion';
 import { AboutFooter } from '../../src/components/AboutFooter';
@@ -7,7 +8,7 @@ import { colors, spacing, type } from '../../src/theme';
 
 export default function SilentMindScreen() {
   return (
-    <Background>
+    <Background color={colors.bgTab}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <Image source={silentMindProgram.banner} style={styles.banner} resizeMode="cover" />

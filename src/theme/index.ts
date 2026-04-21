@@ -2,6 +2,7 @@ export const colors = {
   bg: '#00102E',
   bgSoft: '#06183B',
   bgDeep: '#000823',
+  bgTab: '#00162A',
   surface: 'rgba(255,255,255,0.05)',
   surfaceElevated: 'rgba(255,255,255,0.09)',
   border: 'rgba(255,255,255,0.12)',

@@ -3,7 +3,7 @@ import { Text, View, Image, StyleSheet } from 'react-native';
 import { colors, type } from '../../src/theme';
 import { useNotifications } from '../../src/player/notificationStore';
 
-const LOGO = require('../../assets/images/logo-header.png');
+const LOGO = require('../../assets/images/allhere-logo.png');
 
 function TabIcon({ label, focused, badge }: { label: string; focused: boolean; badge?: number }) {
   return (
@@ -15,6 +15,20 @@ function TabIcon({ label, focused, badge }: { label: string; focused: boolean; b
         </View>
       ) : null}
     </View>
+  );
+}
+
+function TwoLineLabel({ lines, focused }: { lines: [string, string]; focused: boolean }) {
+  return (
+    <Text
+      numberOfLines={2}
+      style={[
+        styles.twoLineLabel,
+        { color: focused ? colors.accent : colors.textDim },
+      ]}
+    >
+      {lines[0]}{'\n'}{lines[1]}
+    </Text>
   );
 }
 
@@ -31,9 +45,9 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: colors.bg,
           borderTopColor: colors.border,
-          height: 72,
+          height: 80,
           paddingTop: 6,
-          paddingBottom: 12,
+          paddingBottom: 10,
         },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textDim,
@@ -41,11 +55,43 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Start', tabBarIcon: ({ focused }) => <TabIcon label="◐" focused={focused} /> }} />
-      <Tabs.Screen name="silent-mind" options={{ title: 'Silent Mind', tabBarIcon: ({ focused }) => <TabIcon label="◉" focused={focused} /> }} />
-      <Tabs.Screen name="news" options={{ title: 'News', tabBarIcon: ({ focused }) => <TabIcon label="◇" focused={focused} badge={newsUnread} /> }} />
-      <Tabs.Screen name="video" options={{ title: 'Video', tabBarIcon: ({ focused }) => <TabIcon label="▷" focused={focused} badge={videoUnread} /> }} />
-      <Tabs.Screen name="silent-flute" options={{ title: 'Silent Flute', tabBarIcon: ({ focused }) => <TabIcon label="♪" focused={focused} /> }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Start',
+          tabBarIcon: ({ focused }) => <TabIcon label="◐" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="silent-mind"
+        options={{
+          title: 'Silent Mind',
+          tabBarIcon: ({ focused }) => <TabIcon label="◉" focused={focused} />,
+          tabBarLabel: ({ focused }) => <TwoLineLabel lines={['Silent', 'Mind']} focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="news"
+        options={{
+          title: 'News',
+          tabBarIcon: ({ focused }) => <TabIcon label="◇" focused={focused} badge={newsUnread} />,
+        }}
+      />
+      <Tabs.Screen
+        name="video"
+        options={{
+          title: 'Video',
+          tabBarIcon: ({ focused }) => <TabIcon label="▷" focused={focused} badge={videoUnread} />,
+        }}
+      />
+      <Tabs.Screen
+        name="silent-flute"
+        options={{
+          title: 'Silent Flute',
+          tabBarIcon: ({ focused }) => <TabIcon label="♪" focused={focused} />,
+          tabBarLabel: ({ focused }) => <TwoLineLabel lines={['Silent', 'Flute']} focused={focused} />,
+        }}
+      />
     </Tabs>
   );
 }
@@ -54,6 +100,12 @@ const styles = StyleSheet.create({
   iconWrap: { width: 32, height: 28, alignItems: 'center', justifyContent: 'center' },
   iconGlyph: { fontSize: 18 },
   headerLogo: { width: 100, height: 32 },
+  twoLineLabel: {
+    ...type.overline,
+    fontSize: 10,
+    textAlign: 'center',
+    lineHeight: 12,
+  },
   badge: {
     position: 'absolute',
     top: -4,

@@ -237,12 +237,20 @@ export const silentMindVolets: Volet[] = [
   },
 ];
 
+const oneMinute: AudioTrack = {
+  id: 'home-1min',
+  title: 'One minute meditation',
+  source: require('../../assets/audio/Home/One minute meditation.mp3'),
+  transcript: require('../../assets/audio/Home/Words/One minute meditation.wjson'),
+  description: 'One minute to arrive. A single breath, a moment of attention — your first taste of the practice.',
+};
+
 export const startJourneySteps = [
   {
     id: 'step-1min',
     label: '1 minute',
     description: 'A first taste — just one minute to arrive.',
-    track: silentMindVolets[0].tracks[0],
+    track: oneMinute,
   },
   {
     id: 'step-3min',

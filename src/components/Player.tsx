@@ -1,10 +1,11 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Modal, Image, PanResponder } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Image, PanResponder } from 'react-native';
+import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { usePlayerStore } from '../player/store';
 import { useProgress } from '../player/progressStore';
 import { loadTranscript } from '../content/loadTranscript';
-import { findCueIndex, TranscriptCue } from '../content/srt';
+import { findCueIndex, TranscriptCue } from '../content/transcript';
 import { colors, radius, spacing, type } from '../theme';
 import { CircleButton } from './CircleButton';
 
@@ -23,12 +24,16 @@ const BREAK_OPTIONS = [15, 30, 45, 60, 90];
 const breakLabel = (s: number) => s < 60 ? `${s}s` : s === 60 ? '1 min' : `1 min ${s - 60}`;
 
 export function Player() {
-  const { track, isOpen, close } = usePlayerStore();
-  if (!track) return null;
+  const { track, isOpen } = usePlayerStore();
+  if (!track || !isOpen) return null;
   return (
-    <Modal visible={isOpen} animationType="slide" transparent={false} onRequestClose={close}>
+    <Animated.View
+      entering={SlideInDown.duration(280)}
+      exiting={SlideOutDown.duration(220)}
+      style={styles.overlay}
+    >
       <PlayerInner />
-    </Modal>
+    </Animated.View>
   );
 }
 
@@ -241,9 +246,11 @@ function PlayerInner() {
   return (
     <View style={styles.root}>
       <View style={styles.header}>
-        <Pressable onPress={close} hitSlop={12}>
-          <Text style={styles.close}>Close</Text>
-        </Pressable>
+        {!finished ? (
+          <Pressable onPress={close} hitSlop={12}>
+            <Text style={styles.close}>Close</Text>
+          </Pressable>
+        ) : <View style={{ width: 50 }} />}
         <View style={{ width: 50 }} />
       </View>
 
@@ -358,10 +365,7 @@ function PlayerInner() {
         </View>
       ) : finished ? (
         <View style={styles.preplay}>
-          <Text style={styles.breakLabel}>WELL DONE</Text>
-          <Text style={styles.description}>
-            You completed {selectedRounds} round{selectedRounds > 1 ? 's' : ''}. Take a moment to rest.
-          </Text>
+          <Text style={styles.breakLabel}>AUDIO ENDED</Text>
           <Pressable onPress={close} style={styles.pillPrimary}>
             <Text style={styles.pillPrimaryText}>Close</Text>
           </Pressable>
@@ -517,6 +521,7 @@ function CueLine({ cue, time, onLayout }: { cue: TranscriptCue; time: number; on
 }
 
 const styles = StyleSheet.create({
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bg, zIndex: 80 },
   root: { flex: 1, backgroundColor: colors.bg, paddingTop: 56 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
   close: { ...type.caption, color: colors.text },

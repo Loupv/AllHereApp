@@ -1,10 +1,10 @@
 import { View, StyleSheet } from 'react-native';
 import { colors } from '../theme';
 
-export function Background({ children }: { children: React.ReactNode }) {
-  return <View style={styles.root}>{children}</View>;
+export function Background({ children, color }: { children: React.ReactNode; color?: string }) {
+  return <View style={[styles.root, { backgroundColor: color ?? colors.bg }]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1 },
 });

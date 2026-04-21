@@ -73,5 +73,6 @@ const styles = StyleSheet.create({
     borderRadius: 38,
     overflow: 'hidden',
     backgroundColor: '#00102E',
+    paddingTop: 32,
   },
 });

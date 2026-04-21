@@ -11,7 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { colors, type } from '../theme';
 
-const LOGO = require('../../assets/images/logo-header.png');
+const LOGO = require('../../assets/images/allhere-logo.png');
 
 export function IntroSplash({ onDone }: { onDone: () => void }) {
   const opacity = useSharedValue(0);

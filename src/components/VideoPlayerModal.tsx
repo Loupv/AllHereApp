@@ -1,16 +1,21 @@
 import { useEffect } from 'react';
-import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useVideoStore } from '../player/videoStore';
 import { colors, radius, spacing, type } from '../theme';
 
 export function VideoPlayerModal() {
-  const { video, isOpen, close } = useVideoStore();
-  if (!video) return null;
+  const { video, isOpen } = useVideoStore();
+  if (!video || !isOpen) return null;
   return (
-    <Modal visible={isOpen} animationType="slide" onRequestClose={close}>
+    <Animated.View
+      entering={SlideInDown.duration(280)}
+      exiting={SlideOutDown.duration(220)}
+      style={styles.overlay}
+    >
       <VideoInner />
-    </Modal>
+    </Animated.View>
   );
 }
 
@@ -50,6 +55,7 @@ function VideoInner() {
 }
 
 const styles = StyleSheet.create({
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bg, zIndex: 80 },
   root: { flex: 1, backgroundColor: colors.bg, paddingTop: 56 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
   close: { ...type.caption, color: colors.text },

@@ -1,5 +1,5 @@
 import { Asset } from 'expo-asset';
-import { parseSRT, parseWhisperJson, TranscriptCue } from './srt';
+import { parseWhisperJson, TranscriptCue } from './transcript';
 
 const cache = new Map<number, TranscriptCue[]>();
 
@@ -11,8 +11,7 @@ export const loadTranscript = async (module: number): Promise<TranscriptCue[]> =
   const uri = asset.localUri ?? asset.uri;
   const res = await fetch(uri);
   const raw = await res.text();
-  const isJson = raw.trimStart().startsWith('{');
-  const cues = isJson ? parseWhisperJson(raw) : parseSRT(raw);
+  const cues = parseWhisperJson(raw);
   cache.set(module, cues);
   return cues;
 };
