@@ -407,7 +407,24 @@ function PlayerInner() {
       <View style={styles.middle}>
         {!hasStarted ? (
           <>{/* preplay content below */}
-            <Text style={styles.description}>{description}</Text>
+            {Array.isArray(description) ? (
+              <View style={styles.descriptionBlock}>
+                {description.map((line, i) => (
+                  <Text
+                    key={i}
+                    style={[
+                      styles.description,
+                      line.style === 'bold' && styles.descriptionBold,
+                      line.style === 'italic' && styles.descriptionItalic,
+                    ]}
+                  >
+                    {line.text}
+                  </Text>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.description}>{description}</Text>
+            )}
             {rounds ? (
               <View style={styles.paramsCard}>
                 <View style={styles.sliderHeader}>
@@ -668,6 +685,9 @@ const styles = StyleSheet.create({
   preplay: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.lg, gap: spacing.sm + 4 },
   preplayLegacy: { display: 'none' },
   description: { ...type.body, color: colors.textMuted, textAlign: 'center', maxWidth: 360, fontSize: 13, lineHeight: 20 },
+  descriptionBlock: { alignItems: 'center', gap: 6, maxWidth: 380 },
+  descriptionBold: { color: colors.text, fontFamily: 'Montserrat_800ExtraBold', fontSize: 15, lineHeight: 22, marginBottom: 6, textAlign: 'center' },
+  descriptionItalic: { fontStyle: 'italic' },
   durationHint: { ...type.overline, color: colors.textDim, fontSize: 10, textAlign: 'center' },
 
   paramsCard: {

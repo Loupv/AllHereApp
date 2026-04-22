@@ -13,6 +13,17 @@ export type RoundsConfig = {
   introTranscript?: number;
 };
 
+/**
+ * Optional rich description: each entry is a paragraph rendered on its own
+ * line with its own weight / style. `\n` inside `text` adds a hard line break
+ * within the same paragraph, which lets a title wrap to two lines while
+ * staying in the same visual block.
+ */
+export type DescriptionLine = {
+  text: string;
+  style?: 'bold' | 'italic' | 'normal';
+};
+
 export type AudioTrack = {
   id: string;
   title: string;
@@ -20,7 +31,7 @@ export type AudioTrack = {
   transcript?: number;
   durationHint?: string;
   artwork?: number;
-  description?: string;
+  description?: string | DescriptionLine[];
   rounds?: RoundsConfig;
   comingSoon?: boolean;
 };
@@ -97,11 +108,13 @@ export const silentMindVolets: Volet[] = [
         source: require('../../assets/audio/Part0/4. QM Format.mp3'),
         transcript: require('../../assets/audio/Part0/Words/4. QM Format.wjson'),
         durationHint: '1:13',
-        description:
-          'An introduction to the Quantified Meditation format.\n' +
-          'High intensity training.\n' +
-          'Multiple rounds, short breaks.\n' +
-          'Train to reproduce the same meditative state on demand.',
+        description: [
+          // Line break before "Quantified" keeps the two-line heading tidy
+          { text: 'An introduction to the\nQuantified Meditation format', style: 'bold' },
+          { text: 'High intensity training', style: 'italic' },
+          { text: 'Multiple rounds, short breaks', style: 'italic' },
+          { text: 'Train to reproduce the same meditative state on demand', style: 'italic' },
+        ],
       },
     ],
   },
