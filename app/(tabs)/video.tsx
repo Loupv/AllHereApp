@@ -1,6 +1,7 @@
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
+import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { SeeMoreLink } from '../../src/components/SeeMoreLink';
@@ -34,6 +35,7 @@ export default function VideoScreen() {
 
   return (
     <Background color={colors.bgTab}>
+      <SwipeTabs current="video">
       <ScrollView
         contentContainerStyle={styles.content}
         onRefresh={refresh}
@@ -110,6 +112,7 @@ export default function VideoScreen() {
         <SeeMoreLink label="Media" url="https://allhere.org/media-hub/" />
         <AboutFooter />
       </ScrollView>
+      </SwipeTabs>
     </Background>
   );
 }

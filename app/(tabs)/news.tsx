@@ -1,6 +1,7 @@
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
+import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { SeeMoreLink } from '../../src/components/SeeMoreLink';
@@ -20,6 +21,7 @@ export default function NewsScreen() {
 
   return (
     <Background color={colors.bgTab}>
+      <SwipeTabs current="news">
       <ScrollView
         contentContainerStyle={styles.content}
         onRefresh={refresh}
@@ -83,6 +85,7 @@ export default function NewsScreen() {
         <SeeMoreLink label="Updates" url="https://allhere.org/updates/" />
         <AboutFooter />
       </ScrollView>
+      </SwipeTabs>
     </Background>
   );
 }

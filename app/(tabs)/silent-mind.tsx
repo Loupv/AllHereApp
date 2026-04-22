@@ -1,5 +1,6 @@
 import { Text, View, Image, StyleSheet } from 'react-native';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
+import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
 import { VoletCard } from '../../src/components/VoletCard';
 import { AboutFooter } from '../../src/components/AboutFooter';
@@ -9,6 +10,7 @@ import { colors, spacing, type } from '../../src/theme';
 export default function SilentMindScreen() {
   return (
     <Background color={colors.bgTab}>
+      <SwipeTabs current="silent-mind">
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <Image source={silentMindProgram.banner} style={styles.banner} resizeMode="cover" />
@@ -33,6 +35,7 @@ export default function SilentMindScreen() {
         ))}
         <AboutFooter />
       </ScrollView>
+      </SwipeTabs>
     </Background>
   );
 }

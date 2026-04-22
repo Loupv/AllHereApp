@@ -2,8 +2,10 @@ import { useState, useMemo } from 'react';
 import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
+import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
+import { BreathingRing } from '../../src/components/BreathingRing';
 import { Collapse } from '../../src/components/Collapse';
 import { startJourneySteps } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
@@ -36,14 +38,21 @@ export default function StartScreen() {
 
   return (
     <Background>
+      <SwipeTabs current="index">
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <Image source={require('../../assets/images/hero/home.jpg')} style={styles.heroImage} resizeMode="cover" />
           <View style={styles.heroOverlay} />
+          {/* Decorative breathing ring — signals the meditative intent without a */}
+          {/* single yoga / lotus cliché. Two concentric circles on a long cycle. */}
+          <View style={styles.heroRings} pointerEvents="none">
+            <BreathingRing size={260} color={colors.text} thickness={1.2} />
+            <BreathingRing size={180} color={colors.accent} thickness={1.6} inMs={5000} outMs={5000} minOpacity={0.2} maxOpacity={0.6} />
+          </View>
           <View style={styles.heroInner}>
-            <Text style={styles.eyebrow}>START YOUR JOURNEY</Text>
+            <Text style={styles.eyebrow}>MEDITATION · STEP BY STEP</Text>
             <Text style={styles.heroTitle}>To the{'\n'}Silent Mind</Text>
-            <Text style={styles.heroSub}>Guided by science, enhanced by technology.</Text>
+            <Text style={styles.heroSub}>From your first sixty seconds to a daily meditation practice —{'\n'}guided by science, measured by technology.</Text>
           </View>
         </View>
 
@@ -67,7 +76,7 @@ export default function StartScreen() {
               >
                 <View style={styles.stepHeader}>
                   <View style={{ flex: 1 }}>
-                    {isFirst ? (
+                    {isFirst && isHighlighted ? (
                       <>
                         <Text style={styles.firstEyebrow}>BEGIN YOUR PRACTICE</Text>
                         <Text style={styles.firstTitle}>60 seconds is all it takes.</Text>
@@ -91,7 +100,7 @@ export default function StartScreen() {
 
                 <Collapse open={isOpen}>
                   <View style={styles.stepBody}>
-                    {!(isFirst) ? (
+                    {!(isFirst && isHighlighted) ? (
                       <Text style={styles.stepDesc}>{step.description}</Text>
                     ) : (
                       <Text style={styles.stepDesc}>One breath to arrive. One minute to settle.</Text>
@@ -133,19 +142,21 @@ export default function StartScreen() {
 
         <AboutFooter />
       </ScrollView>
+      </SwipeTabs>
     </Background>
   );
 }
 
 const styles = StyleSheet.create({
   content: { paddingBottom: spacing.md },
-  hero: { height: 240, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  hero: { height: 300, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   heroImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.65)' },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.72)' },
+  heroRings: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   heroInner: { paddingHorizontal: spacing.lg, alignItems: 'center' },
-  eyebrow: { ...type.overline, color: colors.text, opacity: 0.75, marginBottom: spacing.sm, fontSize: 13, letterSpacing: 2 },
-  heroTitle: { ...type.display, color: colors.text, fontSize: 28, textAlign: 'center', lineHeight: 34, marginBottom: spacing.sm },
-  heroSub: { ...type.body, color: colors.textMuted, fontSize: 13, textAlign: 'center' },
+  eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.sm, fontSize: 11, letterSpacing: 3 },
+  heroTitle: { ...type.display, color: colors.text, fontSize: 30, textAlign: 'center', lineHeight: 36, marginBottom: spacing.md },
+  heroSub: { ...type.body, color: colors.textMuted, fontSize: 12, lineHeight: 19, textAlign: 'center' },
 
   steps: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: spacing.sm + 2 },
   step: {
