@@ -9,7 +9,11 @@ import Animated, {
   Easing,
   runOnJS,
 } from 'react-native-reanimated';
+import Constants from 'expo-constants';
 import { colors, type } from '../theme';
+
+// Minor (0.1 ← 0.1.0); drop the patch digit — app.json stays the source of truth.
+const VERSION = `V${(Constants.expoConfig?.version ?? '0.1.0').split('.').slice(0, 2).join('.')}`;
 
 const LOGO = require('../../assets/images/allhere-logo.png');
 
@@ -51,6 +55,7 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
           WHERE MEDITATION MEETS{'\n'}SCIENCE & TECHNOLOGY
         </Animated.Text>
       </View>
+      <Animated.Text style={[styles.version, subStyle]}>{VERSION}</Animated.Text>
     </Animated.View>
   );
 }
@@ -77,5 +82,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 10,
     lineHeight: 18,
+  },
+  version: {
+    ...type.overline,
+    position: 'absolute',
+    bottom: 24,
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    color: colors.textDim,
+    fontSize: 9,
+    letterSpacing: 2,
   },
 });
