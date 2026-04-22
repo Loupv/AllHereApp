@@ -37,12 +37,10 @@ export default function VoletScreen() {
           {volet.description ? <Text style={styles.description}>{volet.description}</Text> : null}
         </View>
 
-        <Text style={styles.sectionLabel}>Practices</Text>
         {volet.tracks.map((t) => (
           <ContentCard
             key={t.id}
             title={t.title}
-            meta={t.transcript ? 'Transcript' : undefined}
             onPress={() => openPlayer(t, volet.tracks)}
           />
         ))}

@@ -39,23 +39,18 @@ export default function QMVoletScreen() {
           {volet.description ? <Text style={styles.description}>{volet.description}</Text> : null}
         </View>
 
-        {playable.length > 0 ? (
-          <>
-            <Text style={styles.sectionLabel}>Quantified practices</Text>
-            {playable.map((t) => (
-              <ContentCard
-                key={t.id}
-                title={t.title}
-                meta={t.rounds ? `${t.rounds.max} × ${t.rounds.roundLengthMinutes} min` : undefined}
-                onPress={() => openPlayer(t, playable)}
-              />
-            ))}
-          </>
-        ) : null}
+        {playable.map((t) => (
+          <ContentCard
+            key={t.id}
+            title={t.title}
+            meta={t.rounds ? `${t.rounds.max} × ${t.rounds.roundLengthMinutes} min` : undefined}
+            onPress={() => openPlayer(t, playable)}
+          />
+        ))}
 
         {soon.length > 0 ? (
           <>
-            <Text style={[styles.sectionLabel, { marginTop: spacing.lg }]}>Coming soon</Text>
+            <Text style={[styles.sectionLabel, { marginTop: spacing.md }]}>Coming soon</Text>
             {soon.map((t) => (
               <View key={t.id} style={styles.soonCard}>
                 <Text style={styles.soonTitle}>{t.title}</Text>

@@ -68,27 +68,35 @@ export function VoletCard({
     };
   });
 
-  // Opening animation: vertical stretch then collapse, navigating mid-way.
-  const openY = useSharedValue(1);
+  // Opening animation: a calm press-in / fade-out pair. No vertical stretch
+  // (that felt cartoonish). The card shrinks a hair and fades while routing,
+  // then resets instantly — the navigation itself carries the motion.
+  const openScale = useSharedValue(1);
   const openOpacity = useSharedValue(1);
   const navigate = () => router.push(`${basePath}/${volet.id}` as any);
 
   const onPress = () => {
     if (locked) return;
-    openY.value = withSequence(
-      withTiming(1.28, { duration: 360, easing: Easing.out(Easing.cubic) }, (finished) => {
-        if (finished) runOnJS(navigate)();
-      }),
-      withTiming(1, { duration: 420, easing: Easing.in(Easing.cubic) }),
-    );
-    openOpacity.value = withSequence(
-      withTiming(0.75, { duration: 360 }),
-      withTiming(1, { duration: 420 }),
-    );
+    openScale.value = withTiming(0.97, {
+      duration: 180,
+      easing: Easing.out(Easing.quad),
+    });
+    openOpacity.value = withTiming(0, {
+      duration: 260,
+      easing: Easing.in(Easing.cubic),
+    }, (finished) => {
+      if (finished) runOnJS(navigate)();
+    });
   };
 
+  // Reset when the screen re-mounts (user navigates back)
+  useEffect(() => {
+    openScale.value = 1;
+    openOpacity.value = 1;
+  }, []);
+
   const openStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleY: openY.value }],
+    transform: [{ scale: openScale.value }],
     opacity: openOpacity.value,
   }));
 

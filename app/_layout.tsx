@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { kv } from '../src/content/kv';
+import { useNotifications } from '../src/player/notificationStore';
 import { View, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -21,6 +23,15 @@ import { colors } from '../src/theme';
 export default function RootLayout() {
   const [introDone, setIntroDone] = useState(false);
   const user = useAuth(s => s.user);
+
+  // DEV: wipe per-item seen state on every app reload so tab badges and
+  // "Mark all as read" behaviours are testable. Remove this block when
+  // going to production.
+  useEffect(() => {
+    kv.remove('ah_seen_news_v1');
+    kv.remove('ah_seen_media_v1');
+    useNotifications.setState({ seenNews: {}, seenMedia: {} });
+  }, []);
   const [fontsLoaded] = useFonts({
     Montserrat_400Regular,
     Montserrat_500Medium,
