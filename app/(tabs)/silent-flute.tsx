@@ -11,7 +11,7 @@ export default function SilentFluteScreen() {
     <Background color={colors.bgTab}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
-          <Image source={require('../../assets/images/lounge-2.jpg')} style={styles.heroImage} resizeMode="cover" />
+          <Image source={require('../../assets/images/hero/thescience.jpg')} style={styles.heroImage} resizeMode="cover" />
           <View style={styles.heroOverlay} />
           <View style={styles.heroText}>
             <Text style={styles.eyebrow}>SILENT FLUTE</Text>

@@ -20,9 +20,7 @@ const fmt = (s: number) => {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 };
 
-const BREAK_OPTIONS = [15, 30, 45, 60, 90];
 const CIRCLE_SIZE = 108;
-const breakLabel = (s: number) => s < 60 ? `${s}s` : s === 60 ? '1 min' : `1 min ${s - 60}`;
 
 export function Player() {
   const { track, isOpen } = usePlayerStore();
@@ -65,23 +63,42 @@ function useSmoothTime(
 ) {
   const [t, setT] = useState(0);
   const sync = useRef({ t: 0, at: 0 });
+  const lastT = useRef(0);
+  const now0 = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
   // Hard reset when the audio source changes, so stale time from the previous
   // round/inter does not bleed into the new one before its first status tick.
   useEffect(() => {
-    sync.current = { t: 0, at: (typeof performance !== 'undefined' ? performance.now() : Date.now()) };
+    sync.current = { t: 0, at: now0() };
+    lastT.current = 0;
     setT(0);
   }, [resetKey]);
   useEffect(() => {
-    // Ignore status updates until we get a sensible value for the *current* audio.
-    // expo-audio briefly reports the last track's currentTime during source swap.
-    sync.current = { t: statusTime ?? 0, at: (typeof performance !== 'undefined' ? performance.now() : Date.now()) };
+    // expo-audio reports currentTime with some jitter / lag; accept the status
+    // time only when it's forward of (or reasonably close to) the extrapolated
+    // time. If status reports a time significantly lower than where we are, it
+    // probably lags the actual playback — ignoring it prevents t from jumping
+    // backwards, which would otherwise make the karaoke scroll jump up mid-play.
+    const st = statusTime ?? 0;
+    // Allow "real" backwards moves (>1.5s) to pass through (e.g. explicit seek)
+    if (st + 1.5 < lastT.current) {
+      sync.current = { t: st, at: now0() };
+      lastT.current = st;
+    } else if (st >= lastT.current) {
+      sync.current = { t: st, at: now0() };
+      lastT.current = st;
+    }
+    // else: small backward jitter — keep extrapolating from the last known sync
   }, [statusTime]);
   useEffect(() => {
     let raf = 0;
     const tick = () => {
-      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const now = now0();
       const dt = (now - sync.current.at) / 1000;
-      setT(sync.current.t + (playing ? dt : 0));
+      const next = sync.current.t + (playing ? dt : 0);
+      // Never emit a value that goes backwards (unless it's a big jump, handled above)
+      const monotonic = playing ? Math.max(next, lastT.current) : next;
+      lastT.current = monotonic;
+      setT(monotonic);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -97,7 +114,6 @@ function PlayerInner() {
   const markListened = useProgress(s => s.markListened);
 
   const [selectedRounds, setSelectedRounds] = useState(track?.rounds?.max ?? 1);
-  const [breakSeconds, setBreakSeconds] = useState(track?.rounds?.breakSeconds ?? 60);
   const [includeIntro, setIncludeIntro] = useState(!!track?.rounds?.introSource);
   const [currentRound, setCurrentRound] = useState(1);
   const [hasStarted, setHasStarted] = useState(false);
@@ -140,7 +156,6 @@ function PlayerInner() {
     setHasStarted(false);
     setCurrentRound(1);
     setSelectedRounds(track?.rounds?.max ?? 1);
-    setBreakSeconds(track?.rounds?.breakSeconds ?? 60);
     setIncludeIntro(!!track?.rounds?.introSource);
     setInBreak(false);
     setFinished(false);
@@ -202,6 +217,8 @@ function PlayerInner() {
   }, [t, duration, status.playing, hasStarted, inBreak, finished]);
 
   const handleRoundEnd = () => {
+    // Stop the current audio immediately so it doesn't bleed into the transition.
+    try { player.pause(); } catch {}
     // After intro (round 0), go straight to round 1 with no break
     if (currentRound === 0) {
       setCurrentRound(1);
@@ -225,6 +242,7 @@ function PlayerInner() {
   };
 
   const endBreak = () => {
+    try { player.pause(); } catch {}
     setInBreak(false);
     setCurrentRound(r => r + 1);
     endedHandled.current = false;
@@ -239,7 +257,7 @@ function PlayerInner() {
     try { player.seekTo(0); player.play(); } catch {}
     const t1 = setTimeout(() => { try { player.play(); } catch {} }, 400);
     return () => clearTimeout(t1);
-  }, [currentRound, inBreak, player]);
+  }, [currentRound, inBreak, player, hasStarted]);
 
   useEffect(() => {
     if (finished) { try { player.pause(); } catch {} }
@@ -401,24 +419,6 @@ function PlayerInner() {
                   <Text style={styles.sliderValue}>{selectedRounds}<Text style={styles.sliderMax}>/{rounds.max}</Text></Text>
                 </View>
                 <RoundsSlider max={rounds.max} value={selectedRounds} onChange={setSelectedRounds} />
-                <View style={styles.breakPickerHeader}>
-                  <Text style={styles.sliderLabel}>BREAK</Text>
-                </View>
-                <View style={styles.breakRow}>
-                  {BREAK_OPTIONS.map(opt => {
-                    const selected = opt === breakSeconds;
-                    return (
-                      <Pressable key={opt} onPress={() => setBreakSeconds(opt)} style={styles.breakOption}>
-                        <View style={[styles.radio, selected && styles.radioSelected]}>
-                          {selected ? <View style={styles.radioInner} /> : null}
-                        </View>
-                        <Text style={[styles.breakOptionText, selected && styles.breakOptionTextSelected]}>
-                          {breakLabel(opt)}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
               </View>
             ) : null}
           </>
@@ -475,7 +475,9 @@ function PlayerInner() {
                 setHasStarted(true);
                 setCurrentRound(startAtIntro ? 0 : 1);
                 endedHandled.current = false;
-                player.play();
+                // Do NOT call player.play() here — the current `player` may still
+                // be loaded with the previous round's source. The source-change
+                // useEffect below owns playback start once the new source is live.
               }}
             />
           ) : (
@@ -514,7 +516,7 @@ function PlayerInner() {
           {!hasStarted ? (
             <Text style={styles.durationHint}>
               {rounds
-                ? `${selectedRounds} × ${rounds.roundLengthMinutes} min · break ${breakLabel(breakSeconds)}`
+                ? `${selectedRounds} × ${rounds.roundLengthMinutes} min · break 1 min`
                 : duration > 0
                   ? `${fmt(duration)} — start when you are ready`
                   : 'Loading…'}

@@ -16,7 +16,7 @@ export default function VideoScreen() {
     <Background color={colors.bgTab}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
-          <Image source={require('../../assets/images/xr-platform.png')} style={styles.heroImage} resizeMode="cover" />
+          <Image source={require('../../assets/images/hero/thepractice.jpg')} style={styles.heroImage} resizeMode="cover" />
           <View style={styles.heroOverlay} />
           <View style={styles.heroText}>
             <Text style={styles.eyebrow}>VIDEO</Text>

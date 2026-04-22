@@ -43,7 +43,7 @@ export const silentMindProgram = {
   title: 'The Three-Part Journey',
   intro:
     'Our program is divided into three parts of incremental learning. Designed for those looking for their first meditative experience as well as seasoned practitioners exploring new techniques.',
-  banner: require('../../assets/images/banner-image-3.png'),
+  banner: require('../../assets/images/hero/banner.jpg'),
 };
 
 export const silentMindVolets: Volet[] = [
@@ -87,7 +87,7 @@ export const silentMindVolets: Volet[] = [
     tagline: 'The Earth',
     description:
       'Guide beginners through total relaxation and body awareness. Learn to quiet mental noise and develop basic concentration in a safe, distraction-free space.',
-    image: require('../../assets/images/circle-1.png'),
+    image: require('../../assets/images/hero/earth.jpg'),
     tracks: [
       {
         id: 'p1-1', title: 'Turning Inward',
@@ -96,7 +96,7 @@ export const silentMindVolets: Volet[] = [
         description: 'An introductory eyes-open practice. Find a suitable, comfortable location away from disturbance, then turn the attention of the mind gently inward.',
       },
       {
-        id: 'p1-2', title: 'Self-Observation and Breath Following',
+        id: 'p1-2', title: 'Breath and Self-Observation',
         source: require('../../assets/audio/Part1/2 - Self-Observation and Breath Following.mp3'),
         transcript: require('../../assets/audio/Part1/Words/2 - Self-Observation and Breath Following.wjson'),
         description: 'Turn the attention of the mind towards the breathing body — moving from thoughts to the breath, then to observing the breath itself.',
@@ -194,7 +194,7 @@ export const silentMindVolets: Volet[] = [
     tagline: 'The Sky',
     description:
       'Deepen practice with breath observation and gravity center focus. Develop sustained attention and mental stability through real-time visual feedback.',
-    image: require('../../assets/images/circle-2.png'),
+    image: require('../../assets/images/hero/sky.jpg'),
     tracks: [
       {
         id: 'p2-1', title: 'Follow the Air',
@@ -217,33 +217,13 @@ export const silentMindVolets: Volet[] = [
     ],
     qmTracks: [
       {
-        id: 'qm2-1', title: 'Cosmic Sky',
-        transcript: require('../../assets/audio/QMPart2/Words/QM3_5rounds_ErkinGuidance_Cosmic Sky.wjson'),
-        description: 'A three-minute guided meditation training by All Here. Five rounds of three minutes each, with one-minute pauses between rounds.',
-        rounds: {
-          max: 5, roundLengthMinutes: 3, breakSeconds: 60,
-          roundSources: [
-            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round01.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round02.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round03.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round04.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round05.mp3'),
-          ],
-          roundTranscripts: [
-            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round01.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round02.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round03.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round04.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_5rounds_ErkinGuidance_Cosmic Sky/round05.wjson'),
-          ],
-        },
-      },
-      {
-        id: 'qm2-2', title: 'Cosmic Sky (extended)',
+        id: 'qm2-2', title: 'Cosmic Sky',
         transcript: require('../../assets/audio/QMPart2/Words/QM3_6rounds_ErkinGuidance_Cosmic Sky.wjson'),
-        description: 'The extended Cosmic Sky training — six rounds of three minutes each, with one-minute pauses to consolidate presence and stability.',
+        description: 'Six rounds of three minutes each, with one-minute pauses to consolidate presence and stability.',
         rounds: {
           max: 6, roundLengthMinutes: 3, breakSeconds: 60,
+          introSource: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/intro.mp3'),
+          introTranscript: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/intro.wjson'),
           roundSources: [
             require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round01.mp3'),
             require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round02.mp3'),
@@ -260,6 +240,20 @@ export const silentMindVolets: Volet[] = [
             require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round05.wjson'),
             require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round06.wjson'),
           ],
+          roundInters: [
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round01_inter.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round02_inter.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round03_inter.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round04_inter.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round05_inter.mp3'),
+          ],
+          roundInterTranscripts: [
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round01_inter.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round02_inter.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round03_inter.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round04_inter.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/round05_inter.wjson'),
+          ],
         },
       },
       {
@@ -268,6 +262,8 @@ export const silentMindVolets: Volet[] = [
         description: "QM3 training by All Here — designed to train the ability to quickly mobilize presence. Six rounds of three minutes each with one-minute breaks in between.",
         rounds: {
           max: 6, roundLengthMinutes: 3, breakSeconds: 60,
+          introSource: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/intro.mp3'),
+          introTranscript: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/intro.wjson'),
           roundSources: [
             require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round01.mp3'),
             require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round02.mp3'),
@@ -284,6 +280,20 @@ export const silentMindVolets: Volet[] = [
             require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round05.wjson'),
             require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round06.wjson'),
           ],
+          roundInters: [
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round01_inter.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round02_inter.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round03_inter.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round04_inter.mp3'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round05_inter.mp3'),
+          ],
+          roundInterTranscripts: [
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round01_inter.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round02_inter.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round03_inter.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round04_inter.wjson'),
+            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/round05_inter.wjson'),
+          ],
         },
       },
     ],
@@ -295,7 +305,7 @@ export const silentMindVolets: Volet[] = [
     tagline: 'The Space',
     description:
       'Cultivate deep contemplative states and autonomous practice. Access profound silence and inner peace with minimal guidance and subtle tracking.',
-    image: require('../../assets/images/circle-3.png'),
+    image: require('../../assets/images/hero/space.jpg'),
     tracks: [
       {
         id: 'p3-1', title: 'Emptiness',
@@ -366,7 +376,7 @@ export const videoItems: VideoItem[] = [
     subtitle: 'Placeholder — replace with final cut',
     duration: '9:56',
     source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    poster: require('../../assets/images/banner-image-3.png'),
+    poster: require('../../assets/images/hero/thepractice.jpg'),
   },
   {
     id: 'v2',

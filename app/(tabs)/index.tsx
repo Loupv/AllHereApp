@@ -49,7 +49,7 @@ export default function StartScreen() {
     <Background>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
-          <Image source={require('../../assets/images/lounge-1.jpg')} style={styles.heroImage} resizeMode="cover" />
+          <Image source={require('../../assets/images/hero/home.jpg')} style={styles.heroImage} resizeMode="cover" />
           <View style={styles.heroOverlay} />
           <View style={styles.heroInner}>
             <Text style={styles.eyebrow}>START YOUR JOURNEY</Text>
