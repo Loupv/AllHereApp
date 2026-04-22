@@ -54,7 +54,6 @@ export default function StartScreen() {
             const isFirst = i === 0;
             const isActive = i === activeIdx && !isDone;
             const isHighlighted = isActive;
-            const isQm = step.id === 'step-qm3';
             return (
               <Pressable
                 key={step.id}
@@ -95,7 +94,6 @@ export default function StartScreen() {
                     <Pressable
                       style={({ pressed }) => [
                         styles.cta,
-                        isQm && styles.ctaQm,
                         pressed && styles.ctaPressed,
                       ]}
                       onPress={(e) => {
@@ -179,7 +177,6 @@ const styles = StyleSheet.create({
   },
   ctaPressed: { opacity: 0.8 },
   ctaText: { ...type.button, color: colors.text, fontSize: 12 },
-  ctaQm: { backgroundColor: colors.accentAlt },
   exploreCta: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.lg,

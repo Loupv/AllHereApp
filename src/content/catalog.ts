@@ -69,7 +69,7 @@ export const silentMindVolets: Volet[] = [
     subtitle: 'Welcome and orientation',
     tagline: 'Before we begin',
     description: 'A short welcome and a preparation of the space to settle in before your first practice.',
-    image: require('../../assets/images/hero/home.jpg'),
+    image: require('../../assets/images/hero/intro.jpg'),
     tracks: [
       {
         id: 'intro-1', title: 'Welcome',
@@ -97,7 +97,11 @@ export const silentMindVolets: Volet[] = [
         source: require('../../assets/audio/Part0/4. QM Format.mp3'),
         transcript: require('../../assets/audio/Part0/Words/4. QM Format.wjson'),
         durationHint: '1:13',
-        description: 'An introduction to the Quantified Meditation format — short rounds with brief breaks, a structured way to practice and track progress over time.',
+        description:
+          'An introduction to the Quantified Meditation format.\n' +
+          'High intensity training.\n' +
+          'Multiple rounds, short breaks.\n' +
+          'Train to reproduce the same meditative state on demand.',
       },
     ],
   },
