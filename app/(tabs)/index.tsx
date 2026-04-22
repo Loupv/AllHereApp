@@ -68,33 +68,30 @@ export default function StartScreen() {
               >
                 <View style={styles.stepHeader}>
                   <View style={{ flex: 1 }}>
-                    {isFirst && isHighlighted ? (
-                      <>
-                        <Text style={styles.firstEyebrow}>BEGIN YOUR PRACTICE</Text>
-                        <Text style={styles.firstTitle}>60 seconds is all it takes.</Text>
-                      </>
-                    ) : (
-                      <View style={styles.rowHeader}>
-                        <Text style={styles.stepNumber}>{String(i + 1).padStart(2, '0')}</Text>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.stepLabel}>{step.label}</Text>
-                          {!isOpen ? (
-                            <Text style={styles.stepHeaderDesc} numberOfLines={1}>{step.description}</Text>
-                          ) : null}
-                        </View>
+                    <View style={styles.rowHeader}>
+                      <Text style={styles.stepNumber}>{String(i + 1).padStart(2, '0')}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.stepLabel}>
+                          {isFirst && isHighlighted ? 'Begin your practice' : step.label}
+                        </Text>
+                        {!isOpen ? (
+                          <Text style={styles.stepHeaderDesc} numberOfLines={1}>
+                            {isFirst && isHighlighted ? '60 seconds is all it takes.' : step.description}
+                          </Text>
+                        ) : null}
                       </View>
-                    )}
+                    </View>
                   </View>
-                  {isDone ? <Text style={styles.doneBadge}>✓</Text> : <Text style={styles.chevron}>{isOpen ? '−' : '+'}</Text>}
+                  {isDone
+                    ? <Text style={styles.doneBadge}>✓</Text>
+                    : <Text style={styles.chevron}>{isOpen ? '−' : '›'}</Text>}
                 </View>
 
                 <Collapse open={isOpen}>
                   <View style={styles.stepBody}>
-                    {!(isFirst && isHighlighted) ? (
-                      <Text style={styles.stepDesc}>{step.description}</Text>
-                    ) : (
-                      <Text style={styles.stepDesc}>One breath to arrive. One minute to settle.</Text>
-                    )}
+                    <Text style={styles.stepDesc}>
+                      {isFirst && isHighlighted ? 'One breath to arrive. One minute to settle.' : step.description}
+                    </Text>
                     <Pressable
                       style={({ pressed }) => [
                         styles.cta,
@@ -169,10 +166,8 @@ const styles = StyleSheet.create({
   stepNumber: { ...type.overline, color: colors.accent, fontSize: 12 },
   stepLabel: { ...type.h2, color: colors.text, fontSize: 17 },
   stepHeaderDesc: { ...type.caption, color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  firstEyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.xs, fontSize: 11 },
-  firstTitle: { ...type.display, color: colors.text, fontSize: 22, lineHeight: 28 },
-  doneBadge: { ...type.h2, color: colors.accent, fontSize: 20 },
-  chevron: { ...type.display, color: colors.accent, fontSize: 22 },
+  doneBadge: { ...type.h2, color: colors.accent, fontSize: 18 },
+  chevron: { ...type.h2, color: colors.accent, fontSize: 22, fontWeight: '300' as const, opacity: 0.7 },
 
   stepBody: { alignItems: 'center', paddingTop: spacing.md, paddingBottom: spacing.xs, gap: spacing.md },
   stepDesc: { ...type.body, color: colors.textMuted, textAlign: 'center', maxWidth: 300, fontSize: 14 },

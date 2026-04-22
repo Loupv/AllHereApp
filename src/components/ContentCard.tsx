@@ -1,17 +1,6 @@
 import { Pressable, Text, View, StyleSheet } from 'react-native';
 import { colors, radius, spacing, type } from '../theme';
-
-type MediaKind = 'audio' | 'video' | 'text';
-
-// Headphones / play / read glyphs. Emojis give a soft visual signal without
-// pulling in an icon font; on platforms where the emoji renders in color
-// the accent border + text colour stay intact because only the glyph itself
-// is tinted by the OS.
-const ICON: Record<MediaKind, string> = {
-  audio: '🎧',
-  video: '▶',
-  text: '¶',
-};
+import { KindIcon, type MediaKind } from './KindIcon';
 
 type Props = {
   title: string;
@@ -40,9 +29,7 @@ export function ContentCard({
       </View>
       <View style={styles.trailing}>
         {duration ? <Text style={[styles.duration, { color: accent }]}>{duration}</Text> : null}
-        <View style={[styles.kindChip, { borderColor: accent }]}>
-          <Text style={[styles.kindIcon, { color: accent }]}>{ICON[kind]}</Text>
-        </View>
+        <KindIcon kind={kind} color={accent} size={22} />
       </View>
     </Pressable>
   );
@@ -58,7 +45,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     paddingVertical: spacing.md,
     paddingLeft: spacing.md,
-    paddingRight: spacing.sm + 4,
+    paddingRight: spacing.md,
     marginBottom: spacing.sm + 4,
     gap: spacing.md,
   },
@@ -76,10 +63,4 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
   },
   duration: { ...type.overline, fontSize: 10 },
-  kindChip: {
-    width: 34, height: 34, borderRadius: 17,
-    borderWidth: 1.5,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  kindIcon: { fontSize: 16, lineHeight: 18, marginTop: -1 },
 });
