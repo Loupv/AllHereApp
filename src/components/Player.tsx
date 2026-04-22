@@ -321,6 +321,12 @@ function PlayerInner() {
   if (!track) return null;
   const progress = duration > 0 ? t / duration : 0;
   const playing = status.playing;
+  // The expo-audio status reports duration only once the asset is decoded.
+  // On slower networks / iOS Safari that can take a moment; guard the UI so
+  // the user sees a clear loading state instead of an apparently-broken
+  // controls row.
+  const isLoading = hasStarted && !finished && (!Number.isFinite(duration) || duration <= 0);
+  const canSeek = duration > 0;
   const artwork = track.artwork ?? DEFAULT_ARTWORK;
   const description = track.description ?? (track.rounds ? QM_DESCRIPTION : DEFAULT_DESCRIPTION);
   const rounds = track.rounds;
@@ -458,7 +464,7 @@ function PlayerInner() {
       {/* Bottom area — fixed structure so the CircleButton anchors at the same Y across states */}
       <View style={styles.bottomArea}>
         <View style={styles.circleRow}>
-          {hasStarted && !finished ? (
+          {hasStarted && !finished && canSeek ? (
             <Pressable onPress={() => player.seekTo(Math.max(0, t - 15))} style={styles.sideBtn}>
               <Text style={styles.sideBtnText}>-15s</Text>
             </Pressable>
@@ -466,6 +472,10 @@ function PlayerInner() {
 
           {finished ? (
             <View style={{ width: CIRCLE_SIZE, height: CIRCLE_SIZE }} />
+          ) : isLoading ? (
+            <View style={[styles.loadingCircle, { width: CIRCLE_SIZE, height: CIRCLE_SIZE, borderRadius: CIRCLE_SIZE / 2 }]}>
+              <Text style={styles.loadingText}>Loading…</Text>
+            </View>
           ) : !hasStarted ? (
             <CircleButton
               size={CIRCLE_SIZE}
@@ -484,7 +494,7 @@ function PlayerInner() {
             <CircleButton size={CIRCLE_SIZE} mode={playing ? 'playing' : 'paused'} onPress={() => { playing ? player.pause() : player.play(); }} />
           )}
 
-          {hasStarted && !finished ? (
+          {hasStarted && !finished && canSeek ? (
             <Pressable onPress={() => player.seekTo(Math.min(duration, t + 15))} style={styles.sideBtn}>
               <Text style={styles.sideBtnText}>+15s</Text>
             </Pressable>
@@ -774,4 +784,12 @@ const styles = StyleSheet.create({
 
   nextRoundBtn: { alignSelf: 'center', marginTop: spacing.sm, paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
   nextRoundText: { ...type.caption, color: colors.accent },
+  loadingCircle: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderColor: colors.border,
+    borderWidth: 1,
+    backgroundColor: colors.surface,
+  },
+  loadingText: { ...type.overline, color: colors.textMuted, fontSize: 10 },
 });

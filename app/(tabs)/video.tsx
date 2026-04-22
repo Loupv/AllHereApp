@@ -47,9 +47,11 @@ export default function VideoScreen() {
             <Text style={styles.title}>Watch, listen & read</Text>
           </View>
         </View>
-        {unreadCount > 0 ? (
+        {items.length > 0 ? (
           <View style={styles.toolbar}>
-            <Text style={styles.toolbarHint}>{unreadCount} unread</Text>
+            <Text style={styles.toolbarHint}>
+              {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+            </Text>
             <Pressable
               onPress={() => {
                 const every = Array.from(new Set([
@@ -59,7 +61,12 @@ export default function VideoScreen() {
                 markAllSeen('media', every);
               }}
               hitSlop={8}
-              style={({ pressed }) => [styles.markAll, pressed && { opacity: 0.6 }]}
+              disabled={unreadCount === 0}
+              style={({ pressed }) => [
+                styles.markAll,
+                unreadCount === 0 && styles.markAllDisabled,
+                pressed && { opacity: 0.6 },
+              ]}
             >
               <Text style={styles.markAllText}>Mark all as read</Text>
             </Pressable>
@@ -134,6 +141,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   markAllText: { ...type.overline, color: colors.text, fontSize: 9, letterSpacing: 1 },
+  markAllDisabled: { opacity: 0.4 },
   unreadStrip: {
     position: 'absolute', top: 0, bottom: 0, left: 0, width: 3,
     backgroundColor: colors.accent, zIndex: 2,

@@ -42,8 +42,8 @@ export const silentMindProgram = {
   eyebrow: 'Silent Mind Program',
   title: 'The Three-Part Journey',
   intro:
-    'Our program is divided into three parts of incremental learning. Designed for those looking for their first meditative experience as well as seasoned practitioners exploring new techniques.',
-  banner: require('../../assets/images/hero/banner.jpg'),
+    'Our program is divided into three parts, focused on training meditative attention, leading to stability and Silence of Mind.',
+  banner: require('../../assets/images/hero/space.jpg'),
 };
 
 export const silentMindVolets: Volet[] = [
@@ -86,7 +86,7 @@ export const silentMindVolets: Volet[] = [
     subtitle: 'From Noise to Focal Mind',
     tagline: 'The Earth',
     description:
-      'Guide beginners through total relaxation and body awareness. Learn to quiet mental noise and develop basic concentration in a safe, distraction-free space.',
+      'Enhance attention and self-awareness through mind-body connection and reduction of the mental noise.',
     image: require('../../assets/images/hero/earth.jpg'),
     tracks: [
       {
