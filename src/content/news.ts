@@ -1,11 +1,17 @@
+import type { ImageSrc } from './catalog';
+
 export type NewsArticle = {
   id: string;
   eyebrow: string;
   title: string;
   excerpt: string;
   date: string;
-  image: number;
+  image: ImageSrc;
   body: string[];
+  /** Canonical URL on allhere.org when the article is pulled from the WP REST API */
+  link?: string;
+  /** True when the item originates from the remote API (vs. the bundled static list) */
+  remote?: boolean;
 };
 
 export const newsArticles: NewsArticle[] = [

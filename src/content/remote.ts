@@ -7,15 +7,19 @@
  * gives us everything we need to render a card.
  *
  * Failure mode: if the fetch fails (offline, CORS, 5xx), callers fall back
- * to the static bundled content shipped in `news.ts` / `catalog.ts`, so the
- * app always renders something.
+ * to the last cached payload (via kv), then to the static bundled content,
+ * so the app always renders something.
  */
 
+import { useEffect, useRef, useState, useCallback } from 'react';
 import type { NewsArticle } from './news';
 import type { VideoItem } from './catalog';
+import { kv } from './kv';
+import { useRemoteStore } from './remoteStore';
 
 const BASE = 'https://allhere.org/wp-json/wp/v2';
 const PER_PAGE = 20;
+const CACHE_PREFIX = 'ah_remote_v1_';
 
 // ---------- tiny HTML helpers (WP returns HTML inside strings) ----------
 
@@ -31,14 +35,14 @@ const decodeEntities = (s: string) =>
    .replace(/&nbsp;/g, ' ')
    .replace(/&lt;/g, '<')
    .replace(/&gt;/g, '>')
-   .replace(/&quot;/g, '"');
+   .replace(/&quot;/g, '"')
+   .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)));
 
 const stripHtml = (s: string) =>
   decodeEntities(s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
 
 // Break HTML into rough paragraph strings for the detail view.
 const htmlToParagraphs = (html: string): string[] => {
-  // Grab each <p>…</p>, then fall back to a single block if none were found.
   const ps = Array.from(html.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)).map(m => stripHtml(m[1]));
   const cleaned = ps.filter(Boolean);
   if (cleaned.length) return cleaned;
@@ -54,22 +58,17 @@ const firstDate = (p: any): string =>
 
 // ---------- News / Updates ----------
 
-export type RemoteNewsArticle = NewsArticle & {
-  link?: string;   // original URL on allhere.org (absent on bundled items)
-  remote?: true;
-};
-
-export async function fetchUpdates(): Promise<RemoteNewsArticle[]> {
+export async function fetchUpdates(): Promise<NewsArticle[]> {
   const r = await fetch(`${BASE}/posts?per_page=${PER_PAGE}&_embed=1`);
   if (!r.ok) throw new Error(`posts ${r.status}`);
   const data = await r.json();
-  return data.map((p: any): RemoteNewsArticle => ({
+  return data.map((p: any): NewsArticle => ({
     id: `wp-${p.id}`,
     eyebrow: (p._embedded?.['wp:term']?.[0]?.[0]?.name as string) || 'Update',
     title: stripHtml(p.title?.rendered ?? ''),
     excerpt: stripHtml(p.excerpt?.rendered ?? '').slice(0, 280),
     date: firstDate(p),
-    image: { uri: featuredUrl(p) ?? '' } as any, // local items use require() (number); remote uses {uri}
+    image: { uri: featuredUrl(p) ?? '' },
     body: htmlToParagraphs(p.content?.rendered ?? ''),
     link: p.link,
     remote: true,
@@ -83,29 +82,23 @@ export async function fetchUpdates(): Promise<RemoteNewsArticle[]> {
 // cards that open the corresponding article on the site in a new tab /
 // external browser, instead of playing inline.
 
-export type RemoteVideoItem = Omit<VideoItem, 'source'> & {
-  link: string;
-  source?: any;
-  remote: true;
-};
-
 async function fetchType(type: string): Promise<any[]> {
   const r = await fetch(`${BASE}/${type}?per_page=${PER_PAGE}&_embed=1`);
   if (!r.ok) return [];
   return r.json();
 }
 
-export async function fetchVideos(): Promise<RemoteVideoItem[]> {
+export async function fetchVideos(): Promise<VideoItem[]> {
   const [headlines, podcasts] = await Promise.all([
     fetchType('in-the-headlines').catch(() => []),
     fetchType('podcast').catch(() => []),
   ]);
-  const toItem = (p: any, eyebrow: string): RemoteVideoItem => ({
+  const toItem = (p: any, eyebrow: string): VideoItem => ({
     id: `wp-${p.id}`,
     title: stripHtml(p.title?.rendered ?? ''),
     subtitle: stripHtml(p.excerpt?.rendered ?? '').slice(0, 140) || eyebrow,
     duration: firstDate(p),
-    poster: { uri: featuredUrl(p) ?? '' } as any,
+    poster: { uri: featuredUrl(p) ?? '' },
     link: p.link,
     remote: true,
   });
@@ -113,32 +106,82 @@ export async function fetchVideos(): Promise<RemoteVideoItem[]> {
     ...headlines.map((p: any) => toItem(p, 'Headline')),
     ...podcasts.map((p: any) => toItem(p, 'Podcast')),
   ];
-  // Keep only items with a real featured image so cards don't look empty
-  return items.filter(it => (it.poster as any)?.uri);
+  // Drop items with no featured image — cards would look empty
+  return items.filter(it => typeof it.poster === 'object' && !!it.poster.uri);
 }
 
-// ---------- Hooks: fetch once, keep in-memory cache, fall back to static ----------
+// ---------- Hooks ----------
 
-import { useEffect, useState } from 'react';
+type RemoteSink<T> = (items: T[]) => void;
 
-const memCache: Record<string, any> = {};
+type RemoteConfig<T> = {
+  /** Cache key (suffixed with CACHE_PREFIX) */
+  key: string;
+  fetcher: () => Promise<T[]>;
+  /** Static bundled items used until the first remote payload arrives */
+  fallback: T[];
+  /** Optional side-channel: kept in sync with the resolved list (e.g. Zustand setter) */
+  sink?: RemoteSink<T>;
+};
 
-export function useRemoteList<T>(key: string, fetcher: () => Promise<T[]>, fallback: T[]) {
-  const [items, setItems] = useState<T[]>(memCache[key] ?? fallback);
-  const [loading, setLoading] = useState(!memCache[key]);
-  useEffect(() => {
-    let alive = true;
-    fetcher()
-      .then((list) => {
-        if (!alive) return;
-        if (list && list.length) {
-          memCache[key] = list;
-          setItems(list);
-        }
-      })
-      .catch(() => { /* keep static fallback */ })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
-  }, [key]);
-  return { items, loading };
+/**
+ * Returns a list that starts with cached/static items and swaps to the
+ * freshly-fetched list as soon as it lands. Exposes `refresh()` so UI can
+ * bind a pull-to-refresh, and `refreshing` so it can render a spinner.
+ */
+export function useRemoteList<T>({ key, fetcher, fallback, sink }: RemoteConfig<T>) {
+  const cacheKey = CACHE_PREFIX + key;
+  const cached = useRef(kv.get<T[]>(cacheKey));
+  const initial = (cached.current && cached.current.length) ? cached.current : fallback;
+
+  const [items, setItems] = useState<T[]>(initial);
+  const [loading, setLoading] = useState(!cached.current);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const load = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    try {
+      const list = await fetcher();
+      if (list && list.length) {
+        setItems(list);
+        kv.set(cacheKey, list);
+        sink?.(list);
+      }
+      setError(null);
+    } catch (e: any) {
+      setError(e);
+    } finally {
+      if (isRefresh) setRefreshing(false);
+      setLoading(false);
+    }
+  }, [cacheKey, fetcher, sink]);
+
+  // Push whatever we have (cache or static) into the sink on mount so the
+  // detail route can resolve items even if the tab's list isn't yet visible.
+  useEffect(() => { sink?.(items); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  // First fetch on mount
+  useEffect(() => { load(false); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  const refresh = useCallback(() => load(true), [load]);
+
+  return { items, loading, refreshing, error, refresh };
 }
+
+// Convenience wrappers so each tab is a one-liner.
+export const useNewsFeed = (fallback: NewsArticle[]) =>
+  useRemoteList<NewsArticle>({
+    key: 'news',
+    fetcher: fetchUpdates,
+    fallback,
+    sink: useRemoteStore.getState().setNews,
+  });
+
+export const useVideoFeed = (fallback: VideoItem[]) =>
+  useRemoteList<VideoItem>({
+    key: 'videos',
+    fetcher: fetchVideos,
+    fallback,
+    sink: useRemoteStore.getState().setVideos,
+  });

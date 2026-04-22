@@ -361,13 +361,22 @@ export const startJourneySteps = [
 export type NewsItem = { id: string; title: string; excerpt: string; date: string };
 export const newsItems: NewsItem[] = [];
 
+/**
+ * An image source may come from a bundled asset (require() → number on
+ * native / opaque object on web) or from a remote URL ({ uri }) — both are
+ * valid inputs for <Image source>.
+ */
+export type ImageSrc = number | { uri: string };
+
 export type VideoItem = {
   id: string;
   title: string;
   subtitle?: string;
   duration: string;
-  source: string;
-  poster: number;
+  source?: string;
+  poster: ImageSrc;
+  link?: string;
+  remote?: boolean;
 };
 export const videoItems: VideoItem[] = [
   {

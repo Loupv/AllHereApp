@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import { View, Text, Image, Pressable, StyleSheet, Linking, Platform } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, Linking, Platform, RefreshControl } from 'react-native';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { SeeMoreLink } from '../../src/components/SeeMoreLink';
 import { videoItems } from '../../src/content/catalog';
-import { fetchVideos, useRemoteList, RemoteVideoItem } from '../../src/content/remote';
+import { useVideoFeed } from '../../src/content/remote';
 import { useVideoStore } from '../../src/player/videoStore';
 import { useNotifications } from '../../src/player/notificationStore';
 import { colors, radius, spacing, type } from '../../src/theme';
@@ -16,19 +16,25 @@ const openExternal = (url: string) => {
 };
 
 export default function VideoScreen() {
-  const open = useVideoStore(s => s.open);
+  const openVideo = useVideoStore(s => s.open);
   const markRead = useNotifications(s => s.markVideoRead);
   useEffect(() => { markRead(); }, []);
 
-  const { items, loading } = useRemoteList<RemoteVideoItem>(
-    'videos',
-    fetchVideos,
-    videoItems as unknown as RemoteVideoItem[],
-  );
+  const { items, loading, refreshing, refresh } = useVideoFeed(videoItems);
 
   return (
     <Background color={colors.bgTab}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refresh}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
+          />
+        }
+      >
         <View style={styles.hero}>
           <Image source={require('../../assets/images/hero/thepractice.jpg')} style={styles.heroImage} resizeMode="cover" />
           <View style={styles.heroOverlay} />
@@ -44,13 +50,15 @@ export default function VideoScreen() {
           <Pressable
             key={v.id}
             onPress={() => {
+              // Remote items link out to allhere.org (site hosts the embed);
+              // bundled items keep playing inline via the VideoStore.
               if (v.remote && v.link) openExternal(v.link);
-              else if ((v as any).source) open(v as any);
+              else if (v.source) openVideo(v);
             }}
             style={({ pressed }) => [styles.card, pressed && styles.pressed]}
           >
             <View style={styles.posterWrap}>
-              <Image source={v.poster as any} style={styles.poster} resizeMode="cover" />
+              <Image source={v.poster} style={styles.poster} resizeMode="cover" />
               <View style={styles.posterOverlay} />
               <View style={styles.playBadge}>
                 <Text style={styles.playIcon}>▶</Text>

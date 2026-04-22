@@ -1,36 +1,35 @@
 import { useEffect } from 'react';
-import { View, Text, Image, Pressable, StyleSheet, Linking, Platform } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { SeeMoreLink } from '../../src/components/SeeMoreLink';
 import { newsArticles } from '../../src/content/news';
-import { fetchUpdates, useRemoteList, RemoteNewsArticle } from '../../src/content/remote';
+import { useNewsFeed } from '../../src/content/remote';
 import { useNotifications } from '../../src/player/notificationStore';
 import { colors, radius, spacing, type } from '../../src/theme';
-
-const openExternal = (url: string) => {
-  if (Platform.OS === 'web') window.open(url, '_blank', 'noopener,noreferrer');
-  else Linking.openURL(url).catch(() => {});
-};
 
 export default function NewsScreen() {
   const router = useRouter();
   const markRead = useNotifications(s => s.markNewsRead);
   useEffect(() => { markRead(); }, []);
 
-  // Live list from allhere.org/wp-json/wp/v2/posts, with a fallback to the
-  // bundled static articles so the tab is never empty (offline / fetch error).
-  const { items, loading } = useRemoteList<RemoteNewsArticle>(
-    'updates',
-    fetchUpdates,
-    newsArticles as unknown as RemoteNewsArticle[],
-  );
+  const { items, loading, refreshing, refresh } = useNewsFeed(newsArticles);
 
   return (
     <Background color={colors.bgTab}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refresh}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
+          />
+        }
+      >
         <View style={styles.hero}>
           <Image source={require('../../assets/images/hero/news.jpg')} style={styles.heroImage} resizeMode="cover" />
           <View style={styles.heroOverlay} />
@@ -45,13 +44,10 @@ export default function NewsScreen() {
         {items.map((a) => (
           <Pressable
             key={a.id}
-            onPress={() => {
-              if (a.remote && a.link) openExternal(a.link);
-              else router.push(`/news/${a.id}`);
-            }}
+            onPress={() => router.push(`/news/${a.id}`)}
             style={({ pressed }) => [styles.card, pressed && styles.pressed]}
           >
-            <Image source={a.image as any} style={styles.image} resizeMode="cover" />
+            <Image source={a.image} style={styles.image} resizeMode="cover" />
             <View style={styles.cardBody}>
               <View style={styles.cardMeta}>
                 <Text style={styles.cardEyebrow}>{a.eyebrow}</Text>

@@ -1,13 +1,22 @@
-import { ScrollView, Text, View, Image, StyleSheet } from 'react-native';
+import { ScrollView, Text, View, Image, StyleSheet, Pressable, Linking, Platform } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { newsArticles } from '../../src/content/news';
-import { colors, spacing, type } from '../../src/theme';
+import { useRemoteStore } from '../../src/content/remoteStore';
+import { colors, radius, spacing, type } from '../../src/theme';
+
+const openExternal = (url: string) => {
+  if (Platform.OS === 'web') window.open(url, '_blank', 'noopener,noreferrer');
+  else Linking.openURL(url).catch(() => {});
+};
 
 export default function NewsArticleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const article = newsArticles.find(a => a.id === id);
+  const remoteList = useRemoteStore(s => s.news);
+  const article =
+    newsArticles.find(a => a.id === id) ??
+    remoteList.find(a => a.id === id);
 
   if (!article) {
     return (
@@ -28,9 +37,18 @@ export default function NewsArticleScreen() {
             <Text style={styles.date}>{article.date}</Text>
           </View>
           <Text style={styles.title}>{article.title}</Text>
-          {article.body.map((p, i) => (
-            <Text key={i} style={styles.paragraph}>{p}</Text>
-          ))}
+          {article.body.length > 0
+            ? article.body.map((p, i) => (
+                <Text key={i} style={styles.paragraph}>{p}</Text>
+              ))
+            : (
+              <Text style={styles.paragraph}>{article.excerpt}</Text>
+            )}
+          {article.link ? (
+            <Pressable onPress={() => openExternal(article.link!)} hitSlop={8} style={styles.readMoreBtn}>
+              <Text style={styles.readMore}>Read the full article on allhere.org →</Text>
+            </Pressable>
+          ) : null}
         </View>
         <AboutFooter />
       </ScrollView>
@@ -53,4 +71,13 @@ const styles = StyleSheet.create({
     ...type.body, color: colors.textMuted,
     marginBottom: spacing.md, lineHeight: 24, maxWidth: 620,
   },
+  readMoreBtn: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.pill,
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
+  readMore: { ...type.caption, color: colors.accent },
 });
