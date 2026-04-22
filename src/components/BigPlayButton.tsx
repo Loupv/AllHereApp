@@ -71,6 +71,19 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
     outerVis.value  = withTiming(mode === 'qm3' ? 1 : 0, { duration: 500, easing: Easing.out(Easing.cubic) });
   }, [mode]);
 
+  // ---- per-mode motion masks ----
+  // 60s   → only the inner ring breathes
+  // 3min  → only the middle ring pulses (inner sits still)
+  // 3×3m  → all three motions combine
+  const breathActive = useSharedValue(mode === 'one' || mode === 'qm3' ? 1 : 0);
+  const pulseActive  = useSharedValue(mode === 'three' || mode === 'qm3' ? 1 : 0);
+  const orbitActive  = useSharedValue(mode === 'qm3' ? 1 : 0);
+  useEffect(() => {
+    breathActive.value = withTiming(mode === 'one' || mode === 'qm3' ? 1 : 0, { duration: 500 });
+    pulseActive.value  = withTiming(mode === 'three' || mode === 'qm3' ? 1 : 0, { duration: 500 });
+    orbitActive.value  = withTiming(mode === 'qm3' ? 1 : 0, { duration: 500 });
+  }, [mode]);
+
   // ---- geometry ----
   // Inner ring stays at a fixed modest radius so the text area keeps its
   // size across modes. Outer rings grow outward when they appear.
@@ -81,21 +94,29 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
 
   // ---- animated styles for each ring wrapper ----
   const innerStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + breath.value * 0.025 }],
+    // Breath only applies when breathActive=1; when inactive the ring is still.
+    transform: [{ scale: 1 + breath.value * 0.025 * breathActive.value }],
   }));
   const middleStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(middleVis.value, [0, 1], [0, 0.35 + softPulse.value * 0.55]),
+    opacity: interpolate(
+      middleVis.value,
+      [0, 1],
+      // Base opacity 0.35; the 0.55-wide pulse only fires when pulseActive=1.
+      [0, 0.35 + softPulse.value * 0.55 * pulseActive.value],
+    ),
     transform: [{ scale: interpolate(middleVis.value, [0, 1], [0.82, 1]) }],
   }));
   const outerStyle = useAnimatedStyle(() => ({
     opacity: interpolate(outerVis.value, [0, 1], [0, 0.85]),
     transform: [
-      { rotate: `${orbit.value * 360}deg` },
+      // Rotation disappears when orbitActive=0, so the dashed ring just sits
+      // on its last angle rather than endlessly spinning under a hidden layer.
+      { rotate: `${orbit.value * 360 * orbitActive.value}deg` },
       { scale: interpolate(outerVis.value, [0, 1], [0.82, 1]) },
     ],
   }));
   const textStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + breath.value * 0.02 }],
+    transform: [{ scale: 1 + breath.value * 0.02 * breathActive.value }],
   }));
 
   return (
