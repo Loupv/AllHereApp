@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Pressable, View, Text, Image, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle,
   withRepeat, withSequence, withTiming, Easing, cancelAnimation, runOnJS,
 } from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import type { Volet } from '../content/catalog';
 import { useProgress } from '../player/progressStore';
 import { colors, radius, spacing, type } from '../theme';
@@ -89,11 +89,15 @@ export function VoletCard({
     });
   };
 
-  // Reset when the screen re-mounts (user navigates back)
-  useEffect(() => {
-    openScale.value = 1;
-    openOpacity.value = 1;
-  }, []);
+  // Reset when the tab regains focus — the tab screen often stays mounted
+  // while the detail screen is on top, so a mount-only reset would leave
+  // the card stuck at opacity 0 when the user comes back.
+  useFocusEffect(
+    useCallback(() => {
+      openScale.value = withTiming(1, { duration: 220 });
+      openOpacity.value = withTiming(1, { duration: 220 });
+    }, []),
+  );
 
   const openStyle = useAnimatedStyle(() => ({
     transform: [{ scale: openScale.value }],

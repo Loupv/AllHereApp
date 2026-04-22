@@ -25,6 +25,22 @@ export type AudioTrack = {
   comingSoon?: boolean;
 };
 
+/**
+ * Display duration for a track:
+ * - explicit durationHint wins (e.g. "20:54" or "11 min")
+ * - otherwise derive from a QM rounds config: rounds × round length + breaks
+ * - else undefined (no pill shown)
+ */
+export function trackDuration(t: AudioTrack): string | undefined {
+  if (t.durationHint) return t.durationHint;
+  const r = t.rounds;
+  if (r) {
+    const totalMin = r.max * r.roundLengthMinutes + (r.max - 1);
+    return `${totalMin} min`;
+  }
+  return undefined;
+}
+
 export type Volet = {
   id: string;
   title: string;
@@ -53,29 +69,34 @@ export const silentMindVolets: Volet[] = [
     subtitle: 'Welcome and orientation',
     tagline: 'Before we begin',
     description: 'A short welcome and a preparation of the space to settle in before your first practice.',
+    image: require('../../assets/images/hero/home.jpg'),
     tracks: [
       {
         id: 'intro-1', title: 'Welcome',
         source: require('../../assets/audio/Part0/1. Welcome.mp3'),
         transcript: require('../../assets/audio/Part0/Words/1. Welcome.wjson'),
+        durationHint: '2:30',
         description: "Welcome to the Silent Mind program, All Here's journey into a quiet and attentive way of being. A vertical progression toward advanced meditation practice.",
       },
       {
         id: 'intro-2', title: 'Silent Mind',
         source: require('../../assets/audio/Part0/2. Silent Mind.mp3'),
         transcript: require('../../assets/audio/Part0/Words/2. Silent Mind.wjson'),
+        durationHint: '2:17',
         description: "At the heart of our practice is the development of the Silent Mind — a practical method to reduce fluctuations of consciousness and cultivate a profound inner presence.",
       },
       {
         id: 'intro-3', title: 'Prepare the space',
         source: require('../../assets/audio/Part0/3. Prepare the space.mp3'),
         transcript: require('../../assets/audio/Part0/Words/3. Prepare the space.wjson'),
+        durationHint: '3:01',
         description: 'Simple practical guidance for preparing your meditation space. Creating supportive conditions helps the mind settle more easily and encourages a steady practice.',
       },
       {
         id: 'intro-4', title: 'QM Format',
         source: require('../../assets/audio/Part0/4. QM Format.mp3'),
         transcript: require('../../assets/audio/Part0/Words/4. QM Format.wjson'),
+        durationHint: '1:13',
         description: 'An introduction to the Quantified Meditation format — short rounds with brief breaks, a structured way to practice and track progress over time.',
       },
     ],
@@ -93,18 +114,21 @@ export const silentMindVolets: Volet[] = [
         id: 'p1-1', title: 'Turning Inward',
         source: require('../../assets/audio/Part1/1 - Turning Inward (Eyes-open, introductory practice).mp3'),
         transcript: require('../../assets/audio/Part1/Words/1 - Turning Inward (Eyes-open, introductory practice).wjson'),
+        durationHint: '19:24',
         description: 'An introductory eyes-open practice. Find a suitable, comfortable location away from disturbance, then turn the attention of the mind gently inward.',
       },
       {
         id: 'p1-2', title: 'Breath and Self-Observation',
         source: require('../../assets/audio/Part1/2 - Self-Observation and Breath Following.mp3'),
         transcript: require('../../assets/audio/Part1/Words/2 - Self-Observation and Breath Following.wjson'),
+        durationHint: '20:54',
         description: 'Turn the attention of the mind towards the breathing body — moving from thoughts to the breath, then to observing the breath itself.',
       },
       {
         id: 'p1-3', title: 'Center of Gravity',
         source: require('../../assets/audio/Part1/3 - Center of Gravity.mp3'),
         transcript: require('../../assets/audio/Part1/Words/3 - Center of Gravity.wjson'),
+        durationHint: '23:48',
         description: 'The Center of Gravity practice — strongly related to the sense of self, developing internal presence and stable anchoring of attention.',
       },
     ],
@@ -200,18 +224,21 @@ export const silentMindVolets: Volet[] = [
         id: 'p2-1', title: 'Follow the Air',
         source: require('../../assets/audio/Part2/1 - Follow the Air.mp3'),
         transcript: require('../../assets/audio/Part2/Words/1 - Follow the Air.wjson'),
+        durationHint: '13:42',
         description: 'Follow the air coming in and going out of your body. Feel the flow and settle into the natural rhythm of breathing.',
       },
       {
         id: 'p2-2', title: 'Follow and witness the Air',
         source: require('../../assets/audio/Part2/2 - Follow and witness the Air.mp3'),
         transcript: require('../../assets/audio/Part2/Words/2 - Follow and witness the Air.wjson'),
+        durationHint: '26:35',
         description: 'Follow the airflow, then step back and witness its movement. A transition from active following to quiet observation.',
       },
       {
         id: 'p2-3', title: 'Unfollow and witness the air',
         source: require('../../assets/audio/Part2/3 - Unfollow and witness the air.mp3'),
         transcript: require('../../assets/audio/Part2/Words/3 - Unfollow and witness the air.wjson'),
+        durationHint: '21:00',
         description: 'Stabilize the mind and its attention on a single, very subtle object: the air. Observe the airflow without trying to follow it.',
       },
     ],
@@ -311,6 +338,7 @@ export const silentMindVolets: Volet[] = [
         id: 'p3-1', title: 'Emptiness',
         source: require('../../assets/audio/Part2/4 - Emptiness.mp3'),
         transcript: require('../../assets/audio/Part2/Words/4 - Emptiness.wjson'),
+        durationHint: '20:58',
         description: 'Building on the breathing body and presence of air, open to the practice of emptiness — witnessing the space between and behind experience.',
       },
       { id: 'p3-2', title: 'The Dark Practice & Vertical Axis', comingSoon: true },
@@ -326,6 +354,7 @@ const oneMinute: AudioTrack = {
   title: 'One minute meditation',
   source: require('../../assets/audio/Home/One minute meditation.mp3'),
   transcript: require('../../assets/audio/Home/Words/One minute meditation.wjson'),
+  durationHint: '1:50',
   description: 'One minute to arrive. A single breath, a moment of attention — your first taste of the practice.',
 };
 
@@ -334,6 +363,7 @@ const threeMinutes: AudioTrack = {
   title: 'Three minutes meditation',
   source: require('../../assets/audio/Home/Three minutes meditation.mp3'),
   transcript: require('../../assets/audio/Home/Words/Three minutes meditation.wjson'),
+  durationHint: '3:07',
   description: 'Three minutes of guided attention. Settle a little deeper — a steadier taste of the practice.',
 };
 
@@ -342,6 +372,7 @@ const threeMinutes: AudioTrack = {
 const qm3RoundsHome: AudioTrack = {
   id: 'home-qm3',
   title: 'QM · Three rounds',
+  durationHint: '11 min',
   description: 'A first taste of Quantified Meditation: three rounds of three minutes with one-minute pauses between them.',
   rounds: {
     max: 3,

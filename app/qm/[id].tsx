@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { ContentCard } from '../../src/components/ContentCard';
-import { qmVolets, silentMindVolets } from '../../src/content/catalog';
+import { qmVolets, silentMindVolets, trackDuration } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { colors, radius, spacing, type } from '../../src/theme';
 
@@ -44,6 +44,9 @@ export default function QMVoletScreen() {
             key={t.id}
             title={t.title}
             meta={t.rounds ? `${t.rounds.max} × ${t.rounds.roundLengthMinutes} min` : undefined}
+            duration={trackDuration(t)}
+            kind="audio"
+            accent={colors.accentAlt}
             onPress={() => openPlayer(t, playable)}
           />
         ))}

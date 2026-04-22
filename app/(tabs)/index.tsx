@@ -5,7 +5,7 @@ import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrol
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { Collapse } from '../../src/components/Collapse';
-import { startJourneySteps, silentMindVolets } from '../../src/content/catalog';
+import { startJourneySteps } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { useProgress } from '../../src/player/progressStore';
 import { colors, radius, spacing, type } from '../../src/theme';
@@ -23,17 +23,6 @@ export default function StartScreen() {
       if (!listened[s.track.id]) return i;
     }
     return startJourneySteps.length - 1;
-  }, [listened]);
-
-  // Any track from the Silent Mind program already listened? Then the user has
-  // moved past the home journey — suppress the "active" pink frame.
-  const silentMindStarted = useMemo(() => {
-    for (const v of silentMindVolets) {
-      for (const t of [...v.tracks, ...(v.qmTracks ?? [])]) {
-        if (listened[t.id]) return true;
-      }
-    }
-    return false;
   }, [listened]);
 
   const openIdx = manualIdx ?? activeIdx;
@@ -64,7 +53,7 @@ export default function StartScreen() {
             const isDone = !!(step.track && listened[step.track.id]);
             const isFirst = i === 0;
             const isActive = i === activeIdx && !isDone;
-            const isHighlighted = isActive && !silentMindStarted;
+            const isHighlighted = isActive;
             const isQm = step.id === 'step-qm3';
             return (
               <Pressable

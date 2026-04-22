@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { ContentCard } from '../../src/components/ContentCard';
-import { silentMindVolets, qmVolets } from '../../src/content/catalog';
+import { silentMindVolets, qmVolets, trackDuration } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { colors, radius, spacing, type } from '../../src/theme';
 
@@ -41,6 +41,8 @@ export default function VoletScreen() {
           <ContentCard
             key={t.id}
             title={t.title}
+            duration={trackDuration(t)}
+            kind="audio"
             onPress={() => openPlayer(t, volet.tracks)}
           />
         ))}
