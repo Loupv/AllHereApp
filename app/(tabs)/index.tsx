@@ -67,7 +67,7 @@ export default function StartScreen() {
               >
                 <View style={styles.stepHeader}>
                   <View style={{ flex: 1 }}>
-                    {isFirst && isHighlighted ? (
+                    {isFirst ? (
                       <>
                         <Text style={styles.firstEyebrow}>BEGIN YOUR PRACTICE</Text>
                         <Text style={styles.firstTitle}>60 seconds is all it takes.</Text>
@@ -91,7 +91,7 @@ export default function StartScreen() {
 
                 <Collapse open={isOpen}>
                   <View style={styles.stepBody}>
-                    {!(isFirst && isHighlighted) ? (
+                    {!(isFirst) ? (
                       <Text style={styles.stepDesc}>{step.description}</Text>
                     ) : (
                       <Text style={styles.stepDesc}>One breath to arrive. One minute to settle.</Text>
