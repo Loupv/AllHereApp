@@ -1,17 +1,31 @@
 import { useEffect } from 'react';
-import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, Linking, Platform } from 'react-native';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
+import { SeeMoreLink } from '../../src/components/SeeMoreLink';
 import { videoItems } from '../../src/content/catalog';
+import { fetchVideos, useRemoteList, RemoteVideoItem } from '../../src/content/remote';
 import { useVideoStore } from '../../src/player/videoStore';
 import { useNotifications } from '../../src/player/notificationStore';
 import { colors, radius, spacing, type } from '../../src/theme';
+
+const openExternal = (url: string) => {
+  if (Platform.OS === 'web') window.open(url, '_blank', 'noopener,noreferrer');
+  else Linking.openURL(url).catch(() => {});
+};
 
 export default function VideoScreen() {
   const open = useVideoStore(s => s.open);
   const markRead = useNotifications(s => s.markVideoRead);
   useEffect(() => { markRead(); }, []);
+
+  const { items, loading } = useRemoteList<RemoteVideoItem>(
+    'videos',
+    fetchVideos,
+    videoItems as unknown as RemoteVideoItem[],
+  );
+
   return (
     <Background color={colors.bgTab}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -23,28 +37,37 @@ export default function VideoScreen() {
             <Text style={styles.title}>Watch & learn</Text>
           </View>
         </View>
-        {videoItems.map(v => (
+        {loading && items.length === 0 ? (
+          <Text style={styles.loading}>Loading…</Text>
+        ) : null}
+        {items.map(v => (
           <Pressable
             key={v.id}
-            onPress={() => open(v)}
+            onPress={() => {
+              if (v.remote && v.link) openExternal(v.link);
+              else if ((v as any).source) open(v as any);
+            }}
             style={({ pressed }) => [styles.card, pressed && styles.pressed]}
           >
             <View style={styles.posterWrap}>
-              <Image source={v.poster} style={styles.poster} resizeMode="cover" />
+              <Image source={v.poster as any} style={styles.poster} resizeMode="cover" />
               <View style={styles.posterOverlay} />
               <View style={styles.playBadge}>
                 <Text style={styles.playIcon}>▶</Text>
               </View>
-              <View style={styles.durationBadge}>
-                <Text style={styles.durationText}>{v.duration}</Text>
-              </View>
+              {v.duration ? (
+                <View style={styles.durationBadge}>
+                  <Text style={styles.durationText}>{v.duration}</Text>
+                </View>
+              ) : null}
             </View>
             <View style={styles.cardBody}>
-              <Text style={styles.cardTitle}>{v.title}</Text>
-              {v.subtitle ? <Text style={styles.cardSubtitle}>{v.subtitle}</Text> : null}
+              <Text style={styles.cardTitle} numberOfLines={2}>{v.title}</Text>
+              {v.subtitle ? <Text style={styles.cardSubtitle} numberOfLines={2}>{v.subtitle}</Text> : null}
             </View>
           </Pressable>
         ))}
+        <SeeMoreLink label="Media" url="https://allhere.org/media-hub/" />
         <AboutFooter />
       </ScrollView>
     </Background>
@@ -99,4 +122,5 @@ const styles = StyleSheet.create({
   cardBody: { padding: spacing.md },
   cardTitle: { ...type.h2, color: colors.text, fontSize: 17, marginBottom: 4 },
   cardSubtitle: { ...type.caption, color: colors.textDim },
+  loading: { ...type.caption, color: colors.textDim, textAlign: 'center', paddingVertical: spacing.lg },
 });

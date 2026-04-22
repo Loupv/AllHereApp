@@ -1,17 +1,33 @@
 import { useEffect } from 'react';
-import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, Linking, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
+import { SeeMoreLink } from '../../src/components/SeeMoreLink';
 import { newsArticles } from '../../src/content/news';
+import { fetchUpdates, useRemoteList, RemoteNewsArticle } from '../../src/content/remote';
 import { useNotifications } from '../../src/player/notificationStore';
 import { colors, radius, spacing, type } from '../../src/theme';
+
+const openExternal = (url: string) => {
+  if (Platform.OS === 'web') window.open(url, '_blank', 'noopener,noreferrer');
+  else Linking.openURL(url).catch(() => {});
+};
 
 export default function NewsScreen() {
   const router = useRouter();
   const markRead = useNotifications(s => s.markNewsRead);
   useEffect(() => { markRead(); }, []);
+
+  // Live list from allhere.org/wp-json/wp/v2/posts, with a fallback to the
+  // bundled static articles so the tab is never empty (offline / fetch error).
+  const { items, loading } = useRemoteList<RemoteNewsArticle>(
+    'updates',
+    fetchUpdates,
+    newsArticles as unknown as RemoteNewsArticle[],
+  );
+
   return (
     <Background color={colors.bgTab}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -23,13 +39,19 @@ export default function NewsScreen() {
             <Text style={styles.title}>News</Text>
           </View>
         </View>
-        {newsArticles.map((a) => (
+        {loading && items.length === 0 ? (
+          <Text style={styles.loading}>Loading…</Text>
+        ) : null}
+        {items.map((a) => (
           <Pressable
             key={a.id}
-            onPress={() => router.push(`/news/${a.id}`)}
+            onPress={() => {
+              if (a.remote && a.link) openExternal(a.link);
+              else router.push(`/news/${a.id}`);
+            }}
             style={({ pressed }) => [styles.card, pressed && styles.pressed]}
           >
-            <Image source={a.image} style={styles.image} resizeMode="cover" />
+            <Image source={a.image as any} style={styles.image} resizeMode="cover" />
             <View style={styles.cardBody}>
               <View style={styles.cardMeta}>
                 <Text style={styles.cardEyebrow}>{a.eyebrow}</Text>
@@ -40,6 +62,7 @@ export default function NewsScreen() {
             </View>
           </Pressable>
         ))}
+        <SeeMoreLink label="Updates" url="https://allhere.org/updates/" />
         <AboutFooter />
       </ScrollView>
     </Background>
@@ -71,4 +94,5 @@ const styles = StyleSheet.create({
   date: { ...type.overline, color: colors.textDim, fontSize: 10 },
   cardTitle: { ...type.h2, color: colors.text, fontSize: 18, lineHeight: 24 },
   cardExcerpt: { ...type.body, color: colors.textMuted, fontSize: 14, lineHeight: 20 },
+  loading: { ...type.caption, color: colors.textDim, textAlign: 'center', paddingVertical: spacing.lg },
 });
