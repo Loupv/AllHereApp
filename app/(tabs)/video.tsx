@@ -51,7 +51,13 @@ export default function VideoScreen() {
           <View style={styles.toolbar}>
             <Text style={styles.toolbarHint}>{unreadCount} unread</Text>
             <Pressable
-              onPress={() => markAllSeen('media', items.map(v => v.id))}
+              onPress={() => {
+                const every = Array.from(new Set([
+                  ...videoItems.map(v => v.id),
+                  ...items.map(v => v.id),
+                ]));
+                markAllSeen('media', every);
+              }}
               hitSlop={8}
               style={({ pressed }) => [styles.markAll, pressed && { opacity: 0.6 }]}
             >

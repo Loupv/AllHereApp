@@ -37,7 +37,15 @@ export default function NewsScreen() {
           <View style={styles.toolbar}>
             <Text style={styles.toolbarHint}>{unreadCount} unread</Text>
             <Pressable
-              onPress={() => markAllSeen('news', items.map(a => a.id))}
+              onPress={() => {
+                // Mark every known id as seen — current visible items AND the
+                // bundled static list — so the tab badge zeroes out too.
+                const every = Array.from(new Set([
+                  ...newsArticles.map(a => a.id),
+                  ...items.map(a => a.id),
+                ]));
+                markAllSeen('news', every);
+              }}
               hitSlop={8}
               style={({ pressed }) => [styles.markAll, pressed && { opacity: 0.6 }]}
             >

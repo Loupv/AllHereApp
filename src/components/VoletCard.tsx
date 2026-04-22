@@ -1,6 +1,9 @@
 import { useEffect } from 'react';
 import { Pressable, View, Text, Image, StyleSheet } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, Easing, cancelAnimation } from 'react-native-reanimated';
+import Animated, {
+  useSharedValue, useAnimatedStyle,
+  withRepeat, withSequence, withTiming, Easing, cancelAnimation, runOnJS,
+} from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import type { Volet } from '../content/catalog';
 import { useProgress } from '../player/progressStore';
@@ -8,19 +11,18 @@ import { colors, radius, spacing, type } from '../theme';
 
 type Props = {
   volet: Volet;
-  /** e.g. '/silent-mind' or '/qm' — the card navigates to `${basePath}/${volet.id}` */
+  /** '/silent-mind' or '/qm' — card routes to `${basePath}/${volet.id}` */
   basePath: '/silent-mind' | '/qm';
-  /** Accent tint — magenta for Silent Mind, teal for QM. Kept inline so the
-   *  component doesn't have to know about theme toggles. */
+  /** Accent tint — magenta for Silent Mind, teal for QM */
   accent?: string;
-  accentRgb?: string; // e.g. '158,54,148' — used for the pulsing border alpha
+  accentRgb?: string;
   secondary?: boolean;
 };
 
 /**
- * Full-bleed card for a program volet. Tapping routes to the detail page.
- * When the card contains the "next" unlistened track, it breathes with a
- * soft accent outline to invite the user in.
+ * Compact horizontal volet card (circle + title + chevron). On tap the card
+ * plays a short "opening" stretch (scaleY 1 → 1.18, then back to 1) while it
+ * routes to the full-page detail, so the transition feels physical.
  */
 export function VoletCard({
   volet,
@@ -32,11 +34,11 @@ export function VoletCard({
   const router = useRouter();
   const nextTrackId = useProgress(s => s.nextTrackId());
   const locked = volet.locked;
-  // Card count + "next" detection is scoped to volet.tracks (the list the
-  // detail page actually renders). qmTracks are shown in the parallel QM tab.
   const tracks = volet.tracks;
+  const playable = tracks.filter(t => !t.comingSoon);
   const containsNext = !!nextTrackId && tracks.some(t => t.id === nextTrackId);
 
+  // Slow breathing outline when this volet owns the next unlistened track
   const pulse = useSharedValue(0);
   useEffect(() => {
     if (containsNext && !locked) {
@@ -45,8 +47,7 @@ export function VoletCard({
           withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
           withTiming(0, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
         ),
-        -1,
-        false,
+        -1, false,
       );
     } else {
       cancelAnimation(pulse);
@@ -67,29 +68,61 @@ export function VoletCard({
     };
   });
 
-  const playable = tracks.filter(t => !t.comingSoon);
+  // Opening animation: vertical stretch then collapse, navigating mid-way.
+  const openY = useSharedValue(1);
+  const openOpacity = useSharedValue(1);
+  const navigate = () => router.push(`${basePath}/${volet.id}` as any);
+
+  const onPress = () => {
+    if (locked) return;
+    openY.value = withSequence(
+      withTiming(1.18, { duration: 160, easing: Easing.out(Easing.cubic) }, (finished) => {
+        if (finished) runOnJS(navigate)();
+      }),
+      withTiming(1, { duration: 220, easing: Easing.in(Easing.cubic) }),
+    );
+    openOpacity.value = withSequence(
+      withTiming(0.85, { duration: 160 }),
+      withTiming(1, { duration: 220 }),
+    );
+  };
+
+  const openStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleY: openY.value }],
+    opacity: openOpacity.value,
+  }));
+
   const countLabel = playable.length > 0
     ? `${playable.length} audio${playable.length > 1 ? 's' : ''}`
     : 'Coming soon';
 
   return (
-    <Animated.View style={[styles.card, secondary && styles.cardSecondary, locked && styles.cardLocked, pulseStyle]}>
+    <Animated.View
+      style={[
+        styles.card,
+        secondary && styles.cardSecondary,
+        locked && styles.cardLocked,
+        pulseStyle,
+        openStyle,
+      ]}
+    >
       <Pressable
-        onPress={() => { if (!locked) router.push(`${basePath}/${volet.id}` as any); }}
+        onPress={onPress}
         style={({ pressed }) => [styles.pressable, pressed && styles.pressed]}
       >
         {volet.image ? (
-          <Image source={volet.image} style={styles.image} resizeMode="cover" />
+          <Image source={volet.image} style={styles.thumb} resizeMode="cover" />
         ) : (
-          <View style={[styles.image, { backgroundColor: colors.bgSoft }]} />
+          <View style={[styles.thumb, { backgroundColor: colors.bgSoft }]} />
         )}
-        <View style={styles.imageOverlay} />
         <View style={styles.body}>
           <Text style={[styles.eyebrow, { color: accent }]}>{volet.title}</Text>
-          {volet.subtitle ? <Text style={styles.title}>{volet.subtitle}</Text> : null}
-          {volet.tagline ? <Text style={styles.tagline}>{volet.tagline}</Text> : null}
-          <Text style={styles.meta}>{countLabel}{locked ? '' : '  →'}</Text>
+          {volet.subtitle ? (
+            <Text style={styles.title} numberOfLines={1}>{volet.subtitle}</Text>
+          ) : null}
+          <Text style={styles.meta}>{countLabel}</Text>
         </View>
+        <Text style={[styles.chevron, { color: accent }]}>{locked ? '' : '→'}</Text>
       </Pressable>
     </Animated.View>
   );
@@ -98,22 +131,32 @@ export function VoletCard({
 const styles = StyleSheet.create({
   card: {
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm + 2,
     borderRadius: radius.lg,
-    overflow: 'hidden',
     borderColor: colors.border,
     borderWidth: 1,
     backgroundColor: colors.surface,
+    overflow: 'hidden',
   },
   cardSecondary: { opacity: 0.85 },
   cardLocked: { opacity: 0.45 },
-  pressable: { overflow: 'hidden', borderRadius: radius.lg - 1 },
+  pressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    gap: spacing.md,
+  },
   pressed: { opacity: 0.85 },
-  image: { width: '100%', height: 140 },
-  imageOverlay: { ...StyleSheet.absoluteFillObject, height: 140, backgroundColor: 'rgba(0,16,46,0.45)' },
-  body: { padding: spacing.md, gap: 4 },
-  eyebrow: { ...type.overline, fontSize: 11 },
-  title: { ...type.h2, color: colors.text, fontSize: 17, marginTop: 2 },
-  tagline: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
-  meta: { ...type.overline, color: colors.textDim, fontSize: 10, marginTop: 6 },
+  thumb: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderColor: colors.borderStrong,
+    borderWidth: 1,
+  },
+  body: { flex: 1, gap: 2 },
+  eyebrow: { ...type.overline, fontSize: 10 },
+  title: { ...type.h2, color: colors.text, fontSize: 15 },
+  meta: { ...type.overline, color: colors.textDim, fontSize: 9, marginTop: 2 },
+  chevron: { ...type.display, fontSize: 16, marginLeft: 4 },
 });
