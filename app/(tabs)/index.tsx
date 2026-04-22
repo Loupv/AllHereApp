@@ -1,212 +1,181 @@
 import { useState, useMemo } from 'react';
-import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
-import { Background } from '../../src/components/Background';
+import { AnimatedGradient } from '../../src/components/AnimatedGradient';
+import { BigPlayButton, type BigPlayMode } from '../../src/components/BigPlayButton';
 import { AboutFooter } from '../../src/components/AboutFooter';
-import { BreathingRing } from '../../src/components/BreathingRing';
-import { Collapse } from '../../src/components/Collapse';
 import { startJourneySteps } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { useProgress } from '../../src/player/progressStore';
 import { colors, radius, spacing, type } from '../../src/theme';
 
+type ModeKey = 'step-1min' | 'step-3min' | 'step-qm3';
+
+const MODES: { key: ModeKey; big: BigPlayMode; label: string; sublabel: string; duration: string }[] = [
+  { key: 'step-1min', big: 'one',   label: '1 MIN',      sublabel: 'Arrive in a single breath',        duration: '1 min' },
+  { key: 'step-3min', big: 'three', label: '3 MIN',      sublabel: 'Settle a little deeper',            duration: '3 min' },
+  { key: 'step-qm3',  big: 'qm3',   label: '3 × 3 MIN',  sublabel: 'Quantified Meditation · 3 rounds',  duration: '11 min' },
+];
+
 export default function StartScreen() {
   const router = useRouter();
   const openPlayer = usePlayerStore(s => s.open);
   const listened = useProgress(s => s.listened);
-  const [manualIdx, setManualIdx] = useState<number | null>(null);
+  const { height } = useWindowDimensions();
+  const playSize = Math.max(220, Math.min(320, Math.round(height / 3)));
 
-  const activeIdx = useMemo(() => {
-    for (let i = 0; i < startJourneySteps.length; i++) {
-      const s = startJourneySteps[i];
-      if (!s.track) return i;
-      if (!listened[s.track.id]) return i;
+  // Smart default: pick the first step the user hasn't listened to yet, so
+  // reopening the home surfaces the next natural step. Falls back to 1 min.
+  const defaultMode: ModeKey = useMemo(() => {
+    for (const s of startJourneySteps) {
+      if (s.track && !listened[s.track.id]) return s.id as ModeKey;
     }
-    return startJourneySteps.length - 1;
+    return 'step-1min';
   }, [listened]);
+  const [mode, setMode] = useState<ModeKey>(defaultMode);
 
-  const openIdx = manualIdx ?? activeIdx;
+  const cfg = MODES.find(m => m.key === mode)!;
+  const step = startJourneySteps.find(s => s.id === cfg.key);
+  const track = step?.track;
+  const isDone = !!(track && listened[track.id]);
 
-  const toggle = (i: number) => {
-    setManualIdx(prev => {
-      const current = prev ?? activeIdx;
-      return current === i ? -1 : i;
-    });
+  const onPlay = () => {
+    if (!track) return;
+    const pl = startJourneySteps.map(s => s.track).filter(Boolean) as any;
+    openPlayer(track, pl);
   };
 
+  const allDone = startJourneySteps.every(s => s.track && listened[s.track.id]);
+
   return (
-    <Background>
+    <View style={styles.root}>
       <SwipeTabs current="index">
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.hero}>
-          <Image source={require('../../assets/images/hero/home.jpg')} style={styles.heroImage} resizeMode="cover" />
-          <View style={styles.heroOverlay} />
-          {/* Decorative breathing ring — signals the meditative intent without a */}
-          {/* single yoga / lotus cliché. Two concentric circles on a long cycle. */}
-          <View style={styles.heroRings} pointerEvents="none">
-            <BreathingRing size={260} color={colors.text} thickness={1.2} />
-            <BreathingRing size={180} color={colors.accent} thickness={1.6} inMs={5000} outMs={5000} minOpacity={0.2} maxOpacity={0.6} />
-          </View>
-          <View style={styles.heroInner}>
-            <Text style={styles.eyebrow}>MEDITATION · STEP BY STEP</Text>
-            <Text style={styles.heroTitle}>To the{'\n'}Silent Mind</Text>
-            <Text style={styles.heroSub}>From your first sixty seconds to a daily meditation practice —{'\n'}guided by science, measured by technology.</Text>
-          </View>
-        </View>
+        <AnimatedGradient>
+          <View style={styles.content}>
+            <View style={styles.header}>
+              <Text style={styles.eyebrow}>MEDITATION · STEP BY STEP</Text>
+              <Text style={styles.title}>To the Silent Mind</Text>
+            </View>
 
-        <View style={styles.steps}>
-          {startJourneySteps.map((step, i) => {
-            const isOpen = i === openIdx;
-            const isDone = !!(step.track && listened[step.track.id]);
-            const isFirst = i === 0;
-            const isActive = i === activeIdx && !isDone;
-            const isHighlighted = isActive;
-            return (
-              <Pressable
-                key={step.id}
-                onPress={() => toggle(i)}
-                style={({ pressed }) => [
-                  styles.step,
-                  isHighlighted && styles.stepFirst,
-                  isDone && styles.stepDone,
-                  pressed && styles.stepPressed,
-                ]}
-              >
-                <View style={styles.stepHeader}>
-                  <View style={{ flex: 1 }}>
-                    {isFirst && isHighlighted ? (
-                      <>
-                        <Text style={styles.firstEyebrow}>BEGIN YOUR PRACTICE</Text>
-                        <Text style={styles.firstTitle}>60 seconds is all it takes.</Text>
-                      </>
-                    ) : (
-                      <View style={styles.rowHeader}>
-                        <Text style={styles.stepNumber}>{String(i + 1).padStart(2, '0')}</Text>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.stepLabel}>{step.label}</Text>
-                          {!isOpen ? (
-                            <Text style={styles.stepHeaderDesc} numberOfLines={1}>{step.description}</Text>
-                          ) : null}
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                  {isDone
-                    ? <Text style={styles.doneBadge}>✓</Text>
-                    : <Text style={styles.chevron}>{isOpen ? '−' : '›'}</Text>}
-                </View>
+            <View style={styles.center}>
+              <BigPlayButton
+                mode={cfg.big}
+                label={isDone ? `LISTEN AGAIN · ${cfg.label}` : `START WITH ${cfg.label}`}
+                sublabel={cfg.sublabel}
+                size={playSize}
+                onPress={onPlay}
+              />
+            </View>
 
-                <Collapse open={isOpen}>
-                  <View style={styles.stepBody}>
-                    {!(isFirst && isHighlighted) ? (
-                      <Text style={styles.stepDesc}>{step.description}</Text>
-                    ) : (
-                      <Text style={styles.stepDesc}>One breath to arrive. One minute to settle.</Text>
-                    )}
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.cta,
-                        pressed && styles.ctaPressed,
-                      ]}
-                      onPress={(e) => {
-                        e.stopPropagation?.();
-                        if (step.track) {
-                          const pl = startJourneySteps.map(s => s.track).filter(Boolean) as any;
-                          openPlayer(step.track, pl);
-                        }
-                      }}
-                    >
-                      <Text style={styles.ctaText}>
-                        {isDone ? 'Listen again' : 'Begin'}
+            <View style={styles.radioRow}>
+              {MODES.map(m => {
+                const selected = m.key === mode;
+                const done = (() => {
+                  const s = startJourneySteps.find(s => s.id === m.key);
+                  return !!(s?.track && listened[s.track.id]);
+                })();
+                return (
+                  <Pressable
+                    key={m.key}
+                    onPress={() => setMode(m.key)}
+                    hitSlop={6}
+                    style={styles.radio}
+                  >
+                    <View style={[styles.radioDot, selected && styles.radioDotSelected]}>
+                      {selected ? <View style={styles.radioDotInner} /> : null}
+                    </View>
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={[styles.radioLabel, selected && styles.radioLabelSelected]}>
+                        {m.label}
                       </Text>
-                    </Pressable>
-                  </View>
-                </Collapse>
+                      <Text style={styles.radioDuration}>{m.duration}{done ? ' · ✓' : ''}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {allDone ? (
+              <Pressable
+                onPress={() => router.push('/silent-mind')}
+                style={({ pressed }) => [styles.explore, pressed && { opacity: 0.85 }]}
+              >
+                <Text style={styles.exploreEyebrow}>READY FOR MORE ?</Text>
+                <Text style={styles.exploreTitle}>Explore the Silent Mind Program →</Text>
               </Pressable>
-            );
-          })}
-        </View>
+            ) : null}
 
-        {startJourneySteps.every(s => s.track && listened[s.track.id]) ? (
-          <Pressable
-            onPress={() => router.push('/silent-mind')}
-            style={({ pressed }) => [styles.exploreCta, pressed && { opacity: 0.85 }]}
-          >
-            <Text style={styles.exploreEyebrow}>READY FOR MORE ?</Text>
-            <Text style={styles.exploreTitle}>Explore the Silent Mind Program</Text>
-            <Text style={styles.exploreHint}>A three-part journey, guided audio by audio, from noise to silent mind.</Text>
-          </Pressable>
-        ) : null}
-
-        <AboutFooter />
-      </ScrollView>
+            <View style={styles.footerSpacer} />
+            <AboutFooter />
+          </View>
+        </AnimatedGradient>
       </SwipeTabs>
-    </Background>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.md },
-  hero: { height: 300, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-  heroImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.72)' },
-  heroRings: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  heroInner: { paddingHorizontal: spacing.lg, alignItems: 'center' },
-  eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.sm, fontSize: 11, letterSpacing: 3 },
-  heroTitle: { ...type.display, color: colors.text, fontSize: 30, textAlign: 'center', lineHeight: 36, marginBottom: spacing.md },
-  heroSub: { ...type.body, color: colors.textMuted, fontSize: 12, lineHeight: 19, textAlign: 'center' },
+  root: { flex: 1 },
+  content: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
+  },
+  header: { alignItems: 'center', marginBottom: spacing.lg },
+  eyebrow: {
+    ...type.overline, color: colors.accent,
+    marginBottom: spacing.sm, fontSize: 11, letterSpacing: 3,
+  },
+  title: {
+    ...type.display, color: colors.text,
+    fontSize: 26, lineHeight: 32, textAlign: 'center',
+  },
 
-  steps: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: spacing.sm + 2 },
-  step: {
-    paddingVertical: spacing.md,
+  center: { alignItems: 'center', justifyContent: 'center', marginVertical: spacing.xl },
+
+  radioRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.md,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
   },
-  stepFirst: {
-    paddingVertical: spacing.md + 2,
-    borderColor: colors.accent,
-    backgroundColor: 'rgba(158,54,148,0.08)',
+  radio: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm,
   },
-  stepPressed: { opacity: 0.92 },
-  stepDone: { opacity: 0.6 },
+  radioDot: {
+    width: 18, height: 18, borderRadius: 9,
+    borderColor: 'rgba(255,255,255,0.45)', borderWidth: 1.5,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 4,
+  },
+  radioDotSelected: { borderColor: colors.accent },
+  radioDotInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
+  radioLabel: {
+    ...type.overline, fontSize: 10, letterSpacing: 1.5,
+    color: 'rgba(255,255,255,0.55)', textAlign: 'center',
+  },
+  radioLabelSelected: { color: colors.text },
+  radioDuration: {
+    ...type.caption, color: colors.textMuted, fontSize: 10,
+    marginTop: 2,
+  },
 
-  stepHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  rowHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  stepNumber: { ...type.overline, color: colors.accent, fontSize: 12 },
-  stepLabel: { ...type.h2, color: colors.text, fontSize: 17 },
-  stepHeaderDesc: { ...type.caption, color: colors.textMuted, fontSize: 12, marginTop: 2 },
-  firstEyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.xs, fontSize: 11 },
-  firstTitle: { ...type.display, color: colors.text, fontSize: 22, lineHeight: 28 },
-  doneBadge: { ...type.h2, color: colors.accent, fontSize: 18 },
-  chevron: { ...type.h2, color: colors.accent, fontSize: 22, fontWeight: '300' as const, opacity: 0.7 },
-
-  stepBody: { alignItems: 'center', paddingTop: spacing.md, paddingBottom: spacing.xs, gap: spacing.md },
-  stepDesc: { ...type.body, color: colors.textMuted, textAlign: 'center', maxWidth: 300, fontSize: 14 },
-  cta: {
-    paddingVertical: spacing.sm + 4,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accent,
-  },
-  ctaPressed: { opacity: 0.8 },
-  ctaText: { ...type.button, color: colors.text, fontSize: 12 },
-  exploreCta: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.lg,
-    padding: spacing.lg,
+  explore: {
+    marginTop: spacing.xl,
+    padding: spacing.md,
     borderRadius: radius.lg,
-    borderColor: colors.accent,
-    borderWidth: 1,
-    backgroundColor: 'rgba(158,54,148,0.10)',
+    borderColor: 'rgba(255,255,255,0.25)', borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
     alignItems: 'center',
     gap: 4,
   },
   exploreEyebrow: { ...type.overline, color: colors.accent, fontSize: 10 },
-  exploreTitle: { ...type.h2, color: colors.text, fontSize: 16, textAlign: 'center' },
-  exploreHint: { ...type.caption, color: colors.textMuted, textAlign: 'center', fontSize: 12 },
+  exploreTitle: { ...type.h2, color: colors.text, fontSize: 14, textAlign: 'center' },
+
+  footerSpacer: { flex: 1, minHeight: spacing.xl },
 });
