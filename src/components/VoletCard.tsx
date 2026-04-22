@@ -150,7 +150,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     overflow: 'hidden',
   },
-  cardSecondary: { opacity: 0.85 },
+  // Intro volet reads as secondary to the three numbered parts: no surface
+  // fill, dimmer outline, lighter title so it sits back visually.
+  cardSecondary: {
+    backgroundColor: 'transparent',
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
   cardLocked: { opacity: 0.45 },
   pressable: {
     flexDirection: 'row',
