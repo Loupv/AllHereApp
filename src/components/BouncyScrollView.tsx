@@ -1,19 +1,46 @@
 import { forwardRef, useEffect, useRef, useImperativeHandle } from 'react';
-import { Platform, ScrollView, ScrollViewProps, View } from 'react-native';
+import { Platform, ScrollView, ScrollViewProps, View, Text, StyleSheet } from 'react-native';
+import { colors, spacing, type } from '../theme';
+
+type Props = ScrollViewProps & {
+  /** Called when the user drags the top down past the refresh threshold. */
+  onRefresh?: () => void;
+  /** When true, show the indicator in its spinning state until it flips back to false. */
+  refreshing?: boolean;
+};
 
 /**
- * ScrollView with iOS-style rubber-band overscroll on web.
- * On web we bypass Reanimated entirely: wheel deltas are applied directly to
- * the wrapper's CSS transform (zero-frame latency), and release is handled
- * by a simple rAF critically-damped spring. On native we fall through to the
- * stock RN ScrollView (which already bounces on iOS).
+ * ScrollView with iOS-style rubber-band overscroll on web, plus an optional
+ * pull-to-refresh indicator.
+ *
+ * - Web: bypass Reanimated entirely. Wheel / touch deltas are applied
+ *   directly to the wrapper's CSS transform (zero-frame latency), release
+ *   is handled by a simple rAF critically-damped spring. Refresh indicator
+ *   is a React component whose rotation / opacity is driven from the same
+ *   loop via a `data-p` attribute and scoped CSS.
+ * - Native: fall through to the stock RN ScrollView. If onRefresh is set,
+ *   a RefreshControl is attached so iOS/Android pull-to-refresh works out
+ *   of the box.
  */
-export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function BouncyScrollView(
-  { children, style, contentContainerStyle, bounces = true, ...rest },
+export const BouncyScrollView = forwardRef<ScrollView, Props>(function BouncyScrollView(
+  {
+    children, style, contentContainerStyle, bounces = true,
+    onRefresh, refreshing,
+    refreshControl, // do not double-wrap if a caller already supplied one
+    ...rest
+  },
   ref,
 ) {
   const scrollRef = useRef<ScrollView>(null);
   const wrapperRef = useRef<View>(null);
+  const indicatorRef = useRef<View>(null);
+  // Stash callbacks in refs so the event-listener closures always see the
+  // latest values without having to re-attach on every render.
+  const onRefreshRef = useRef(onRefresh);
+  const refreshingRef = useRef(!!refreshing);
+  onRefreshRef.current = onRefresh;
+  refreshingRef.current = !!refreshing;
+
   useImperativeHandle(ref, () => scrollRef.current as ScrollView);
 
   useEffect(() => {
@@ -25,31 +52,41 @@ export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function
       node._nativeRef?._node ?? null;
     const wrapperNode: any = wrapperRef.current as any;
     const wrapEl: HTMLElement | null = wrapperNode?._nativeRef?._node ?? wrapperNode ?? null;
+    const indicatorNode: any = indicatorRef.current as any;
+    const indicatorEl: HTMLElement | null = indicatorNode?._nativeRef?._node ?? indicatorNode ?? null;
     if (!scrollEl || !wrapEl) return;
 
     const ATBOUND = 1.5;
     const WHEEL_FACTOR = 0.22;
     const TOUCH_FACTOR = 0.9;
-    const MAX = 70; // px soft cap
+    const MAX = 70;
+    const REFRESH_TRIGGER = 55; // px of visible pull-down that arms onRefresh
 
-    let raw = 0;       // accumulated overscroll, can exceed MAX (saturated via tanh)
-    let current = 0;   // displayed translate in px
-    let velocity = 0;  // for spring
+    let raw = 0;
+    let current = 0;
+    let velocity = 0;
     let rafId = 0;
     let releasing = false;
     let releaseTimer: any = 0;
 
     const softBound = (r: number) => -MAX * Math.tanh(r / MAX);
 
+    const paintIndicator = (pullPx: number) => {
+      if (!indicatorEl) return;
+      const active = pullPx > 4;
+      const p = Math.min(1, Math.max(0, pullPx / REFRESH_TRIGGER));
+      indicatorEl.style.opacity = String(active ? Math.min(1, p + 0.1) : 0);
+      indicatorEl.style.transform = `translate(-50%, 0) rotate(${p * 180}deg)`;
+    };
+
     const paint = (tx: number) => {
-      // willChange kept static via CSS below; direct style write = next-frame paint
       wrapEl.style.transform = tx === 0 ? '' : `translate3d(0, ${tx}px, 0)`;
+      paintIndicator(tx);
     };
 
     const loop = () => {
-      // Critically-damped spring toward 0
-      const k = 320;     // stiffness
-      const d = 34;      // damping (2*sqrt(k) ~ 35.8 → slightly under-damped)
+      const k = 320;
+      const d = 34;
       const dt = 1 / 60;
       const a = -k * current - d * velocity;
       velocity += a * dt;
@@ -70,7 +107,6 @@ export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function
     const startRelease = () => {
       if (releasing) return;
       releasing = true;
-      // Seed velocity from the rate of recent pull so release feels connected.
       if (!rafId) rafId = requestAnimationFrame(loop);
     };
 
@@ -91,6 +127,14 @@ export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function
       applyRaw();
     };
 
+    const maybeFireRefresh = () => {
+      if (!onRefreshRef.current) return;
+      if (refreshingRef.current) return; // already in-flight
+      if (current >= REFRESH_TRIGGER) {
+        try { onRefreshRef.current(); } catch { /* ignore */ }
+      }
+    };
+
     const onWheel = (e: WheelEvent) => {
       const { scrollTop, scrollHeight, clientHeight } = scrollEl;
       const atTop = scrollTop <= ATBOUND;
@@ -100,11 +144,13 @@ export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function
         e.preventDefault();
         pull(e.deltaY * WHEEL_FACTOR);
         clearTimeout(releaseTimer);
-        // Spring back as soon as wheel stops — 32ms is just over one wheel tick.
-        releaseTimer = setTimeout(startRelease, 32);
+        releaseTimer = setTimeout(() => {
+          maybeFireRefresh();
+          startRelease();
+        }, 32);
       } else if (raw !== 0) {
-        // Pointer scrolled back into content — release immediately
         clearTimeout(releaseTimer);
+        maybeFireRefresh();
         startRelease();
       }
     };
@@ -128,10 +174,10 @@ export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function
     };
     const onTouchEnd = () => {
       clearTimeout(releaseTimer);
+      maybeFireRefresh();
       startRelease();
     };
 
-    // Baseline styles for the wrapper — avoid transition (we drive it ourselves)
     wrapEl.style.willChange = 'transform';
     wrapEl.style.transition = '';
 
@@ -151,13 +197,47 @@ export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function
     };
   }, []);
 
+  // Native: wire RefreshControl so iOS/Android pull-to-refresh still works.
+  let effectiveRefreshControl = refreshControl;
+  if (!effectiveRefreshControl && onRefresh && Platform.OS !== 'web') {
+    // Lazy require to avoid a web bundle cost for an unused component.
+    const { RefreshControl } = require('react-native');
+    effectiveRefreshControl = (
+      <RefreshControl
+        refreshing={!!refreshing}
+        onRefresh={onRefresh}
+        tintColor={colors.accent}
+        colors={[colors.accent]}
+      />
+    );
+  }
+
+  // Indicator — web only. Native has its own RefreshControl spinner.
+  const showIndicator = Platform.OS === 'web' && !!onRefresh;
+
   return (
     <View ref={wrapperRef} style={{ flex: 1 }}>
+      {showIndicator ? (
+        <View
+          ref={indicatorRef}
+          // Drawn inside the wrapper so it follows the pull translate. Sits
+          // above the top edge by default (opacity 0) and peeks into view as
+          // the user drags.
+          style={styles.indicator}
+          pointerEvents="none"
+        >
+          <View style={[styles.indicatorInner, refreshing && styles.indicatorSpinning]}>
+            <Text style={styles.indicatorArrow}>{refreshing ? '◴' : '↓'}</Text>
+          </View>
+          {refreshing ? <Text style={styles.indicatorLabel}>Refreshing…</Text> : null}
+        </View>
+      ) : null}
       <ScrollView
         ref={scrollRef}
         style={style}
         contentContainerStyle={contentContainerStyle}
         bounces={bounces}
+        refreshControl={effectiveRefreshControl}
         {...rest}
       >
         {children}
@@ -165,3 +245,44 @@ export const BouncyScrollView = forwardRef<ScrollView, ScrollViewProps>(function
     </View>
   );
 });
+
+const styles = StyleSheet.create({
+  indicator: {
+    position: 'absolute',
+    top: -46,
+    left: '50%',
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 10,
+    opacity: 0,
+    // Center via translate (left:50% + translateX(-50%) done in JS on web)
+    ...(Platform.OS === 'web' ? ({ transform: 'translate(-50%, 0)' } as any) : null),
+  },
+  indicatorInner: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderColor: colors.border,
+    borderWidth: 1,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  indicatorSpinning: {
+    // Use a CSS animation on web only; native wouldn't use this path anyway.
+    ...(Platform.OS === 'web' ? ({ animation: 'ah-spin 800ms linear infinite' } as any) : null),
+  },
+  indicatorArrow: { ...type.caption, color: colors.accent, fontSize: 14, lineHeight: 16 },
+  indicatorLabel: { ...type.overline, color: colors.textDim, fontSize: 9 },
+});
+
+// Inject the keyframes once on web.
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const id = 'ah-bouncy-spin';
+  if (!document.getElementById(id)) {
+    const s = document.createElement('style');
+    s.id = id;
+    s.innerHTML = '@keyframes ah-spin { to { transform: rotate(360deg); } }';
+    document.head.appendChild(s);
+  }
+}

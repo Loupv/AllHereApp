@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { ScrollView, Text, View, Image, StyleSheet, Pressable, Linking, Platform } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Background } from '../../src/components/Background';
@@ -5,6 +6,7 @@ import { AboutFooter } from '../../src/components/AboutFooter';
 import { HtmlViewer } from '../../src/components/HtmlViewer';
 import { newsArticles } from '../../src/content/news';
 import { useRemoteStore } from '../../src/content/remoteStore';
+import { useNotifications } from '../../src/player/notificationStore';
 import { colors, radius, spacing, type } from '../../src/theme';
 
 const openExternal = (url: string) => {
@@ -15,9 +17,13 @@ const openExternal = (url: string) => {
 export default function NewsArticleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const remoteList = useRemoteStore(s => s.news);
+  const markSeen = useNotifications(s => s.markSeen);
   const article =
     newsArticles.find(a => a.id === id) ??
     remoteList.find(a => a.id === id);
+  useEffect(() => {
+    if (article) markSeen('news', article.id);
+  }, [article?.id]);
 
   if (!article) {
     return (

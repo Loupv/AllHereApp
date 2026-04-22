@@ -1,7 +1,10 @@
 import { Tabs } from 'expo-router';
 import { Text, View, Image, StyleSheet } from 'react-native';
 import { colors, type } from '../../src/theme';
-import { useNotifications } from '../../src/player/notificationStore';
+import { useNotifications, countUnread } from '../../src/player/notificationStore';
+import { useRemoteStore } from '../../src/content/remoteStore';
+import { newsArticles } from '../../src/content/news';
+import { videoItems } from '../../src/content/catalog';
 
 const LOGO = require('../../assets/images/allhere-logo.png');
 
@@ -33,7 +36,26 @@ function TwoLineLabel({ lines, focused }: { lines: [string, string]; focused: bo
 }
 
 export default function TabsLayout() {
-  const { newsUnread, videoUnread } = useNotifications();
+  // Subscribe to the seen maps so the badges re-render when items are marked.
+  const seenNews = useNotifications(s => s.seenNews);
+  const seenMedia = useNotifications(s => s.seenMedia);
+  const remoteNews = useRemoteStore(s => s.news);
+  const remoteMedia = useRemoteStore(s => s.videos);
+
+  // Static ids are always present; remote ids come from the last fetch.
+  const newsIds = [
+    ...newsArticles.map(a => a.id),
+    ...remoteNews.map(a => a.id),
+  ];
+  const mediaIds = [
+    ...videoItems.map(v => v.id),
+    ...remoteMedia.map(v => v.id),
+  ];
+  // Dedupe — a remote id shouldn't be double-counted if it somehow overlaps
+  const uniq = (xs: string[]) => Array.from(new Set(xs));
+  const newsUnread = uniq(newsIds).filter(id => !seenNews[id]).length;
+  const videoUnread = uniq(mediaIds).filter(id => !seenMedia[id]).length;
+  void countUnread; // kept for external use
 
   return (
     <Tabs
@@ -80,7 +102,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="video"
         options={{
-          title: 'Video',
+          title: 'Media',
           tabBarIcon: ({ focused }) => <TabIcon label="▷" focused={focused} badge={videoUnread} />,
         }}
       />

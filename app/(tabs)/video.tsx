@@ -1,78 +1,106 @@
-import { useEffect } from 'react';
-import { View, Text, Image, Pressable, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { SeeMoreLink } from '../../src/components/SeeMoreLink';
-import { videoItems } from '../../src/content/catalog';
+import { videoItems, MediaKind } from '../../src/content/catalog';
 import { useVideoFeed } from '../../src/content/remote';
 import { useVideoStore } from '../../src/player/videoStore';
 import { useNotifications } from '../../src/player/notificationStore';
 import { colors, radius, spacing, type } from '../../src/theme';
 
+const KIND_ICON: Record<MediaKind, string> = {
+  video: '▶',
+  audio: '♪',
+  article: '¶',
+};
+
+const KIND_LABEL: Record<MediaKind, string> = {
+  video: 'WATCH',
+  audio: 'LISTEN',
+  article: 'READ',
+};
+
 export default function VideoScreen() {
   const router = useRouter();
   const openVideo = useVideoStore(s => s.open);
-  const markRead = useNotifications(s => s.markVideoRead);
-  useEffect(() => { markRead(); }, []);
+  const seen = useNotifications(s => s.seenMedia);
+  const markSeen = useNotifications(s => s.markSeen);
+  const markAllSeen = useNotifications(s => s.markAllSeen);
 
   const { items, loading, refreshing, refresh } = useVideoFeed(videoItems);
+  const unreadCount = items.filter(v => !seen[v.id]).length;
 
   return (
     <Background color={colors.bgTab}>
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={refresh}
-            tintColor={colors.accent}
-            colors={[colors.accent]}
-          />
-        }
+        onRefresh={refresh}
+        refreshing={refreshing}
       >
         <View style={styles.hero}>
           <Image source={require('../../assets/images/hero/thepractice.jpg')} style={styles.heroImage} resizeMode="cover" />
           <View style={styles.heroOverlay} />
           <View style={styles.heroText}>
-            <Text style={styles.eyebrow}>VIDEO</Text>
-            <Text style={styles.title}>Watch & learn</Text>
+            <Text style={styles.eyebrow}>MEDIA HUB</Text>
+            <Text style={styles.title}>Watch, listen & read</Text>
           </View>
         </View>
+        {unreadCount > 0 ? (
+          <View style={styles.toolbar}>
+            <Text style={styles.toolbarHint}>{unreadCount} unread</Text>
+            <Pressable
+              onPress={() => markAllSeen('media', items.map(v => v.id))}
+              hitSlop={8}
+              style={({ pressed }) => [styles.markAll, pressed && { opacity: 0.6 }]}
+            >
+              <Text style={styles.markAllText}>Mark all as read</Text>
+            </Pressable>
+          </View>
+        ) : null}
         {loading && items.length === 0 ? (
           <Text style={styles.loading}>Loading…</Text>
         ) : null}
-        {items.map(v => (
-          <Pressable
-            key={v.id}
-            onPress={() => {
-              // Remote items open the in-app detail screen which renders the
-              // WP article HTML (incl. YT / Vimeo iframes) inline on web and
-              // falls back to text + "Open on allhere.org" on native.
-              if (v.remote) router.push(`/video/${v.id}`);
-              else if (v.source) openVideo(v);
-            }}
-            style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-          >
-            <View style={styles.posterWrap}>
-              <Image source={v.poster} style={styles.poster} resizeMode="cover" />
-              <View style={styles.posterOverlay} />
-              <View style={styles.playBadge}>
-                <Text style={styles.playIcon}>▶</Text>
-              </View>
-              {v.duration ? (
-                <View style={styles.durationBadge}>
-                  <Text style={styles.durationText}>{v.duration}</Text>
+        {items.map(v => {
+          const kind: MediaKind = v.kind ?? (v.source ? 'video' : 'article');
+          const isUnread = !seen[v.id];
+          return (
+            <Pressable
+              key={v.id}
+              onPress={() => {
+                markSeen('media', v.id);
+                if (v.remote) router.push(`/video/${v.id}`);
+                else if (v.source) openVideo(v);
+              }}
+              style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+            >
+              {isUnread ? <View style={styles.unreadStrip} /> : null}
+              <View style={styles.posterWrap}>
+                <Image source={v.poster} style={styles.poster} resizeMode="cover" />
+                <View style={styles.posterOverlay} />
+                {kind === 'video' ? (
+                  <View style={styles.playBadge}>
+                    <Text style={styles.playIcon}>▶</Text>
+                  </View>
+                ) : null}
+                <View style={styles.kindBadge}>
+                  <Text style={styles.kindIcon}>{KIND_ICON[kind]}</Text>
+                  <Text style={styles.kindText}>{KIND_LABEL[kind]}</Text>
                 </View>
-              ) : null}
-            </View>
-            <View style={styles.cardBody}>
-              <Text style={styles.cardTitle} numberOfLines={2}>{v.title}</Text>
-              {v.subtitle ? <Text style={styles.cardSubtitle} numberOfLines={2}>{v.subtitle}</Text> : null}
-            </View>
-          </Pressable>
-        ))}
+                {v.duration ? (
+                  <View style={styles.durationBadge}>
+                    <Text style={styles.durationText}>{v.duration}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <View style={styles.cardBody}>
+                <Text style={styles.cardTitle} numberOfLines={2}>{v.title}</Text>
+                {v.subtitle ? <Text style={styles.cardSubtitle} numberOfLines={2}>{v.subtitle}</Text> : null}
+              </View>
+            </Pressable>
+          );
+        })}
         <SeeMoreLink label="Media" url="https://allhere.org/media-hub/" />
         <AboutFooter />
       </ScrollView>
@@ -88,7 +116,24 @@ const styles = StyleSheet.create({
   heroText: { padding: spacing.lg, alignItems: 'center' },
   eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.sm },
   title: { ...type.display, color: colors.text, fontSize: 32, textAlign: 'center' },
+  toolbar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
+  },
+  toolbarHint: { ...type.overline, color: colors.accent, fontSize: 10 },
+  markAll: {
+    paddingVertical: 4, paddingHorizontal: 10,
+    borderRadius: radius.pill,
+    borderColor: colors.border, borderWidth: 1,
+    backgroundColor: colors.surface,
+  },
+  markAllText: { ...type.overline, color: colors.text, fontSize: 9, letterSpacing: 1 },
+  unreadStrip: {
+    position: 'absolute', top: 0, bottom: 0, left: 0, width: 3,
+    backgroundColor: colors.accent, zIndex: 2,
+  },
   card: {
+    position: 'relative',
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
     borderRadius: radius.lg,
@@ -115,6 +160,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   playIcon: { color: colors.text, fontSize: 22, marginLeft: 4 },
+  kindBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  kindIcon: { color: colors.accent, fontSize: 11 },
+  kindText: { ...type.overline, color: colors.text, fontSize: 9, letterSpacing: 1.5 },
   durationBadge: {
     position: 'absolute',
     right: spacing.sm,

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { ScrollView, Text, View, Image, StyleSheet, Pressable, Linking, Platform } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Background } from '../../src/components/Background';
@@ -5,6 +6,7 @@ import { AboutFooter } from '../../src/components/AboutFooter';
 import { HtmlViewer } from '../../src/components/HtmlViewer';
 import { videoItems } from '../../src/content/catalog';
 import { useRemoteStore } from '../../src/content/remoteStore';
+import { useNotifications } from '../../src/player/notificationStore';
 import { colors, radius, spacing, type } from '../../src/theme';
 
 const openExternal = (url: string) => {
@@ -15,9 +17,13 @@ const openExternal = (url: string) => {
 export default function VideoArticleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const remoteList = useRemoteStore(s => s.videos);
+  const markSeen = useNotifications(s => s.markSeen);
   const video =
     videoItems.find(v => v.id === id) ??
     remoteList.find(v => v.id === id);
+  useEffect(() => {
+    if (video) markSeen('media', video.id);
+  }, [video?.id]);
 
   if (!video) {
     return (

@@ -118,34 +118,63 @@ const VIDEO_PATTERNS: RegExp[] = [
   /vimeo\.com\/\d+/i,
 ];
 
+const AUDIO_PATTERNS: RegExp[] = [
+  /<audio[\s>]/i,
+  /soundcloud\.com\/player/i,
+  /open\.spotify\.com\/episode/i,
+  /anchor\.fm/i,
+  /podcasters\.spotify\.com/i,
+];
+
 const hasVideo = (html: string | undefined) =>
   !!html && VIDEO_PATTERNS.some((r) => r.test(html));
+
+const hasAudio = (html: string | undefined) =>
+  !!html && AUDIO_PATTERNS.some((r) => r.test(html));
+
+const pickKind = (wpType: string, html: string | undefined): import('./catalog').MediaKind => {
+  if (hasVideo(html)) return 'video';
+  if (wpType === 'podcast' || hasAudio(html)) return 'audio';
+  return 'article';
+};
 
 export async function fetchVideos(): Promise<VideoItem[]> {
   const [headlines, podcasts] = await Promise.all([
     fetchType('in-the-headlines').catch(() => []),
     fetchType('podcast').catch(() => []),
   ]);
-  const toItem = (p: any, eyebrow: string): VideoItem => ({
-    id: `wp-${p.id}`,
-    title: stripHtml(p.title?.rendered ?? ''),
-    subtitle: stripHtml(p.excerpt?.rendered ?? '').slice(0, 140) || eyebrow,
-    duration: firstDate(p),
-    poster: { uri: featuredUrl(p) ?? '' },
-    contentHtml: p.content?.rendered ?? '',
-    link: p.link,
-    remote: true,
-  });
+  const toItem = (p: any, wpType: string): VideoItem => {
+    const html = p.content?.rendered ?? '';
+    const excerpt = stripHtml(p.excerpt?.rendered ?? '').slice(0, 140);
+    return {
+      id: `wp-${p.id}`,
+      title: stripHtml(p.title?.rendered ?? ''),
+      subtitle: excerpt || undefined, // no more fake "Headline" / "Podcast" subtitle
+      duration: firstDate(p),
+      poster: { uri: featuredUrl(p) ?? '' },
+      contentHtml: html,
+      link: p.link,
+      remote: true,
+      kind: pickKind(wpType, html),
+    };
+  };
   const items = [
-    ...headlines.map((p: any) => toItem(p, 'Headline')),
-    ...podcasts.map((p: any) => toItem(p, 'Podcast')),
+    ...headlines.map((p: any) => toItem(p, 'in-the-headlines')),
+    ...podcasts.map((p: any) => toItem(p, 'podcast')),
   ];
-  // Keep only cards that have BOTH a featured image AND a real video embed
-  // in their HTML; otherwise they're just articles that belong in News.
+  // Keep anything that has a featured image — press mentions, podcasts and
+  // actual video embeds all belong in the Media tab.
   return items.filter(
-    (it) => typeof it.poster === 'object' && !!it.poster.uri && hasVideo(it.contentHtml),
+    (it) => typeof it.poster === 'object' && !!it.poster.uri,
   );
 }
+
+// Exposed for callers that want to know if an item is a true video (vs. a
+// press mention or podcast) — e.g. to swap the ▶ badge.
+export const itemHasVideoEmbed = (item: { contentHtml?: string }) =>
+  hasVideo(item.contentHtml);
+export const itemHasAudioEmbed = (item: { contentHtml?: string }) =>
+  hasAudio(item.contentHtml);
 
 // ---------- Hooks ----------
 

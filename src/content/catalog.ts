@@ -368,6 +368,8 @@ export const newsItems: NewsItem[] = [];
  */
 export type ImageSrc = number | { uri: string };
 
+export type MediaKind = 'video' | 'audio' | 'article';
+
 export type VideoItem = {
   id: string;
   title: string;
@@ -379,6 +381,8 @@ export type VideoItem = {
   remote?: boolean;
   /** Raw WordPress `content.rendered` HTML — used on web to play embeds (YT/Vimeo) inline */
   contentHtml?: string;
+  /** What the user will actually do with the card: watch / listen / read */
+  kind?: MediaKind;
 };
 export const videoItems: VideoItem[] = [
   {
