@@ -104,6 +104,23 @@ async function fetchType(type: string): Promise<any[]> {
   return r.json();
 }
 
+/**
+ * Detect whether a WP post's rendered HTML actually carries a playable
+ * video embed (YouTube / Vimeo / Fuji TV / native <video>). Matches both the
+ * raw iframe tag and direct watch URLs that WordPress sometimes leaves as
+ * oEmbed placeholders that render as iframes on the site.
+ */
+const VIDEO_PATTERNS: RegExp[] = [
+  /<iframe[^>]+src=["'][^"']*(youtube\.com\/embed|player\.vimeo\.com|fod\.fujitv\.co\.jp|youtube-nocookie\.com)/i,
+  /<video[\s>]/i,
+  /youtube\.com\/watch\?v=/i,
+  /youtu\.be\//i,
+  /vimeo\.com\/\d+/i,
+];
+
+const hasVideo = (html: string | undefined) =>
+  !!html && VIDEO_PATTERNS.some((r) => r.test(html));
+
 export async function fetchVideos(): Promise<VideoItem[]> {
   const [headlines, podcasts] = await Promise.all([
     fetchType('in-the-headlines').catch(() => []),
@@ -123,8 +140,11 @@ export async function fetchVideos(): Promise<VideoItem[]> {
     ...headlines.map((p: any) => toItem(p, 'Headline')),
     ...podcasts.map((p: any) => toItem(p, 'Podcast')),
   ];
-  // Drop items with no featured image — cards would look empty
-  return items.filter(it => typeof it.poster === 'object' && !!it.poster.uri);
+  // Keep only cards that have BOTH a featured image AND a real video embed
+  // in their HTML; otherwise they're just articles that belong in News.
+  return items.filter(
+    (it) => typeof it.poster === 'object' && !!it.poster.uri && hasVideo(it.contentHtml),
+  );
 }
 
 // ---------- Hooks ----------
