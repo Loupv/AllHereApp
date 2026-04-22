@@ -33,18 +33,19 @@ export function AnimatedGradient({ children }: { children?: React.ReactNode }) {
 
   return (
     <View style={styles.root} pointerEvents="box-none">
-      {/* Layer A — always visible, deep blue → magenta (Silent Mind tint) */}
+      {/* Layer A — blue → violet → red running one way */}
       <LinearGradient
-        colors={['#000823', '#1B2F5A', '#6F1F68', '#9E3694']}
-        locations={[0, 0.4, 0.8, 1]}
+        colors={['#0B1A4A', '#3A2568', '#7A2D91', '#A92C58', '#8B1A2B']}
+        locations={[0, 0.28, 0.55, 0.82, 1]}
         start={[0.1, 0]}
         end={[0.9, 1]}
         style={StyleSheet.absoluteFill}
       />
-      {/* Layer B — fades in/out, swaps the warm tones for QM teal */}
+      {/* Layer B — same palette rotated, cross-fades in and out so the sky
+          feels like it's slowly shifting without ever looping a hard frame */}
       <AniGradient
-        colors={['#000823', '#0F3A44', '#1F6F6E', '#36A09E']}
-        locations={[0, 0.4, 0.8, 1]}
+        colors={['#081236', '#5C2D6E', '#B5356A', '#C23B4B', '#5C0F1F']}
+        locations={[0, 0.3, 0.6, 0.85, 1]}
         start={[0.9, 0]}
         end={[0.1, 1]}
         style={[StyleSheet.absoluteFill, layerB]}

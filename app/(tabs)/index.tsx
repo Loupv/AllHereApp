@@ -12,10 +12,37 @@ import { colors, radius, spacing, type } from '../../src/theme';
 
 type ModeKey = 'step-1min' | 'step-3min' | 'step-qm3';
 
-const MODES: { key: ModeKey; big: BigPlayMode; label: string; sublabel: string; duration: string }[] = [
-  { key: 'step-1min', big: 'one',   label: '1 MIN',      sublabel: 'Arrive in a single breath',        duration: '1 min' },
-  { key: 'step-3min', big: 'three', label: '3 MIN',      sublabel: 'Settle a little deeper',            duration: '3 min' },
-  { key: 'step-qm3',  big: 'qm3',   label: '3 × 3 MIN',  sublabel: 'Quantified Meditation · 3 rounds',  duration: '11 min' },
+const MODES: {
+  key: ModeKey;
+  big: BigPlayMode;
+  /** Short label used on the radio row */
+  short: string;
+  /** Full label shown inside the big play button */
+  playLabel: string;
+  playLabelDone: string;
+  duration: string;
+}[] = [
+  {
+    key: 'step-1min', big: 'one',
+    short: '60 sec',
+    playLabel: 'START WITH 60 SEC',
+    playLabelDone: 'LISTEN AGAIN · 60 SEC',
+    duration: '1 min',
+  },
+  {
+    key: 'step-3min', big: 'three',
+    short: '3 min',
+    playLabel: 'CONTINUE WITH 3 MIN',
+    playLabelDone: 'LISTEN AGAIN · 3 MIN',
+    duration: '3 min',
+  },
+  {
+    key: 'step-qm3', big: 'qm3',
+    short: '3 × 3 min',
+    playLabel: 'EXPLORE THE QM FORMAT\n3 × 3 MIN',
+    playLabelDone: 'LISTEN AGAIN · 3 × 3 MIN',
+    duration: '11 min',
+  },
 ];
 
 export default function StartScreen() {
@@ -61,8 +88,7 @@ export default function StartScreen() {
             <View style={styles.center}>
               <BigPlayButton
                 mode={cfg.big}
-                label={isDone ? `LISTEN AGAIN · ${cfg.label}` : `START WITH ${cfg.label}`}
-                sublabel={cfg.sublabel}
+                label={isDone ? cfg.playLabelDone : cfg.playLabel}
                 size={playSize}
                 onPress={onPlay}
               />
@@ -87,7 +113,7 @@ export default function StartScreen() {
                     </View>
                     <View style={{ alignItems: 'center' }}>
                       <Text style={[styles.radioLabel, selected && styles.radioLabelSelected]}>
-                        {m.label}
+                        {m.short}
                       </Text>
                       <Text style={styles.radioDuration}>{m.duration}{done ? ' · ✓' : ''}</Text>
                     </View>
