@@ -12,6 +12,8 @@ export type NewsArticle = {
   link?: string;
   /** True when the item originates from the remote API (vs. the bundled static list) */
   remote?: boolean;
+  /** Raw WordPress `content.rendered` HTML — used on web to show iframes/images inline */
+  contentHtml?: string;
 };
 
 export const newsArticles: NewsArticle[] = [

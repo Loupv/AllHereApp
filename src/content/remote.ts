@@ -19,7 +19,7 @@ import { useRemoteStore } from './remoteStore';
 
 const BASE = 'https://allhere.org/wp-json/wp/v2';
 const PER_PAGE = 20;
-const CACHE_PREFIX = 'ah_remote_v1_';
+const CACHE_PREFIX = 'ah_remote_v2_'; // bump when item shape changes
 
 // ---------- tiny HTML helpers (WP returns HTML inside strings) ----------
 
@@ -50,8 +50,23 @@ const htmlToParagraphs = (html: string): string[] => {
   return single ? [single] : [];
 };
 
-const featuredUrl = (p: any): string | undefined =>
-  p?._embedded?.['wp:featuredmedia']?.[0]?.source_url;
+/**
+ * Pick the smallest featured-media size that still looks crisp on a phone
+ * (typically `medium_large` ~768px wide, falling back to `large`, then to
+ * the original). Saves a lot of bandwidth vs. always fetching the 2400px
+ * master asset.
+ */
+const featuredUrl = (p: any): string | undefined => {
+  const fm = p?._embedded?.['wp:featuredmedia']?.[0];
+  if (!fm) return undefined;
+  const sizes = fm.media_details?.sizes ?? {};
+  return (
+    sizes.medium_large?.source_url ??
+    sizes.large?.source_url ??
+    sizes.medium?.source_url ??
+    fm.source_url
+  );
+};
 
 const firstDate = (p: any): string =>
   typeof p?.date === 'string' ? p.date.slice(0, 10) : '';
@@ -70,6 +85,7 @@ export async function fetchUpdates(): Promise<NewsArticle[]> {
     date: firstDate(p),
     image: { uri: featuredUrl(p) ?? '' },
     body: htmlToParagraphs(p.content?.rendered ?? ''),
+    contentHtml: p.content?.rendered ?? '',
     link: p.link,
     remote: true,
   }));
@@ -99,6 +115,7 @@ export async function fetchVideos(): Promise<VideoItem[]> {
     subtitle: stripHtml(p.excerpt?.rendered ?? '').slice(0, 140) || eyebrow,
     duration: firstDate(p),
     poster: { uri: featuredUrl(p) ?? '' },
+    contentHtml: p.content?.rendered ?? '',
     link: p.link,
     remote: true,
   });

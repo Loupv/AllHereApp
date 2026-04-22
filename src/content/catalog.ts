@@ -377,6 +377,8 @@ export type VideoItem = {
   poster: ImageSrc;
   link?: string;
   remote?: boolean;
+  /** Raw WordPress `content.rendered` HTML — used on web to play embeds (YT/Vimeo) inline */
+  contentHtml?: string;
 };
 export const videoItems: VideoItem[] = [
   {

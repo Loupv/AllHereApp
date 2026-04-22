@@ -2,6 +2,7 @@ import { ScrollView, Text, View, Image, StyleSheet, Pressable, Linking, Platform
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
+import { HtmlViewer } from '../../src/components/HtmlViewer';
 import { newsArticles } from '../../src/content/news';
 import { useRemoteStore } from '../../src/content/remoteStore';
 import { colors, radius, spacing, type } from '../../src/theme';
@@ -37,13 +38,15 @@ export default function NewsArticleScreen() {
             <Text style={styles.date}>{article.date}</Text>
           </View>
           <Text style={styles.title}>{article.title}</Text>
-          {article.body.length > 0
-            ? article.body.map((p, i) => (
-                <Text key={i} style={styles.paragraph}>{p}</Text>
-              ))
-            : (
-              <Text style={styles.paragraph}>{article.excerpt}</Text>
-            )}
+          {article.contentHtml ? (
+            <View style={styles.html}>
+              <HtmlViewer html={article.contentHtml} link={article.link} />
+            </View>
+          ) : (
+            article.body.map((p, i) => (
+              <Text key={i} style={styles.paragraph}>{p}</Text>
+            ))
+          )}
           {article.link ? (
             <Pressable onPress={() => openExternal(article.link!)} hitSlop={8} style={styles.readMoreBtn}>
               <Text style={styles.readMore}>Read the full article on allhere.org →</Text>
@@ -67,6 +70,7 @@ const styles = StyleSheet.create({
     ...type.display, color: colors.text, fontSize: 26,
     textAlign: 'center', marginBottom: spacing.lg, lineHeight: 32,
   },
+  html: { alignSelf: 'stretch' },
   paragraph: {
     ...type.body, color: colors.textMuted,
     marginBottom: spacing.md, lineHeight: 24, maxWidth: 620,

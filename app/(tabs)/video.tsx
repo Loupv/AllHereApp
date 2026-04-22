@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { View, Text, Image, Pressable, StyleSheet, Linking, Platform, RefreshControl } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, RefreshControl } from 'react-native';
+import { useRouter } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
@@ -10,12 +11,8 @@ import { useVideoStore } from '../../src/player/videoStore';
 import { useNotifications } from '../../src/player/notificationStore';
 import { colors, radius, spacing, type } from '../../src/theme';
 
-const openExternal = (url: string) => {
-  if (Platform.OS === 'web') window.open(url, '_blank', 'noopener,noreferrer');
-  else Linking.openURL(url).catch(() => {});
-};
-
 export default function VideoScreen() {
+  const router = useRouter();
   const openVideo = useVideoStore(s => s.open);
   const markRead = useNotifications(s => s.markVideoRead);
   useEffect(() => { markRead(); }, []);
@@ -50,9 +47,10 @@ export default function VideoScreen() {
           <Pressable
             key={v.id}
             onPress={() => {
-              // Remote items link out to allhere.org (site hosts the embed);
-              // bundled items keep playing inline via the VideoStore.
-              if (v.remote && v.link) openExternal(v.link);
+              // Remote items open the in-app detail screen which renders the
+              // WP article HTML (incl. YT / Vimeo iframes) inline on web and
+              // falls back to text + "Open on allhere.org" on native.
+              if (v.remote) router.push(`/video/${v.id}`);
               else if (v.source) openVideo(v);
             }}
             style={({ pressed }) => [styles.card, pressed && styles.pressed]}
