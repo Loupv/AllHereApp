@@ -33,11 +33,9 @@ export default function NewsScreen() {
             <Text style={styles.title}>News</Text>
           </View>
         </View>
-        {items.length > 0 ? (
+        {unreadCount > 0 ? (
           <View style={styles.toolbar}>
-            <Text style={styles.toolbarHint}>
-              {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
-            </Text>
+            <Text style={styles.toolbarHint}>{unreadCount} unread</Text>
             <Pressable
               onPress={() => {
                 // Mark every known id as seen — current visible items AND the
@@ -49,12 +47,7 @@ export default function NewsScreen() {
                 markAllSeen('news', every);
               }}
               hitSlop={8}
-              disabled={unreadCount === 0}
-              style={({ pressed }) => [
-                styles.markAll,
-                unreadCount === 0 && styles.markAllDisabled,
-                pressed && { opacity: 0.6 },
-              ]}
+              style={({ pressed }) => [styles.markAll, pressed && { opacity: 0.6 }]}
             >
               <Text style={styles.markAllText}>Mark all as read</Text>
             </Pressable>

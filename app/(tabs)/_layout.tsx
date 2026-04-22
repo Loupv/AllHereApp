@@ -42,19 +42,14 @@ export default function TabsLayout() {
   const remoteNews = useRemoteStore(s => s.news);
   const remoteMedia = useRemoteStore(s => s.videos);
 
-  // Static ids are always present; remote ids come from the last fetch.
-  const newsIds = [
-    ...newsArticles.map(a => a.id),
-    ...remoteNews.map(a => a.id),
-  ];
-  const mediaIds = [
-    ...videoItems.map(v => v.id),
-    ...remoteMedia.map(v => v.id),
-  ];
-  // Dedupe — a remote id shouldn't be double-counted if it somehow overlaps
-  const uniq = (xs: string[]) => Array.from(new Set(xs));
-  const newsUnread = uniq(newsIds).filter(id => !seenNews[id]).length;
-  const videoUnread = uniq(mediaIds).filter(id => !seenMedia[id]).length;
+  // Count the SAME list the tab screen actually renders, otherwise the badge
+  // can stay stuck at a number while "Mark all as read" sits disabled. Once
+  // the tab has fetched (or loaded its cache), remoteStore holds the live
+  // list; before that we fall back to the bundled static items.
+  const newsList = remoteNews.length > 0 ? remoteNews : newsArticles;
+  const mediaList = remoteMedia.length > 0 ? remoteMedia : videoItems;
+  const newsUnread = newsList.filter(a => !seenNews[a.id]).length;
+  const videoUnread = mediaList.filter(v => !seenMedia[v.id]).length;
   void countUnread; // kept for external use
 
   return (

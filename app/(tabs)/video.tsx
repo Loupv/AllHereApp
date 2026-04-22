@@ -47,11 +47,9 @@ export default function VideoScreen() {
             <Text style={styles.title}>Watch, listen & read</Text>
           </View>
         </View>
-        {items.length > 0 ? (
+        {unreadCount > 0 ? (
           <View style={styles.toolbar}>
-            <Text style={styles.toolbarHint}>
-              {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
-            </Text>
+            <Text style={styles.toolbarHint}>{unreadCount} unread</Text>
             <Pressable
               onPress={() => {
                 const every = Array.from(new Set([
@@ -61,12 +59,7 @@ export default function VideoScreen() {
                 markAllSeen('media', every);
               }}
               hitSlop={8}
-              disabled={unreadCount === 0}
-              style={({ pressed }) => [
-                styles.markAll,
-                unreadCount === 0 && styles.markAllDisabled,
-                pressed && { opacity: 0.6 },
-              ]}
+              style={({ pressed }) => [styles.markAll, pressed && { opacity: 0.6 }]}
             >
               <Text style={styles.markAllText}>Mark all as read</Text>
             </Pressable>

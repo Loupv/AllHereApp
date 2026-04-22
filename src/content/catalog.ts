@@ -396,7 +396,7 @@ export const startJourneySteps = [
  */
 export const qmProgram = {
   eyebrow: 'Quantified Meditation',
-  title: 'QM Format — three parts',
+  title: 'High Intensity Training',
   intro:
     'The same three-part journey, quantified. Short, timed rounds with deliberate pauses between them — designed to make presence measurable.',
   banner: require('../../assets/images/hero/space.jpg'),

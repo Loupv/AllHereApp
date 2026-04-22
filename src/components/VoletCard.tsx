@@ -76,14 +76,14 @@ export function VoletCard({
   const onPress = () => {
     if (locked) return;
     openY.value = withSequence(
-      withTiming(1.18, { duration: 160, easing: Easing.out(Easing.cubic) }, (finished) => {
+      withTiming(1.28, { duration: 360, easing: Easing.out(Easing.cubic) }, (finished) => {
         if (finished) runOnJS(navigate)();
       }),
-      withTiming(1, { duration: 220, easing: Easing.in(Easing.cubic) }),
+      withTiming(1, { duration: 420, easing: Easing.in(Easing.cubic) }),
     );
     openOpacity.value = withSequence(
-      withTiming(0.85, { duration: 160 }),
-      withTiming(1, { duration: 220 }),
+      withTiming(0.75, { duration: 360 }),
+      withTiming(1, { duration: 420 }),
     );
   };
 
