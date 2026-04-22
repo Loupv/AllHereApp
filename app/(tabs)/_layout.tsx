@@ -93,6 +93,14 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="qm"
+        options={{
+          title: 'QM Format',
+          tabBarIcon: ({ focused }) => <TabIcon label="◎" focused={focused} />,
+          tabBarLabel: ({ focused }) => <TwoLineLabel lines={['QM', 'Format']} focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="news"
         options={{
           title: 'News',
@@ -104,14 +112,6 @@ export default function TabsLayout() {
         options={{
           title: 'Media',
           tabBarIcon: ({ focused }) => <TabIcon label="▷" focused={focused} badge={videoUnread} />,
-        }}
-      />
-      <Tabs.Screen
-        name="silent-flute"
-        options={{
-          title: 'Silent Flute',
-          tabBarIcon: ({ focused }) => <TabIcon label="♪" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TwoLineLabel lines={['Silent', 'Flute']} focused={focused} />,
         }}
       />
     </Tabs>

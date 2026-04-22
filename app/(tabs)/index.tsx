@@ -65,6 +65,7 @@ export default function StartScreen() {
             const isFirst = i === 0;
             const isActive = i === activeIdx && !isDone;
             const isHighlighted = isActive && !silentMindStarted;
+            const isQm = step.id === 'step-qm3';
             return (
               <Pressable
                 key={step.id}
@@ -106,18 +107,21 @@ export default function StartScreen() {
                       <Text style={styles.stepDesc}>One breath to arrive. One minute to settle.</Text>
                     )}
                     <Pressable
-                      style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
+                      style={({ pressed }) => [
+                        styles.cta,
+                        isQm && styles.ctaQm,
+                        pressed && styles.ctaPressed,
+                      ]}
                       onPress={(e) => {
                         e.stopPropagation?.();
                         if (step.track) {
                           const pl = startJourneySteps.map(s => s.track).filter(Boolean) as any;
                           openPlayer(step.track, pl);
                         }
-                        else if (step.ctaRoute) router.push(step.ctaRoute);
                       }}
                     >
                       <Text style={styles.ctaText}>
-                        {step.track ? (isDone ? 'Listen again' : 'Begin') : 'Explore the program'}
+                        {isDone ? 'Listen again' : 'Begin'}
                       </Text>
                     </Pressable>
                   </View>
@@ -126,6 +130,17 @@ export default function StartScreen() {
             );
           })}
         </View>
+
+        {startJourneySteps.every(s => s.track && listened[s.track.id]) ? (
+          <Pressable
+            onPress={() => router.push('/silent-mind')}
+            style={({ pressed }) => [styles.exploreCta, pressed && { opacity: 0.85 }]}
+          >
+            <Text style={styles.exploreEyebrow}>READY FOR MORE ?</Text>
+            <Text style={styles.exploreTitle}>Explore the Silent Mind Program</Text>
+            <Text style={styles.exploreHint}>A three-part journey, guided audio by audio, from noise to silent mind.</Text>
+          </Pressable>
+        ) : null}
 
         <AboutFooter />
       </ScrollView>
@@ -180,4 +195,19 @@ const styles = StyleSheet.create({
   },
   ctaPressed: { opacity: 0.8 },
   ctaText: { ...type.button, color: colors.text, fontSize: 12 },
+  ctaQm: { backgroundColor: colors.accentAlt },
+  exploreCta: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    borderColor: colors.accent,
+    borderWidth: 1,
+    backgroundColor: 'rgba(158,54,148,0.10)',
+    alignItems: 'center',
+    gap: 4,
+  },
+  exploreEyebrow: { ...type.overline, color: colors.accent, fontSize: 10 },
+  exploreTitle: { ...type.h2, color: colors.text, fontSize: 16, textAlign: 'center' },
+  exploreHint: { ...type.caption, color: colors.textMuted, textAlign: 'center', fontSize: 12 },
 });

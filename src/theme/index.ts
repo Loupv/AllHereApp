@@ -13,6 +13,12 @@ export const colors = {
   accent: '#9E3694',
   accentSoft: 'rgba(158,54,148,0.35)',
   accentDeep: '#6F1F68',
+  // QM tab accent — complementary teal to the Silent Mind magenta so the
+  // two mirror screens feel related but distinct
+  accentAlt: '#36A09E',
+  accentAltSoft: 'rgba(54,160,158,0.35)',
+  accentAltDeep: '#1F6F6E',
+  bgTabAlt: '#00252B',
   placeholder: '#718096',
 };
 

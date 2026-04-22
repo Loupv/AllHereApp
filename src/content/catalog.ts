@@ -337,6 +337,37 @@ const threeMinutes: AudioTrack = {
   description: 'Three minutes of guided attention. Settle a little deeper — a steadier taste of the practice.',
 };
 
+// Home tier 3 — a first taste of Quantified Meditation: 3 × 3-min rounds
+// with 1-min inters, reusing the segmented Breath audio.
+const qm3RoundsHome: AudioTrack = {
+  id: 'home-qm3',
+  title: 'QM · Three rounds',
+  description: 'A first taste of Quantified Meditation: three rounds of three minutes with one-minute pauses between them.',
+  rounds: {
+    max: 3,
+    roundLengthMinutes: 3,
+    breakSeconds: 60,
+    roundSources: [
+      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round01.mp3'),
+      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round02.mp3'),
+      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round03.mp3'),
+    ],
+    roundTranscripts: [
+      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round01.wjson'),
+      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round02.wjson'),
+      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round03.wjson'),
+    ],
+    roundInters: [
+      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round01_inter.mp3'),
+      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round02_inter.mp3'),
+    ],
+    roundInterTranscripts: [
+      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round01_inter.wjson'),
+      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round02_inter.wjson'),
+    ],
+  },
+};
+
 export const startJourneySteps = [
   {
     id: 'step-1min',
@@ -351,10 +382,61 @@ export const startJourneySteps = [
     track: threeMinutes,
   },
   {
-    id: 'step-explore',
-    label: 'Explore the Silent Mind Program',
-    description: 'Continue the journey with the full program.',
-    ctaRoute: '/silent-mind' as const,
+    id: 'step-qm3',
+    label: 'QM · 3 rounds',
+    description: 'A first Quantified Meditation session: three short rounds with one-minute pauses.',
+    track: qm3RoundsHome,
+  },
+];
+
+/**
+ * Mirror of silentMindProgram / silentMindVolets scoped to the Quantified
+ * Meditation tab. Part 1/2/3 reuse the same id suffix (part1 / part2 / part3)
+ * so navigating from a Silent Mind part to its QM twin is a string swap.
+ */
+export const qmProgram = {
+  eyebrow: 'Quantified Meditation',
+  title: 'QM Format — three parts',
+  intro:
+    'The same three-part journey, quantified. Short, timed rounds with deliberate pauses between them — designed to make presence measurable.',
+  banner: require('../../assets/images/hero/space.jpg'),
+};
+
+// Assemble the QM program from the qmTracks already attached to the Silent
+// Mind volets, so the single source of truth stays in `silentMindVolets`.
+const voletById = (id: string) => silentMindVolets.find(v => v.id === id)!;
+
+export const qmVolets: Volet[] = [
+  {
+    id: 'part1',
+    title: 'Part 1',
+    subtitle: voletById('part1').subtitle,
+    tagline: voletById('part1').tagline,
+    description: 'Quantified training for the foundational practices of Part 1 — short, timed rounds with pauses between them.',
+    image: require('../../assets/images/hero/earth.jpg'),
+    tracks: voletById('part1').qmTracks ?? [],
+  },
+  {
+    id: 'part2',
+    title: 'Part 2',
+    subtitle: voletById('part2').subtitle,
+    tagline: voletById('part2').tagline,
+    description: 'Quantified training for Part 2 — stabilize the mind through short, timed rounds.',
+    image: require('../../assets/images/hero/sky.jpg'),
+    tracks: voletById('part2').qmTracks ?? [],
+  },
+  {
+    id: 'part3',
+    title: 'Part 3',
+    subtitle: voletById('part3').subtitle,
+    tagline: voletById('part3').tagline,
+    description: 'QM format for the deeper contemplative practices of Part 3 is on its way.',
+    image: require('../../assets/images/hero/space.jpg'),
+    tracks: [
+      { id: 'qm3-1', title: 'Emptiness (QM)', comingSoon: true },
+      { id: 'qm3-2', title: 'The Dark Practice (QM)', comingSoon: true },
+      { id: 'qm3-3', title: 'The Light Practice (QM)', comingSoon: true },
+    ],
   },
 ];
 
@@ -411,9 +493,3 @@ export const videoItems: VideoItem[] = [
   },
 ];
 
-export type FluteItem = { id: string; title: string; duration: string };
-export const fluteItems: FluteItem[] = [
-  { id: 'f1', title: 'Placeholder — Silent Flute I', duration: '4:30' },
-  { id: 'f2', title: 'Placeholder — Silent Flute II', duration: '6:12' },
-  { id: 'f3', title: 'Placeholder — Silent Flute III', duration: '7:48' },
-];
