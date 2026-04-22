@@ -330,6 +330,10 @@ function PlayerInner() {
   const artwork = track.artwork ?? DEFAULT_ARTWORK;
   const description = track.description ?? (track.rounds ? QM_DESCRIPTION : DEFAULT_DESCRIPTION);
   const rounds = track.rounds;
+  // QM tracks (anything with a rounds config) carry the QM tab accent so the
+  // player feels visually consistent with where the user opened it from.
+  const accent = rounds ? colors.accentAlt : colors.accent;
+  const accentBg = rounds ? 'rgba(54,160,158,0.35)' : colors.accentSoft;
 
   return (
     <View style={styles.root}>
@@ -358,7 +362,7 @@ function PlayerInner() {
             hitSlop={10}
             style={[styles.navBtn, !hasPrev && styles.navBtnDisabled]}
           >
-            <Text style={[styles.navBtnText, !hasPrev && styles.navBtnTextDisabled]}>‹</Text>
+            <Text style={[styles.navBtnText, { color: accent }, !hasPrev && styles.navBtnTextDisabled]}>‹</Text>
           </Pressable>
           <Text style={styles.title} numberOfLines={2}>{track.title}</Text>
           <Pressable
@@ -367,14 +371,14 @@ function PlayerInner() {
             hitSlop={10}
             style={[styles.navBtn, !hasNext && styles.navBtnDisabled]}
           >
-            <Text style={[styles.navBtnText, !hasNext && styles.navBtnTextDisabled]}>›</Text>
+            <Text style={[styles.navBtnText, { color: accent }, !hasNext && styles.navBtnTextDisabled]}>›</Text>
           </Pressable>
         </View>
         {rounds ? (
           <View style={styles.roundBar}>
             {hasStarted ? (
               <>
-                <Text style={[styles.roundBarText, inBreak && styles.roundBarBreak]}>
+                <Text style={[styles.roundBarText, { color: accent }, inBreak && styles.roundBarBreak]}>
                   {currentRound === 0
                     ? 'INTRO'
                     : inBreak
@@ -388,14 +392,14 @@ function PlayerInner() {
                       <View key={i} style={[
                         styles.dot,
                         state === 'done' && styles.dotDone,
-                        state === 'current' && styles.dotCurrent,
+                        state === 'current' && [styles.dotCurrent, { backgroundColor: accent }],
                       ]} />
                     );
                   })}
                 </View>
               </>
             ) : (
-              <Text style={styles.roundBarText}>
+              <Text style={[styles.roundBarText, { color: accent }]}>
                 QM{rounds.roundLengthMinutes} · {rounds.roundLengthMinutes}-MIN ROUNDS · UP TO {rounds.max}
               </Text>
             )}
@@ -431,24 +435,24 @@ function PlayerInner() {
                   {rounds.introSource ? (
                     <View style={styles.introToggleRow}>
                       <Pressable onPress={() => setIncludeIntro(s => !s)} style={styles.introToggle}>
-                        <View style={[styles.switch, includeIntro && styles.switchOn]}>
+                        <View style={[styles.switch, includeIntro && [styles.switchOn, { backgroundColor: accent }]]}>
                           <View style={[styles.switchKnob, includeIntro && styles.switchKnobOn]} />
                         </View>
                         <Text style={styles.introToggleText}>Intro</Text>
                       </Pressable>
                     </View>
                   ) : null}
-                  <Text style={styles.sliderLabel}>ROUNDS</Text>
+                  <Text style={[styles.sliderLabel, { color: accent }]}>ROUNDS</Text>
                   <Text style={styles.sliderValue}>{selectedRounds}<Text style={styles.sliderMax}>/{rounds.max}</Text></Text>
                 </View>
-                <RoundsSlider max={rounds.max} value={selectedRounds} onChange={setSelectedRounds} />
+                <RoundsSlider max={rounds.max} value={selectedRounds} onChange={setSelectedRounds} accent={accent} />
               </View>
             ) : null}
           </>
         ) : finished ? (
           <View style={styles.finishedBlock}>
-            <Text style={styles.breakLabel}>AUDIO ENDED</Text>
-            <Pressable onPress={close} style={styles.pillPrimary}>
+            <Text style={[styles.breakLabel, { color: accent }]}>AUDIO ENDED</Text>
+            <Pressable onPress={close} style={[styles.pillPrimary, { backgroundColor: accent }]}>
               <Text style={styles.pillPrimaryText}>Close</Text>
             </Pressable>
           </View>
@@ -497,6 +501,7 @@ function PlayerInner() {
             <CircleButton
               size={CIRCLE_SIZE}
               mode="pre"
+              accent={accent}
               onPress={() => {
                 const startAtIntro = rounds?.introSource && includeIntro;
                 setHasStarted(true);
@@ -508,7 +513,7 @@ function PlayerInner() {
               }}
             />
           ) : (
-            <CircleButton size={CIRCLE_SIZE} mode={playing ? 'playing' : 'paused'} onPress={() => { playing ? player.pause() : player.play(); }} />
+            <CircleButton size={CIRCLE_SIZE} mode={playing ? 'playing' : 'paused'} accent={accent} onPress={() => { playing ? player.pause() : player.play(); }} />
           )}
 
           {hasStarted && !finished && canSeek ? (
@@ -527,8 +532,8 @@ function PlayerInner() {
                 {...pan.panHandlers}
               >
                 <View style={styles.progressTrack}>
-                  <View style={[styles.progressFill, { width: `${Math.min(100, progress * 100)}%` }]} />
-                  <View style={[styles.progressThumb, { left: `${Math.min(100, progress * 100)}%` }]} />
+                  <View style={[styles.progressFill, { width: `${Math.min(100, progress * 100)}%`, backgroundColor: accent }]} />
+                  <View style={[styles.progressThumb, { left: `${Math.min(100, progress * 100)}%`, backgroundColor: accent }]} />
                 </View>
               </View>
               <View style={styles.timesRow}>
@@ -550,11 +555,11 @@ function PlayerInner() {
             </Text>
           ) : inBreak ? (
             <Pressable onPress={endBreak} style={styles.nextRoundBtn}>
-              <Text style={styles.nextRoundText}>Skip to round {currentRound + 1} →</Text>
+              <Text style={[styles.nextRoundText, { color: accent }]}>Skip to round {currentRound + 1} →</Text>
             </Pressable>
           ) : finished ? null : rounds ? (
             <Pressable onPress={handleRoundEnd} style={styles.nextRoundBtn}>
-              <Text style={styles.nextRoundText}>
+              <Text style={[styles.nextRoundText, { color: accent }]}>
                 {currentRound === 0 ? 'Skip intro →' : 'End this round →'}
               </Text>
             </Pressable>
@@ -566,7 +571,7 @@ function PlayerInner() {
   );
 }
 
-function RoundsSlider({ max, value, onChange }: { max: number; value: number; onChange: (n: number) => void }) {
+function RoundsSlider({ max, value, onChange, accent = colors.accent }: { max: number; value: number; onChange: (n: number) => void; accent?: string }) {
   const width = useRef(0);
   const [, setTick] = useState(0);
   const valueRef = useRef(value);
@@ -601,15 +606,19 @@ function RoundsSlider({ max, value, onChange }: { max: number; value: number; on
       {...pan.panHandlers}
     >
       <View style={styles.sliderTrack}>
-        <View style={[styles.sliderFill, { width: `${frac * 100}%` }]} />
+        <View style={[styles.sliderFill, { width: `${frac * 100}%`, backgroundColor: accent }]} />
       </View>
       {Array.from({ length: max }, (_, i) => {
         const f = max > 1 ? i / (max - 1) : 0;
         return (
-          <View key={i} style={[styles.sliderTick, { left: `${f * 100}%` }, i + 1 <= value && styles.sliderTickActive]} />
+          <View key={i} style={[
+            styles.sliderTick,
+            { left: `${f * 100}%` },
+            i + 1 <= value && [styles.sliderTickActive, { backgroundColor: accent }],
+          ]} />
         );
       })}
-      <View style={[styles.sliderThumb, { left: `${frac * 100}%` }]} />
+      <View style={[styles.sliderThumb, { left: `${frac * 100}%`, backgroundColor: accent }]} />
     </View>
   );
 }

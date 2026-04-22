@@ -12,9 +12,11 @@ type Props = {
   breakProgress?: number;
   breakLabel?: string;
   size?: number;
+  /** Tint — defaults to the main magenta accent. Pass colors.accentAlt for QM */
+  accent?: string;
 };
 
-export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, size = 112 }: Props) {
+export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, size = 112, accent = colors.accent }: Props) {
   const scale = useSharedValue(1);
   const haloScale = useSharedValue(1);
   const haloOpacity = useSharedValue(0);
@@ -73,9 +75,9 @@ export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, siz
             width: size,
             height: size,
             borderRadius: size / 2,
-            backgroundColor: colors.accent,
+            backgroundColor: accent,
             // soft blur-like glow via shadow (RN-web translates this to box-shadow)
-            shadowColor: colors.accent,
+            shadowColor: accent,
             shadowOpacity: 1,
             shadowRadius: size * 0.35,
             shadowOffset: { width: 0, height: 0 },
@@ -99,7 +101,7 @@ export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, siz
             cx={size / 2}
             cy={size / 2}
             r={r}
-            stroke={colors.accent}
+            stroke={accent}
             strokeWidth={stroke}
             strokeLinecap="round"
             fill="transparent"
