@@ -133,11 +133,16 @@ export default function StartScreen() {
               </View>
             ) : null}
 
+            {/* Equal-flex spacers above and below the 'or' row so the
+                divider lands at the exact midpoint between the intro
+                card and the 'Start with' label. */}
+            <View style={styles.orSpacer} />
             <View style={styles.orRow}>
               <View style={styles.orLine} />
               <Text style={styles.orLabel}>or</Text>
               <View style={styles.orLine} />
             </View>
+            <View style={styles.orSpacer} />
 
             <View style={styles.startBlock} onLayout={onPlayLayout}>
               <Text style={[styles.sectionLabel, styles.startLabel]}>Start with</Text>
@@ -214,11 +219,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     marginBottom: spacing.lg,
   },
-  // Intro block shrinks to its natural size so the 'or' divider sits
-  // right under the card — no wasted air above it. The start block
-  // below still flex-grows to fill the remaining viewport.
+  // Intro + start blocks sit at their natural height. Two equal-flex
+  // spacers on either side of the 'or' row soak up the leftover
+  // vertical space, which lands the divider at the midpoint between
+  // the intro card and the 'Start with' label.
   block: { justifyContent: 'center' },
-  startBlock: { flex: 1, justifyContent: 'center' },
+  startBlock: { alignItems: 'stretch' },
+  orSpacer: { flex: 1, minHeight: spacing.md },
   centerInner: { alignItems: 'center', justifyContent: 'center' },
   sectionLabel: {
     ...type.overline, color: colors.textMuted,
@@ -228,7 +235,7 @@ const styles = StyleSheet.create({
   // Extra margin above the 'Start with' label so the OR divider has
   // breathing room rather than kissing the label under it.
   startLabel: { marginBottom: spacing.sm },
-  orRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.md },
+  orRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   orLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.16)' },
   orLabel: { ...type.overline, color: colors.textMuted, fontSize: 10, letterSpacing: 2 },
   eyebrow: {
