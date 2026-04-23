@@ -85,7 +85,9 @@ export const silentMindProgram = {
   eyebrow: 'Silent Mind Program',
   title: 'The Three-Part Journey',
   intro:
-    'Our program is divided into three parts, focused on training meditative attention, leading to stability and Silence of Mind.',
+    'Our program is divided into three parts,\n' +
+    'focused on training meditative attention,\n' +
+    'leading to stability and Silence of Mind.',
   banner: require('../../assets/images/hero/space.jpg'),
 };
 

@@ -6,14 +6,17 @@ import { VoletCard } from '../../src/components/VoletCard';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { qmVolets, qmProgram } from '../../src/content/catalog';
 import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
+import { useLayout } from '../../src/hooks/useLayout';
 import { colors, spacing, type } from '../../src/theme';
 
 export default function QMScreen() {
   const tabPad = useTabBarPadding();
+  const { columnMax } = useLayout();
   return (
     <Background color={colors.bgTabAlt}>
       <SwipeTabs current="qm">
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabPad }]}>
+        <View style={[styles.column, { maxWidth: columnMax }]}>
         <View style={styles.hero}>
           <Image source={qmProgram.banner} style={styles.banner} resizeMode="cover" />
           <View style={styles.bannerOverlay} />
@@ -36,6 +39,7 @@ export default function QMScreen() {
         ))}
 
         <AboutFooter />
+        </View>
       </ScrollView>
       </SwipeTabs>
     </Background>
@@ -43,7 +47,8 @@ export default function QMScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: {},
+  content: { alignItems: 'center' },
+  column: { width: '100%', alignSelf: 'center' },
   hero: { height: 130, justifyContent: 'flex-end', overflow: 'hidden' },
   banner: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,26,38,0.55)' },

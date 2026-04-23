@@ -6,14 +6,17 @@ import { VoletCard } from '../../src/components/VoletCard';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { silentMindVolets, silentMindProgram } from '../../src/content/catalog';
 import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
+import { useLayout } from '../../src/hooks/useLayout';
 import { colors, spacing, type } from '../../src/theme';
 
 export default function SilentMindScreen() {
   const tabPad = useTabBarPadding();
+  const { columnMax } = useLayout();
   return (
     <Background color={colors.bgTab}>
       <SwipeTabs current="silent-mind">
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabPad }]}>
+        <View style={[styles.column, { maxWidth: columnMax }]}>
         <View style={styles.hero}>
           <Image source={silentMindProgram.banner} style={styles.banner} resizeMode="cover" />
           <View style={styles.bannerOverlay} />
@@ -38,6 +41,7 @@ export default function SilentMindScreen() {
           ))}
 
         <AboutFooter />
+        </View>
       </ScrollView>
       </SwipeTabs>
     </Background>
@@ -48,7 +52,11 @@ const styles = StyleSheet.create({
   // Default bottom padding comes from useTabBarPadding(); the inline
   // override on the ScrollView overrides this at runtime with the
   // safe-area-aware value.
-  content: {},
+  // Scroll container centres the capped 'column' block so on tablet /
+  // wider web previews the content stays at a readable width instead
+  // of stretching edge-to-edge.
+  content: { alignItems: 'center' },
+  column: { width: '100%', alignSelf: 'center' },
   hero: { height: 130, justifyContent: 'flex-end', overflow: 'hidden' },
   banner: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.55)' },

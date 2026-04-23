@@ -3,6 +3,7 @@ import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrol
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
 import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
+import { useLayout } from '../../src/hooks/useLayout';
 import { colors, radius, spacing, type } from '../../src/theme';
 
 const openExternal = (url: string) => {
@@ -33,10 +34,12 @@ const pillars = [
 
 export default function AboutTabScreen() {
   const tabPad = useTabBarPadding();
+  const { columnMax } = useLayout();
   return (
     <Background color={colors.bgTab}>
       <SwipeTabs current="about">
-        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabPad }]}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabPad, alignItems: 'center' }]}>
+          <View style={[styles.column, { maxWidth: columnMax }]}>
           {/* Clip the hero to a shorter frame and push the image up so the
               bottom of the picture stays visible (default cover-centre
               was hiding the lower portion). */}
@@ -90,6 +93,7 @@ export default function AboutTabScreen() {
               <Text style={styles.siteLinkUrl}>allhere.org →</Text>
             </Pressable>
           </View>
+          </View>
         </ScrollView>
       </SwipeTabs>
     </Background>
@@ -98,6 +102,7 @@ export default function AboutTabScreen() {
 
 const styles = StyleSheet.create({
   content: {},
+  column: { width: '100%', alignSelf: 'center' },
   // Clipping frame: 160 px tall. The image inside is rendered taller
   // and anchored to the bottom of the wrapper, so the bottom of the
   // photo stays in view while the top is clipped.

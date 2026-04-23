@@ -2,6 +2,7 @@ import { useRef, useState, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, useWindowDimensions, LayoutChangeEvent } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLayout } from '../../src/hooks/useLayout';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { AnimatedGradient } from '../../src/components/AnimatedGradient';
@@ -53,11 +54,13 @@ export default function StartScreen() {
   const listened = useProgress(s => s.listened);
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  // Effective usable height after the OS safe areas (Android nav bar,
-  // iPhone home indicator, status bar). Used to pick a play-button size
-  // that fits on devices with a tall system nav bar.
+  const { isTablet, columnMax } = useLayout();
   const usableH = Math.max(360, height - insets.top - insets.bottom);
-  const playSize = Math.max(130, Math.min(180, Math.round(usableH / 5.5)));
+  // Generous clamps on tablet (play control can grow a lot), tight on
+  // phone. Divisor also loosens so the button scales up with viewport.
+  const playSize = isTablet
+    ? Math.max(220, Math.min(320, Math.round(usableH / 4)))
+    : Math.max(130, Math.min(180, Math.round(usableH / 5.5)));
 
   // Smart default: pick the first step the user hasn't listened to yet, so
   // reopening the home surfaces the next natural step. Falls back to 1 min.
@@ -123,10 +126,10 @@ export default function StartScreen() {
               { paddingBottom: Math.max(insets.bottom, 0) },
             ]}
           >
-          <View style={styles.content} onLayout={onContentLayout}>
+          <View style={[styles.content, { maxWidth: columnMax, alignSelf: 'center' }]} onLayout={onContentLayout}>
             <View style={styles.header}>
               <Text style={styles.eyebrow}>MEDITATION · STEP BY STEP</Text>
-              <Text style={styles.title}>To the Silent Mind</Text>
+              <Text style={[styles.title, isTablet && styles.titleTablet]}>To the Silent Mind</Text>
             </View>
 
             {/* Spacer above the intro block that mirrors orSpacerTop below
@@ -135,7 +138,7 @@ export default function StartScreen() {
             <View style={styles.introSpacerTop} />
             {introVolet ? (
               <View style={styles.block}>
-                <Text style={styles.sectionLabel}>What you will find on this app</Text>
+                <Text style={[styles.sectionLabel, isTablet && styles.sectionLabelTablet]}>What you will find on this app</Text>
                 {/* VoletCard carries its own horizontal margin that assumes
                     it lives inside a padded scroll view — cancel the extra
                     inset here so it lines up flush with the rest. */}
@@ -162,7 +165,7 @@ export default function StartScreen() {
             <View style={styles.orSpacerBottom} />
 
             <View style={styles.startBlock} onLayout={onPlayLayout}>
-              <Text style={[styles.sectionLabel, styles.startLabel]}>Start with</Text>
+              <Text style={[styles.sectionLabel, styles.startLabel, isTablet && styles.sectionLabelTablet]}>Start with</Text>
 
               <View style={styles.radioRow}>
                 {MODES.map(m => {
@@ -182,7 +185,7 @@ export default function StartScreen() {
                         pressed && { opacity: 0.8 },
                       ]}
                     >
-                      <Text style={[styles.radioLabel, selected && styles.radioLabelSelected]}>
+                      <Text style={[styles.radioLabel, isTablet && styles.radioLabelTablet, selected && styles.radioLabelSelected]}>
                         {m.short}{done ? ' ✓' : ''}
                       </Text>
                     </Pressable>
@@ -223,12 +226,13 @@ const styles = StyleSheet.create({
   // Scroll container: flexGrow:1 makes the inner content box fill the
   // viewport when there's room, and grow scrollable only if the phone
   // can't fit the full layout (Android with a tall nav bar, etc.)
-  scrollContainer: { flexGrow: 1 },
+  scrollContainer: { flexGrow: 1, alignItems: 'center' },
   content: {
     // flexGrow (not flex:1) plays well inside a ScrollView's content
     // container — fills the viewport when it can, lets the ScrollView
     // handle overflow when it can't.
     flexGrow: 1,
+    width: '100%',
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
@@ -274,6 +278,9 @@ const styles = StyleSheet.create({
     ...type.display, color: colors.text,
     fontSize: 22, lineHeight: 28, textAlign: 'center',
   },
+  titleTablet: { fontSize: 28, lineHeight: 34 },
+  radioLabelTablet: { fontSize: 11, letterSpacing: 1.5 },
+  sectionLabelTablet: { fontSize: 12, letterSpacing: 2.5 },
 
   radioRow: {
     flexDirection: 'row',

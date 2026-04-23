@@ -5,12 +5,14 @@ import { Background } from '../../src/components/Background';
 import { ContentCard } from '../../src/components/ContentCard';
 import { qmVolets, silentMindVolets, trackDuration } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
+import { useLayout } from '../../src/hooks/useLayout';
 import { colors, radius, spacing, type } from '../../src/theme';
 
 export default function QMVoletScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const openPlayer = usePlayerStore(s => s.open);
+  const { columnMax } = useLayout();
   const volet = qmVolets.find(v => v.id === id);
   const smTwin = silentMindVolets.find(v => v.id === id);
 
@@ -28,7 +30,8 @@ export default function QMVoletScreen() {
   return (
     <Background color={colors.bgTabAlt}>
       <Stack.Screen options={{ title: `QM · ${volet.title}` }} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center' }]}>
+        <View style={[styles.column, { maxWidth: columnMax }]}>
         <View style={styles.header}>
           {volet.image ? (
             <Image source={volet.image} style={styles.circle} resizeMode="cover" />
@@ -75,6 +78,7 @@ export default function QMVoletScreen() {
             <Text style={styles.backCtaHint}>The guided, untimed version of these practices.</Text>
           </Pressable>
         ) : null}
+        </View>
       </ScrollView>
     </Background>
   );
@@ -117,4 +121,5 @@ const styles = StyleSheet.create({
   backCtaEyebrow: { ...type.overline, color: colors.accent, fontSize: 10 },
   backCtaText: { ...type.h2, color: colors.text, fontSize: 16 },
   backCtaHint: { ...type.caption, color: colors.textMuted, textAlign: 'center', fontSize: 12 },
+  column: { width: '100%', alignSelf: 'center' },
 });

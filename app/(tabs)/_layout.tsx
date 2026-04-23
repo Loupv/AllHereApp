@@ -7,9 +7,10 @@ import { useRemoteStore } from '../../src/content/remoteStore';
 import { newsArticles } from '../../src/content/news';
 import { videoItems } from '../../src/content/catalog';
 
-// Base height of the tab bar before adding the OS bottom inset. Exported
-// so tab screens can compute consistent contentContainer paddingBottom.
-export const TAB_BAR_BASE = 56;
+// Base height of the tab bar before adding the OS bottom inset. Needs
+// to accommodate the icon (28 px) + a two-line label ('Silent Mind',
+// 'QM Format') without cropping the bottom of the second line.
+export const TAB_BAR_BASE = 72;
 
 const LOGO = require('../../assets/images/allhere-logo.png');
 
@@ -61,15 +62,15 @@ export default function TabsLayout() {
         headerTintColor: colors.text,
         headerTitle: () => <Image source={LOGO} style={styles.headerLogo} resizeMode="contain" />,
         headerTitleAlign: 'center',
-        // Responsive tab bar height: base 56 + OS bottom safe area
-        // (home indicator on iPhone X+, gesture bar / nav buttons on
-        // Android). Icons stay clear of the system UI on every device.
+        // Responsive tab bar height: base 72 + OS bottom safe area.
+        // Height/padding are generous enough that two-line labels
+        // ('QM Format' etc.) don't get clipped.
         tabBarStyle: {
           backgroundColor: colors.bg,
           borderTopColor: colors.border,
           height: TAB_BAR_BASE + insets.bottom,
-          paddingTop: 4,
-          paddingBottom: Math.max(4, insets.bottom),
+          paddingTop: 6,
+          paddingBottom: Math.max(6, insets.bottom),
         },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textDim,

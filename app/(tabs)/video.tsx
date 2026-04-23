@@ -13,6 +13,7 @@ import { useVideoStore } from '../../src/player/videoStore';
 import { useNotifications } from '../../src/player/notificationStore';
 import { KindIcon } from '../../src/components/KindIcon';
 import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
+import { useLayout } from '../../src/hooks/useLayout';
 import { colors, radius, spacing, type } from '../../src/theme';
 
 const KIND_ICON: Record<MediaKind, string> = {
@@ -79,6 +80,7 @@ const toNewsRow = (a: NewsArticle): MediaRow => ({
 export default function VideoScreen() {
   const router = useRouter();
   const tabPad = useTabBarPadding();
+  const { gridColumns } = useLayout();
   const openVideo = useVideoStore(s => s.open);
   const seen = useNotifications(s => s.seenMedia);
   const markSeen = useNotifications(s => s.markSeen);
@@ -169,6 +171,7 @@ export default function VideoScreen() {
         {loading && visible.length === 0 ? (
           <Text style={styles.loading}>Loading…</Text>
         ) : null}
+        <View style={gridColumns === 2 ? styles.grid : undefined}>
         {visible.map(r => {
           const isUnread = !seen[r.id];
           return (
@@ -181,7 +184,11 @@ export default function VideoScreen() {
                 else if (h.type === 'video-detail') router.push(`/video/${h.id}` as any);
                 else if (h.type === 'news-detail') router.push(`/news/${h.id}` as any);
               }}
-              style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.card,
+                gridColumns === 2 && styles.cardInGrid,
+                pressed && styles.pressed,
+              ]}
             >
               {isUnread ? <View style={styles.unreadStrip} /> : null}
               <View style={styles.posterWrap}>
@@ -209,6 +216,7 @@ export default function VideoScreen() {
             </Pressable>
           );
         })}
+        </View>
         <SeeMoreLink label="Media" url="https://allhere.org/media-hub/" />
         <AboutFooter />
       </ScrollView>
@@ -268,6 +276,12 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 0, bottom: 0, left: 0, width: 3,
     backgroundColor: colors.accent, zIndex: 2,
   },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+  },
   card: {
     position: 'relative',
     marginHorizontal: spacing.lg,
@@ -277,6 +291,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,
+  },
+  cardInGrid: {
+    width: '48%',
+    marginHorizontal: 0,
   },
   pressed: { opacity: 0.8 },
   posterWrap: { width: '100%', aspectRatio: 16 / 9, backgroundColor: '#000', position: 'relative' },

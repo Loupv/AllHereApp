@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, ScrollView, Image, PanResponder, Pla
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useRouter } from 'expo-router';
+import { useLayout } from '../hooks/useLayout';
 import { usePlayerStore } from '../player/store';
 import { useProgress } from '../player/progressStore';
 import { loadTranscript } from '../content/loadTranscript';
@@ -22,7 +23,8 @@ const fmt = (s: number) => {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 };
 
-const CIRCLE_SIZE = 108;
+// (default circle size — actual value computed from useLayout inside the component)
+const DEFAULT_CIRCLE_SIZE = 108;
 
 export function Player() {
   const { track, isOpen } = usePlayerStore();
@@ -111,6 +113,9 @@ function useSmoothTime(
 
 function PlayerInner() {
   const router = useRouter();
+  const { isTablet } = useLayout();
+  // Bigger central play button on tablet — 160 instead of 108.
+  const circleSize = isTablet ? 160 : 108;
   const { track, close, playlist, index, playNext, playPrev } = usePlayerStore();
   const hasNext = index >= 0 && index < playlist.length - 1;
   const hasPrev = index > 0;
@@ -607,14 +612,14 @@ function PlayerInner() {
           ) : <View style={styles.sideBtnPlaceholder} />}
 
           {finished ? (
-            <View style={{ width: CIRCLE_SIZE, height: CIRCLE_SIZE }} />
+            <View style={{ width: circleSize, height: circleSize }} />
           ) : isLoading ? (
-            <View style={[styles.loadingCircle, { width: CIRCLE_SIZE, height: CIRCLE_SIZE, borderRadius: CIRCLE_SIZE / 2 }]}>
+            <View style={[styles.loadingCircle, { width: circleSize, height: circleSize, borderRadius: circleSize / 2 }]}>
               <Text style={styles.loadingText}>Loading…</Text>
             </View>
           ) : !hasStarted ? (
             <CircleButton
-              size={CIRCLE_SIZE}
+              size={circleSize}
               mode="pre"
               accent={accent}
               onPress={() => {
@@ -628,7 +633,7 @@ function PlayerInner() {
               }}
             />
           ) : (
-            <CircleButton size={CIRCLE_SIZE} mode={playing ? 'playing' : 'paused'} accent={accent} onPress={() => { playing ? player.pause() : player.play(); }} />
+            <CircleButton size={circleSize} mode={playing ? 'playing' : 'paused'} accent={accent} onPress={() => { playing ? player.pause() : player.play(); }} />
           )}
 
           {hasStarted && !finished && canSeek ? (
@@ -887,7 +892,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
-    height: CIRCLE_SIZE + 8,
+    // A pinch taller than the default circle so the row vertically
+    // fits both phone (108) and tablet (160) sizes without wrapping.
+    minHeight: DEFAULT_CIRCLE_SIZE + 8,
   },
   sideBtnPlaceholder: { width: 0, height: 0 },
   belowCircle: { minHeight: 40, alignItems: 'center', justifyContent: 'center', marginTop: spacing.xs },
@@ -919,8 +926,15 @@ const styles = StyleSheet.create({
   noTranscriptText: { ...type.caption, color: colors.textDim, textAlign: 'center' },
 
   controls: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, paddingTop: spacing.xs },
-  progressHit: { paddingVertical: spacing.sm + 4 },
-  progressTrack: { height: 4, backgroundColor: colors.border, borderRadius: 2, position: 'relative' },
+  // Larger vertical hit zone + explicit cursor/touch hint so the bar
+  // reliably captures taps & drags. Also prevents the browser from
+  // claiming the gesture as a page scroll on Chrome Android.
+  progressHit: {
+    paddingVertical: spacing.md,
+    justifyContent: 'center',
+    ...(typeof document !== 'undefined' ? ({ touchAction: 'none', cursor: 'pointer' } as any) : null),
+  },
+  progressTrack: { height: 5, backgroundColor: colors.border, borderRadius: 3, position: 'relative' },
   progressFill: { height: '100%', backgroundColor: colors.accent, borderRadius: 2 },
   progressThumb: {
     position: 'absolute', top: -5, width: 14, height: 14, borderRadius: 7,

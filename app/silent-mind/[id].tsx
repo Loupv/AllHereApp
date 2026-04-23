@@ -5,12 +5,14 @@ import { Background } from '../../src/components/Background';
 import { ContentCard } from '../../src/components/ContentCard';
 import { silentMindVolets, qmVolets, trackDuration } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
+import { useLayout } from '../../src/hooks/useLayout';
 import { colors, radius, spacing, type } from '../../src/theme';
 
 export default function VoletScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const openPlayer = usePlayerStore(s => s.open);
+  const { columnMax } = useLayout();
   const volet = silentMindVolets.find(v => v.id === id);
   // Mirror volet in the QM tab — same id suffix ('part1' / 'part2' / 'part3').
   const qmTwin = qmVolets.find(v => v.id === id);
@@ -26,7 +28,8 @@ export default function VoletScreen() {
   return (
     <Background>
       <Stack.Screen options={{ title: volet.title }} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center' }]}>
+        <View style={[styles.column, { maxWidth: columnMax }]}>
         <View style={styles.header}>
           {volet.image ? (
             <Image source={volet.image} style={styles.circle} resizeMode="cover" />
@@ -91,6 +94,7 @@ export default function VoletScreen() {
             <Text style={styles.qmCtaHint}>Short, timed rounds with pauses, for the same practices.</Text>
           </Pressable>
         ) : null}
+        </View>
       </ScrollView>
     </Background>
   );
@@ -130,4 +134,5 @@ const styles = StyleSheet.create({
   qmCtaEyebrow: { ...type.overline, color: colors.accentAlt, fontSize: 10 },
   qmCtaText: { ...type.h2, color: colors.text, fontSize: 16 },
   qmCtaHint: { ...type.caption, color: colors.textMuted, textAlign: 'center', fontSize: 12 },
+  column: { width: '100%', alignSelf: 'center' },
 });
