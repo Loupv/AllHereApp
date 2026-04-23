@@ -7,9 +7,11 @@ export const colors = {
   surfaceElevated: 'rgba(255,255,255,0.09)',
   border: 'rgba(255,255,255,0.12)',
   borderStrong: 'rgba(255,255,255,0.24)',
-  text: '#FFFFFF',
-  textMuted: 'rgba(255,255,255,0.72)',
-  textDim: 'rgba(255,255,255,0.48)',
+  // Slightly off-white base — pure #FFFFFF felt harsh against the
+  // dark backgrounds. Muted/dim follow suit through the same RGB.
+  text: '#E8EAF0',
+  textMuted: 'rgba(232,234,240,0.72)',
+  textDim: 'rgba(232,234,240,0.48)',
   accent: '#9E3694',
   accentSoft: 'rgba(158,54,148,0.35)',
   accentDeep: '#6F1F68',

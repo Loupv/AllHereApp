@@ -147,7 +147,7 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
               cx={size / 2}
               cy={size / 2}
               r={outerR}
-              stroke="rgba(255,255,255,0.8)"
+              stroke="rgba(232,234,240,0.62)"
               // strokeWidth matches the cap radius; '1 14' + round cap = dots
               strokeWidth={stroke * 1.6}
               strokeDasharray="1 14"
@@ -164,7 +164,7 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
               cx={size / 2}
               cy={size / 2}
               r={outerR}
-              stroke="rgba(255,255,255,0.7)"
+              stroke="rgba(232,234,240,0.55)"
               strokeWidth={stroke}
               strokeDasharray="6 14"
               strokeLinecap="round"
@@ -180,7 +180,7 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
               cx={size / 2}
               cy={size / 2}
               r={innerR}
-              stroke="rgba(255,255,255,0.85)"
+              stroke="rgba(232,234,240,0.68)"
               strokeWidth={stroke}
               fill="transparent"
             />
@@ -194,7 +194,7 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
               cx={size / 2}
               cy={size / 2}
               r={innerR}
-              stroke="rgba(255,255,255,0.85)"
+              stroke="rgba(232,234,240,0.68)"
               strokeWidth={stroke}
               fill="transparent"
             />
@@ -208,7 +208,7 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
               cx={size / 2}
               cy={size / 2}
               r={innerR}
-              stroke="rgba(255,255,255,0.95)"
+              stroke="rgba(232,234,240,0.78)"
               strokeWidth={stroke * 1.5}
               fill="transparent"
             />
