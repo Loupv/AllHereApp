@@ -154,11 +154,12 @@ export default function StartScreen() {
                       key={m.key}
                       onPress={() => setMode(m.key)}
                       hitSlop={6}
-                      style={styles.radio}
+                      style={({ pressed }) => [
+                        styles.radio,
+                        selected && styles.radioSelected,
+                        pressed && { opacity: 0.8 },
+                      ]}
                     >
-                      <View style={[styles.radioDot, selected && styles.radioDotSelected]}>
-                        {selected ? <View style={styles.radioDotInner} /> : null}
-                      </View>
                       <Text style={[styles.radioLabel, selected && styles.radioLabelSelected]}>
                         {m.short}{done ? ' ✓' : ''}
                       </Text>
@@ -245,25 +246,24 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.sm,
   },
+  // Outlined pill instead of a filled dot. Unselected → thin white
+  // outline + muted text. Selected → accent outline + accent text.
   radio: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.xs,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.40)',
+    backgroundColor: 'transparent',
   },
-  radioDot: {
-    width: 14, height: 14, borderRadius: 7,
-    borderColor: 'rgba(255,255,255,0.45)', borderWidth: 1.5,
-    alignItems: 'center', justifyContent: 'center',
+  radioSelected: {
+    borderColor: colors.accent,
   },
-  radioDotSelected: { borderColor: colors.accent },
-  radioDotInner: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent },
   radioLabel: {
-    ...type.overline, fontSize: 9, letterSpacing: 1.5,
-    color: 'rgba(255,255,255,0.55)', textAlign: 'center',
+    ...type.overline, fontSize: 10, letterSpacing: 1.5,
+    color: 'rgba(255,255,255,0.70)', textAlign: 'center',
   },
-  radioLabelSelected: { color: colors.text },
+  radioLabelSelected: { color: colors.accent },
 
   explore: {
     marginTop: spacing.sm,
