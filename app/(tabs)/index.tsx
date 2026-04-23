@@ -243,24 +243,24 @@ const styles = StyleSheet.create({
   radioRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: spacing.md,
+    gap: spacing.xs,
     marginBottom: spacing.sm,
   },
   // Outlined pill instead of a filled dot. Unselected → thin white
   // outline + muted text. Selected → accent outline + accent text.
+  // Padding / font tight enough that the three radios fit on a single
+  // row without spilling outside the viewport.
   radio: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 5,
+    paddingHorizontal: 9,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.40)',
     backgroundColor: 'transparent',
   },
-  radioSelected: {
-    borderColor: colors.accent,
-  },
+  radioSelected: { borderColor: colors.accent },
   radioLabel: {
-    ...type.overline, fontSize: 10, letterSpacing: 1.5,
+    ...type.overline, fontSize: 9, letterSpacing: 0.8,
     color: 'rgba(255,255,255,0.70)', textAlign: 'center',
   },
   radioLabelSelected: { color: colors.accent },

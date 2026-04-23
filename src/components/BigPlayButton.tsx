@@ -80,15 +80,20 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
   // ---- per-mode masks to turn animations on/off smoothly ----
   //
   //   'one'   → ripples
-  //   'three' → ripples + breath
-  //   'qm3'   → ripples + breath + dashed outer orbit
+  //   'three' → ripples + breath + outer ring with orbiting dots
+  //   'qm3'   → ripples + breath + outer ring with orbiting dashes
+  //
+  // Both outer-ring variants rotate at the same slow speed (48 s/turn) so
+  // the two modes feel like different 'textures' of the same gravitation.
   const breathActive = useSharedValue(mode === 'three' || mode === 'qm3' ? 1 : 0);
-  const rippleActive = useSharedValue(1); // every mode gets ripples
-  const orbitActive  = useSharedValue(mode === 'qm3' ? 1 : 0);
+  const rippleActive = useSharedValue(1);
+  const dotsActive   = useSharedValue(mode === 'three' ? 1 : 0);
+  const dashesActive = useSharedValue(mode === 'qm3' ? 1 : 0);
   useEffect(() => {
     breathActive.value = withTiming(mode === 'three' || mode === 'qm3' ? 1 : 0, { duration: 500 });
     rippleActive.value = withTiming(1, { duration: 500 });
-    orbitActive.value  = withTiming(mode === 'qm3' ? 1 : 0, { duration: 500 });
+    dotsActive.value   = withTiming(mode === 'three' ? 1 : 0, { duration: 500 });
+    dashesActive.value = withTiming(mode === 'qm3' ? 1 : 0, { duration: 500 });
   }, [mode]);
 
   // ---- geometry ----
@@ -121,16 +126,39 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
   }));
   const ripple1Style = makeRippleStyle(ripple1);
   const ripple2Style = makeRippleStyle(ripple2);
-  const orbitStyle = useAnimatedStyle(() => ({
-    opacity: orbitActive.value * 0.85,
-    transform: [{ rotate: `${orbit.value * 360 * orbitActive.value}deg` }],
+  // Shared rotation applied to whichever outer-ring texture is visible.
+  // The opacity mask picks which of the two layers shows up.
+  const dotsStyle = useAnimatedStyle(() => ({
+    opacity: dotsActive.value * 0.85,
+    transform: [{ rotate: `${orbit.value * 360 * dotsActive.value}deg` }],
+  }));
+  const dashesStyle = useAnimatedStyle(() => ({
+    opacity: dashesActive.value * 0.85,
+    transform: [{ rotate: `${orbit.value * 360 * dashesActive.value}deg` }],
   }));
 
   return (
     <Pressable onPress={onPress} hitSlop={8} style={({ pressed }) => [pressed && styles.pressed]}>
       <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-        {/* Outer dashed ring (orbit) — mode 'qm3' */}
-        <Animated.View style={[StyleSheet.absoluteFill, styles.center, orbitStyle]} pointerEvents="none">
+        {/* Outer ring — dots — mode 'three' */}
+        <Animated.View style={[StyleSheet.absoluteFill, styles.center, dotsStyle]} pointerEvents="none">
+          <Svg width={size} height={size}>
+            <Circle
+              cx={size / 2}
+              cy={size / 2}
+              r={outerR}
+              stroke="rgba(255,255,255,0.8)"
+              // strokeWidth matches the cap radius; '1 14' + round cap = dots
+              strokeWidth={stroke * 1.6}
+              strokeDasharray="1 14"
+              strokeLinecap="round"
+              fill="transparent"
+            />
+          </Svg>
+        </Animated.View>
+
+        {/* Outer ring — dashes — mode 'qm3' */}
+        <Animated.View style={[StyleSheet.absoluteFill, styles.center, dashesStyle]} pointerEvents="none">
           <Svg width={size} height={size}>
             <Circle
               cx={size / 2}

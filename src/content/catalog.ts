@@ -106,18 +106,18 @@ export const silentMindVolets: Volet[] = [
         description: "Welcome to the Silent Mind program, All Here's journey into a quiet and attentive way of being. A vertical progression toward advanced meditation practice.",
       },
       {
-        id: 'intro-2', title: 'Silent Mind',
-        source: require('../../assets/audio/Part0/2. Silent Mind.mp3'),
-        transcript: require('../../assets/audio/Part0/Words/2. Silent Mind.wjson'),
-        durationHint: '2:17',
-        description: "At the heart of our practice is the development of the Silent Mind — a practical method to reduce fluctuations of consciousness and cultivate a profound inner presence.",
-      },
-      {
         id: 'intro-3', title: 'Prepare the space',
         source: require('../../assets/audio/Part0/3. Prepare the space.mp3'),
         transcript: require('../../assets/audio/Part0/Words/3. Prepare the space.wjson'),
         durationHint: '3:01',
         description: 'Simple practical guidance for preparing your meditation space. Creating supportive conditions helps the mind settle more easily and encourages a steady practice.',
+      },
+      {
+        id: 'intro-2', title: 'Silent Mind',
+        source: require('../../assets/audio/Part0/2. Silent Mind.mp3'),
+        transcript: require('../../assets/audio/Part0/Words/2. Silent Mind.wjson'),
+        durationHint: '2:17',
+        description: "At the heart of our practice is the development of the Silent Mind — a practical method to reduce fluctuations of consciousness and cultivate a profound inner presence.",
       },
       {
         id: 'intro-4', title: 'QM Format',
