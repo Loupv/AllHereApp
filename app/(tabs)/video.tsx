@@ -134,6 +134,7 @@ export default function VideoScreen() {
             <Text style={styles.title}>Watch, listen & read</Text>
           </View>
         </View>
+        <View style={styles.columnWrap}>
         <View style={styles.filterRow}>
           {TOGGLE_KINDS.map(k => {
             const on = enabled[k];
@@ -219,6 +220,7 @@ export default function VideoScreen() {
         </View>
         <SeeMoreLink label="Media" url="https://allhere.org/media-hub/" />
         <AboutFooter />
+        </View>
       </ScrollView>
       </SwipeTabs>
     </Background>
@@ -276,14 +278,20 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 0, bottom: 0, left: 0, width: 3,
     backgroundColor: colors.accent, zIndex: 2,
   },
+  // Everything below the hero lives inside this capped, centred
+  // column so the filter row, the unread/mark-all toolbar and the
+  // grid all line up at the same readable width — no more mark-all
+  // pill sticking to the viewport edge on tablet.
+  columnWrap: {
+    width: '100%',
+    maxWidth: CONTENT_MAX_WIDTH_CONST + spacing.lg * 2,
+    alignSelf: 'center',
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    width: '100%',
-    maxWidth: CONTENT_MAX_WIDTH_CONST + spacing.lg * 2,
-    alignSelf: 'center',
   },
   card: {
     position: 'relative',
