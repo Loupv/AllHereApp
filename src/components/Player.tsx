@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, ScrollView, Image, PanResponder, Pla
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useRouter } from 'expo-router';
-import { useLayout } from '../hooks/useLayout';
+import { useLayout, CONTENT_MAX_WIDTH as PLAYER_CONTENT_MAX_WIDTH } from '../hooks/useLayout';
 import { usePlayerStore } from '../player/store';
 import { useProgress } from '../player/progressStore';
 import { loadTranscript } from '../content/loadTranscript';
@@ -645,7 +645,7 @@ function PlayerInner() {
 
         <View style={styles.aboveCircle}>
           {hasStarted && !finished ? (
-            <>
+            <View style={styles.progressWrap}>
               <View
                 ref={progressEl}
                 style={styles.progressHit}
@@ -661,7 +661,7 @@ function PlayerInner() {
                 <Text style={styles.time}>{fmt(t)}</Text>
                 <Text style={styles.time}>{fmt(duration)}</Text>
               </View>
-            </>
+            </View>
           ) : null}
         </View>
 
@@ -929,6 +929,13 @@ const styles = StyleSheet.create({
   // Larger vertical hit zone + explicit cursor/touch hint so the bar
   // reliably captures taps & drags. Also prevents the browser from
   // claiming the gesture as a page scroll on Chrome Android.
+  // Cap the progress bar width so on tablet / wide viewports the
+  // timebar + its times row don't span the full screen.
+  progressWrap: {
+    width: '100%',
+    maxWidth: PLAYER_CONTENT_MAX_WIDTH,
+    alignSelf: 'center',
+  },
   progressHit: {
     paddingVertical: spacing.md,
     justifyContent: 'center',

@@ -13,7 +13,7 @@ import { useVideoStore } from '../../src/player/videoStore';
 import { useNotifications } from '../../src/player/notificationStore';
 import { KindIcon } from '../../src/components/KindIcon';
 import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
-import { useLayout } from '../../src/hooks/useLayout';
+import { useLayout, CONTENT_MAX_WIDTH as CONTENT_MAX_WIDTH_CONST } from '../../src/hooks/useLayout';
 import { colors, radius, spacing, type } from '../../src/theme';
 
 const KIND_ICON: Record<MediaKind, string> = {
@@ -281,6 +281,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
+    width: '100%',
+    maxWidth: CONTENT_MAX_WIDTH_CONST + spacing.lg * 2,
+    alignSelf: 'center',
   },
   card: {
     position: 'relative',

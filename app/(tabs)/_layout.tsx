@@ -6,6 +6,7 @@ import { useNotifications } from '../../src/player/notificationStore';
 import { useRemoteStore } from '../../src/content/remoteStore';
 import { newsArticles } from '../../src/content/news';
 import { videoItems } from '../../src/content/catalog';
+import { CONTENT_MAX_WIDTH } from '../../src/hooks/useLayout';
 
 // Base height of the tab bar before adding the OS bottom inset. Needs
 // to accommodate the icon (28 px) + a two-line label ('Silent Mind',
@@ -71,6 +72,14 @@ export default function TabsLayout() {
           height: TAB_BAR_BASE + insets.bottom,
           paddingTop: 6,
           paddingBottom: Math.max(6, insets.bottom),
+        },
+        // Per-item max width so the distance between tabs stops
+        // growing on wide viewports. Each tab is capped around
+        // CONTENT_MAX_WIDTH / 5 ≈ 112 px; the row auto-centres its
+        // children since we combine flex:1 with a maxWidth.
+        tabBarItemStyle: {
+          maxWidth: CONTENT_MAX_WIDTH / 5,
+          alignSelf: 'center',
         },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textDim,

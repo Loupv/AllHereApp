@@ -8,8 +8,14 @@ import { useWindowDimensions } from 'react-native';
  * screens (Start, Media grid) can bump sizes / switch to multi-column
  * when there's room.
  */
-const TABLET_MIN_WIDTH = 640;
-const COLUMN_CAP = 560;
+export const TABLET_MIN_WIDTH = 640;
+/**
+ * Single source-of-truth max width used everywhere the UI should stop
+ * stretching on wider viewports: reading columns, tab bar items, the
+ * Player progress bar, the Media grid. Keeping the value in one place
+ * means one knob to tune if we ever want a narrower / wider layout.
+ */
+export const CONTENT_MAX_WIDTH = 560;
 
 export type LayoutInfo = {
   width: number;
@@ -28,7 +34,7 @@ export function useLayout(): LayoutInfo {
     width,
     height,
     isTablet,
-    columnMax: Math.min(width, COLUMN_CAP),
+    columnMax: Math.min(width, CONTENT_MAX_WIDTH),
     gridColumns: isTablet ? 2 : 1,
   };
 }
