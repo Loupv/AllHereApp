@@ -96,12 +96,11 @@ export default function AboutTabScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: 120 },
-  // Clipping frame: 160 px tall. The image inside is tall enough to
-  // cover that height and gets a negative marginTop so the bottom of
-  // the picture lands inside the visible window instead of being
-  // cropped out.
-  heroWrap: { width: '100%', height: 160, overflow: 'hidden' },
-  hero: { width: '100%', height: 240, marginTop: -80 },
+  // Clipping frame: 160 px tall. The image inside is rendered taller
+  // and anchored to the bottom of the wrapper, so the bottom of the
+  // photo stays in view while the top is clipped.
+  heroWrap: { width: '100%', height: 160, overflow: 'hidden', position: 'relative' },
+  hero: { position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', height: 320 },
   body: { padding: spacing.lg },
   eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.sm },
   title: { ...type.display, color: colors.text, fontSize: 26, marginBottom: spacing.md },
