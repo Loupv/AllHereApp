@@ -1,17 +1,20 @@
 import { Tabs } from 'expo-router';
-import { Text, View, Image, StyleSheet } from 'react-native';
+import { Text, View, Image, StyleSheet, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, type } from '../../src/theme';
 import { useNotifications } from '../../src/player/notificationStore';
 import { useRemoteStore } from '../../src/content/remoteStore';
 import { newsArticles } from '../../src/content/news';
 import { videoItems } from '../../src/content/catalog';
-import { CONTENT_MAX_WIDTH } from '../../src/hooks/useLayout';
 
 // Base height of the tab bar before adding the OS bottom inset. Needs
 // to accommodate the icon (28 px) + a two-line label ('Silent Mind',
 // 'QM Format') without cropping the bottom of the second line.
 export const TAB_BAR_BASE = 72;
+// Max width of the tab-items row on wide viewports — a touch wider
+// than CONTENT_MAX_WIDTH so the five tabs breathe a bit more than the
+// reading column around them.
+const TAB_BAR_ITEMS_MAX_WIDTH = 640;
 
 const LOGO = require('../../assets/images/allhere-logo.png');
 
@@ -44,6 +47,10 @@ function TwoLineLabel({ lines, focused }: { lines: [string, string]; focused: bo
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  // Side padding that keeps the flex-distributed tab items centred in
+  // the bar, with a capped spread of TAB_BAR_ITEMS_MAX_WIDTH.
+  const sidePad = Math.max(0, (width - TAB_BAR_ITEMS_MAX_WIDTH) / 2);
   // Badge count on the Media tab now covers news + media together (the
   // two feeds were merged — News tab was removed in favour of About).
   const seenMedia = useNotifications(s => s.seenMedia);
@@ -72,14 +79,11 @@ export default function TabsLayout() {
           height: TAB_BAR_BASE + insets.bottom,
           paddingTop: 6,
           paddingBottom: Math.max(6, insets.bottom),
-        },
-        // Per-item max width so the distance between tabs stops
-        // growing on wide viewports. Each tab is capped around
-        // CONTENT_MAX_WIDTH / 5 ≈ 112 px; the row auto-centres its
-        // children since we combine flex:1 with a maxWidth.
-        tabBarItemStyle: {
-          maxWidth: CONTENT_MAX_WIDTH / 5,
-          alignSelf: 'center',
+          // Symmetric side padding keeps the full-width bar (bg +
+          // top border) while horizontally centring the flex-
+          // distributed tab items inside TAB_BAR_ITEMS_MAX_WIDTH.
+          paddingLeft: sidePad,
+          paddingRight: sidePad,
         },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textDim,
