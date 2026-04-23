@@ -10,26 +10,38 @@ type Props = {
   duration?: string;
   /** Media kind — picks the icon on the right. Defaults to audio. */
   kind?: MediaKind;
-  onPress: () => void;
+  /** When true the card renders greyed-out and is not pressable. Used for
+   *  coming-soon tracks so they keep the exact same list layout. */
+  disabled?: boolean;
+  onPress?: () => void;
   accent?: string;
 };
 
 export function ContentCard({
   title, subtitle, meta,
-  duration, kind = 'audio',
+  duration, kind = 'audio', disabled,
   onPress, accent = colors.accent,
 }: Props) {
+  const tint = disabled ? colors.textDim : accent;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
-      <View style={[styles.accent, { backgroundColor: accent }]} />
+    <Pressable
+      onPress={disabled ? undefined : onPress}
+      disabled={disabled || !onPress}
+      style={({ pressed }) => [
+        styles.card,
+        disabled && styles.cardDisabled,
+        pressed && !disabled && styles.pressed,
+      ]}
+    >
+      <View style={[styles.accent, { backgroundColor: tint }]} />
       <View style={styles.body}>
-        <Text style={styles.title}>{title}</Text>
+        <Text style={[styles.title, disabled && styles.textDisabled]}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         {meta ? <Text style={styles.meta}>{meta}</Text> : null}
       </View>
       <View style={styles.trailing}>
-        {duration ? <Text style={[styles.duration, { color: accent }]}>{duration}</Text> : null}
-        <KindIcon kind={kind} color={accent} size={22} />
+        {duration ? <Text style={[styles.duration, { color: tint }]}>{duration}</Text> : null}
+        <KindIcon kind={kind} color={tint} size={22} />
       </View>
     </Pressable>
   );
@@ -50,6 +62,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   pressed: { opacity: 0.7, backgroundColor: colors.surfaceElevated },
+  cardDisabled: { opacity: 0.5 },
+  textDisabled: { color: colors.textDim },
   accent: {
     width: 4,
     alignSelf: 'stretch',
