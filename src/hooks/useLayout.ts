@@ -12,10 +12,10 @@ export const TABLET_MIN_WIDTH = 640;
 /**
  * Single source-of-truth max width used everywhere the UI should stop
  * stretching on wider viewports: reading columns, tab bar items, the
- * Player progress bar, the Media grid. Keeping the value in one place
- * means one knob to tune if we ever want a narrower / wider layout.
+ * Player progress bar, the Media grid. Aligned with the tab bar items
+ * cap so every capped element shares the same visual rhythm.
  */
-export const CONTENT_MAX_WIDTH = 560;
+export const CONTENT_MAX_WIDTH = 900;
 
 export type LayoutInfo = {
   width: number;
