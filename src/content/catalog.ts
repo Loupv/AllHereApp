@@ -531,6 +531,10 @@ export type VideoItem = {
   remote?: boolean;
   /** Raw WordPress `content.rendered` HTML — used on web to play embeds (YT/Vimeo) inline */
   contentHtml?: string;
+  /** YouTube/Vimeo player URL (scraped from the live page or extracted from
+   * contentHtml). When present, the detail view uses it as the hero embed
+   * in place of `poster`. */
+  embedUrl?: string;
   /** What the user will actually do with the card: watch / listen / read */
   kind?: MediaKind;
 };

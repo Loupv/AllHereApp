@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { Platform } from 'react-native';
 import type { NewsArticle } from './news';
 import type { VideoItem } from './catalog';
 import { kv } from './kv';
@@ -19,7 +20,88 @@ import { useRemoteStore } from './remoteStore';
 
 const BASE = 'https://allhere.org/wp-json/wp/v2';
 const PER_PAGE = 20;
-const CACHE_PREFIX = 'ah_remote_v2_'; // bump when item shape changes
+const CACHE_PREFIX = 'ah_remote_v4_'; // bumped: embeds split out into `embedUrl` field
+const EMBED_CACHE_PREFIX = 'ah_embed_v2_'; // per-link embed URL cache (bumped after CORS-proxy fix)
+
+/**
+ * Try to find a playable YouTube / Vimeo / Wistia embed on the live
+ * allhere.org page for a given post. allhere.org's WP theme injects
+ * these iframes via a shortcode / plugin (Really Simple Featured
+ * Video) and they do NOT show up in the REST API's content.rendered
+ * — so we grab them from the rendered HTML instead and inject an
+ * iframe at the top of the post's content on our side.
+ *
+ * One network round-trip per post that doesn't already carry an
+ * inline iframe; results cached in kv for a long time.
+ */
+/** allhere.org doesn't set CORS on plain HTML pages (only on /wp-json).
+ * On web we go through a public CORS proxy; on native there's no CORS
+ * so we fetch the page directly. */
+const pageFetchUrl = (pageUrl: string) =>
+  Platform.OS === 'web'
+    ? `https://corsproxy.io/?${encodeURIComponent(pageUrl)}`
+    : pageUrl;
+
+async function scrapeEmbed(pageUrl: string): Promise<string | null> {
+  const cacheKey = EMBED_CACHE_PREFIX + pageUrl;
+  const cached = kv.get<string | null>(cacheKey);
+  if (cached !== undefined) return cached ?? null;
+  try {
+    const r = await fetch(pageFetchUrl(pageUrl));
+    if (!r.ok) { kv.set(cacheKey, null); return null; }
+    const html = await r.text();
+    // Pull the first real player embed. Order matters: prefer lazy
+    // 'data-lazy-src' (rocket-lazyload) before the raw src since the
+    // latter sometimes points at 'about:blank' while the real URL
+    // sits in data-lazy-src.
+    const patterns = [
+      /data-lazy-src=["']([^"']*(?:youtube\.com\/embed|youtube-nocookie\.com\/embed|player\.vimeo\.com\/video)[^"']*)/i,
+      /src=["']([^"']*(?:youtube\.com\/embed|youtube-nocookie\.com\/embed|player\.vimeo\.com\/video)[^"']*)/i,
+    ];
+    for (const re of patterns) {
+      const m = html.match(re);
+      if (m) {
+        const url = m[1];
+        if (url && url !== 'about:blank') {
+          kv.set(cacheKey, url);
+          return url;
+        }
+      }
+    }
+    kv.set(cacheKey, null);
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Pull the first player iframe URL out of a content.rendered blob and
+ * return both the URL and the HTML with that iframe removed, so the
+ * detail view can render the video as the hero and keep the text body
+ * clean (no duplicated iframe below). */
+function extractEmbedFromHtml(html: string | undefined): { embedUrl?: string; contentHtml?: string } {
+  if (!html) return { contentHtml: html };
+  const re = /<(?:p|figure)[^>]*>\s*<iframe[^>]*src=["']([^"']*(?:youtube\.com\/embed|youtube-nocookie\.com\/embed|player\.vimeo\.com\/video)[^"']*)["'][^>]*><\/iframe>\s*<\/(?:p|figure)>|<iframe[^>]*src=["']([^"']*(?:youtube\.com\/embed|youtube-nocookie\.com\/embed|player\.vimeo\.com\/video)[^"']*)["'][^>]*><\/iframe>/i;
+  const m = html.match(re);
+  if (!m) return { contentHtml: html };
+  const url = m[1] || m[2];
+  if (!url) return { contentHtml: html };
+  return { embedUrl: url, contentHtml: html.replace(m[0], '') };
+}
+
+async function enrichWithScrapedEmbed<T extends { contentHtml?: string; link?: string; embedUrl?: string }>(item: T): Promise<T> {
+  // Already an inline iframe? Lift it into embedUrl so the detail view
+  // can show it as the hero, and strip it from contentHtml.
+  if (hasVideo(item.contentHtml)) {
+    const { embedUrl, contentHtml } = extractEmbedFromHtml(item.contentHtml);
+    if (embedUrl) return { ...item, embedUrl, contentHtml };
+    return item;
+  }
+  if (!item.link) return item;
+  const embed = await scrapeEmbed(item.link);
+  if (!embed) return item;
+  return { ...item, embedUrl: embed };
+}
 
 // ---------- tiny HTML helpers (WP returns HTML inside strings) ----------
 
@@ -77,7 +159,7 @@ export async function fetchUpdates(): Promise<NewsArticle[]> {
   const r = await fetch(`${BASE}/posts?per_page=${PER_PAGE}&_embed=1`);
   if (!r.ok) throw new Error(`posts ${r.status}`);
   const data = await r.json();
-  return data.map((p: any): NewsArticle => ({
+  const items = data.map((p: any): NewsArticle => ({
     id: `wp-${p.id}`,
     eyebrow: (p._embedded?.['wp:term']?.[0]?.[0]?.name as string) || 'Update',
     title: stripHtml(p.title?.rendered ?? ''),
@@ -89,6 +171,10 @@ export async function fetchUpdates(): Promise<NewsArticle[]> {
     link: p.link,
     remote: true,
   }));
+  // Second pass: for posts whose content.rendered doesn't already carry
+  // an iframe, scrape the rendered page to catch YouTube / Vimeo
+  // embeds injected by the WP theme (they don't show up in the API).
+  return Promise.all(items.map(enrichWithScrapedEmbed));
 }
 
 // ---------- Videos ----------
@@ -164,8 +250,18 @@ export async function fetchVideos(): Promise<VideoItem[]> {
   ];
   // Keep anything that has a featured image — press mentions, podcasts and
   // actual video embeds all belong in the Media tab.
-  return items.filter(
+  const filtered = items.filter(
     (it) => typeof it.poster === 'object' && !!it.poster.uri,
+  );
+  // Second pass: scrape YouTube / Vimeo embeds from the live page for
+  // posts that don't already carry an iframe in content.rendered. Also
+  // updates `kind` from 'article' → 'video' when a scrape succeeds so the
+  // Media tab filters treat them correctly.
+  const enriched = await Promise.all(filtered.map(enrichWithScrapedEmbed));
+  return enriched.map((it) =>
+    it.embedUrl && it.kind !== 'video'
+      ? { ...it, kind: 'video' as const }
+      : it,
   );
 }
 

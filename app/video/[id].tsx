@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createElement } from 'react';
 import { ScrollView, Text, View, Image, StyleSheet, Pressable, Linking, Platform } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Background } from '../../src/components/Background';
@@ -7,6 +8,7 @@ import { HtmlViewer } from '../../src/components/HtmlViewer';
 import { videoItems } from '../../src/content/catalog';
 import { useRemoteStore } from '../../src/content/remoteStore';
 import { useNotifications } from '../../src/player/notificationStore';
+import { useLayout } from '../../src/hooks/useLayout';
 import { colors, radius, spacing, type } from '../../src/theme';
 
 const openExternal = (url: string) => {
@@ -18,6 +20,7 @@ export default function VideoArticleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const remoteList = useRemoteStore(s => s.videos);
   const markSeen = useNotifications(s => s.markSeen);
+  const { columnMax } = useLayout();
   const video =
     videoItems.find(v => v.id === id) ??
     remoteList.find(v => v.id === id);
@@ -37,21 +40,30 @@ export default function VideoArticleScreen() {
     <Background>
       <Stack.Screen options={{ title: '' }} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Image source={video.poster} style={styles.hero} resizeMode="cover" />
-        <View style={styles.body}>
-          {video.duration ? <Text style={styles.date}>{video.duration}</Text> : null}
-          <Text style={styles.title}>{video.title}</Text>
-          {video.subtitle ? <Text style={styles.subtitle}>{video.subtitle}</Text> : null}
-          {video.contentHtml ? (
-            <View style={styles.html}>
-              <HtmlViewer html={video.contentHtml} link={video.link} />
-            </View>
-          ) : null}
-          {video.link ? (
-            <Pressable onPress={() => openExternal(video.link!)} hitSlop={8} style={styles.readMoreBtn}>
-              <Text style={styles.readMore}>Open on allhere.org →</Text>
-            </Pressable>
-          ) : null}
+        <View style={[styles.column, { maxWidth: columnMax }]}>
+          {video.embedUrl && Platform.OS === 'web'
+            ? createElement('iframe', {
+                src: video.embedUrl,
+                style: { width: '100%', aspectRatio: '16 / 9', height: 'auto', border: 0, display: 'block' },
+                allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
+                allowFullScreen: true,
+              })
+            : <Image source={video.poster} style={styles.hero} resizeMode="cover" />}
+          <View style={styles.body}>
+            {video.duration ? <Text style={styles.date}>{video.duration}</Text> : null}
+            <Text style={styles.title}>{video.title}</Text>
+            {video.subtitle ? <Text style={styles.subtitle}>{video.subtitle}</Text> : null}
+            {video.contentHtml ? (
+              <View style={styles.html}>
+                <HtmlViewer html={video.contentHtml} link={video.link} />
+              </View>
+            ) : null}
+            {video.link ? (
+              <Pressable onPress={() => openExternal(video.link!)} hitSlop={8} style={styles.readMoreBtn}>
+                <Text style={styles.readMore}>Open on allhere.org →</Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
         <AboutFooter />
       </ScrollView>
@@ -60,7 +72,8 @@ export default function VideoArticleScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.md },
+  content: { paddingTop: spacing.md, paddingBottom: spacing.md, alignItems: 'center' },
+  column: { width: '100%', alignSelf: 'center' },
   hero: { width: '100%', height: 220 },
   body: { padding: spacing.lg, alignItems: 'center' },
   date: { ...type.overline, color: colors.accent, marginBottom: spacing.sm },

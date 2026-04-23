@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createElement } from 'react';
 import { ScrollView, Text, View, Image, StyleSheet, Pressable, Linking, Platform } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Background } from '../../src/components/Background';
@@ -7,6 +8,7 @@ import { HtmlViewer } from '../../src/components/HtmlViewer';
 import { newsArticles } from '../../src/content/news';
 import { useRemoteStore } from '../../src/content/remoteStore';
 import { useNotifications } from '../../src/player/notificationStore';
+import { useLayout } from '../../src/hooks/useLayout';
 import { colors, radius, spacing, type } from '../../src/theme';
 
 const openExternal = (url: string) => {
@@ -18,6 +20,7 @@ export default function NewsArticleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const remoteList = useRemoteStore(s => s.news);
   const markSeen = useNotifications(s => s.markSeen);
+  const { columnMax } = useLayout();
   const article =
     newsArticles.find(a => a.id === id) ??
     remoteList.find(a => a.id === id);
@@ -37,27 +40,36 @@ export default function NewsArticleScreen() {
     <Background>
       <Stack.Screen options={{ title: '' }} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Image source={article.image} style={styles.hero} resizeMode="cover" />
-        <View style={styles.body}>
-          <View style={styles.meta}>
-            <Text style={styles.eyebrow}>{article.eyebrow}</Text>
-            <Text style={styles.date}>{article.date}</Text>
-          </View>
-          <Text style={styles.title}>{article.title}</Text>
-          {article.contentHtml ? (
-            <View style={styles.html}>
-              <HtmlViewer html={article.contentHtml} link={article.link} />
+        <View style={[styles.column, { maxWidth: columnMax }]}>
+          {article.embedUrl && Platform.OS === 'web'
+            ? createElement('iframe', {
+                src: article.embedUrl,
+                style: { width: '100%', aspectRatio: '16 / 9', height: 'auto', border: 0, display: 'block' },
+                allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
+                allowFullScreen: true,
+              })
+            : <Image source={article.image} style={styles.hero} resizeMode="cover" />}
+          <View style={styles.body}>
+            <View style={styles.meta}>
+              <Text style={styles.eyebrow}>{article.eyebrow}</Text>
+              <Text style={styles.date}>{article.date}</Text>
             </View>
-          ) : (
-            article.body.map((p, i) => (
-              <Text key={i} style={styles.paragraph}>{p}</Text>
-            ))
-          )}
-          {article.link ? (
-            <Pressable onPress={() => openExternal(article.link!)} hitSlop={8} style={styles.readMoreBtn}>
-              <Text style={styles.readMore}>Read the full article on allhere.org →</Text>
-            </Pressable>
-          ) : null}
+            <Text style={styles.title}>{article.title}</Text>
+            {article.contentHtml ? (
+              <View style={styles.html}>
+                <HtmlViewer html={article.contentHtml} link={article.link} />
+              </View>
+            ) : (
+              article.body.map((p, i) => (
+                <Text key={i} style={styles.paragraph}>{p}</Text>
+              ))
+            )}
+            {article.link ? (
+              <Pressable onPress={() => openExternal(article.link!)} hitSlop={8} style={styles.readMoreBtn}>
+                <Text style={styles.readMore}>Read the full article on allhere.org →</Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
         <AboutFooter />
       </ScrollView>
@@ -66,7 +78,8 @@ export default function NewsArticleScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.md },
+  content: { paddingTop: spacing.md, paddingBottom: spacing.md, alignItems: 'center' },
+  column: { width: '100%', alignSelf: 'center' },
   hero: { width: '100%', height: 240 },
   body: { padding: spacing.lg, alignItems: 'center' },
   meta: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
