@@ -129,6 +129,10 @@ export default function StartScreen() {
               <Text style={styles.title}>To the Silent Mind</Text>
             </View>
 
+            {/* Spacer above the intro block that mirrors orSpacerTop below
+                it, so the Intro card sits at the vertical midpoint
+                between the title and the 'or' divider. */}
+            <View style={styles.introSpacerTop} />
             {introVolet ? (
               <View style={styles.block}>
                 <Text style={styles.sectionLabel}>What you will find on this app</Text>
@@ -236,18 +240,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingBottom: spacing.sm,
-    marginBottom: spacing.lg,
   },
-  // Intro + start blocks sit at their natural height. The top 'or'
-  // spacer takes a bigger share of the remaining room than the bottom
-  // one, so the Start section (label + radios + play button) rides a
-  // bit higher on the screen — less dead space under the play button.
+  // Intro + start blocks sit at their natural height. Spacer flex values:
+  //   introSpacerTop : 2   — above the intro card
+  //   orSpacerTop    : 2   — below the intro card, above the 'or' row
+  //   orSpacerBottom : 1   — below the 'or' row
+  //   bottomSpacer   : 1   — below the Start block
+  // introSpacerTop == orSpacerTop keeps the intro card vertically
+  // centered between the title and the 'or' divider.
   block: { justifyContent: 'center' },
   startBlock: { alignItems: 'stretch' },
+  introSpacerTop: { flex: 2, minHeight: spacing.md },
   orSpacerTop: { flex: 2, minHeight: spacing.md },
   orSpacerBottom: { flex: 1, minHeight: spacing.sm },
-  // Eats whatever room is left below the Start block so it doesn't
-  // sink to the very bottom of the viewport when there is extra room.
   bottomSpacer: { flex: 1, minHeight: spacing.md },
   centerInner: { alignItems: 'center', justifyContent: 'center' },
   sectionLabel: {
