@@ -51,9 +51,9 @@ export default function StartScreen() {
   const listened = useProgress(s => s.listened);
   const { height } = useWindowDimensions();
   // Smaller play control so the full Start layout fits in one page without
-  // scrolling (intro card + OR divider + play + radios + optional explore
-  // pill). Was roughly h/3, now h/4 with tighter clamps.
-  const playSize = Math.max(170, Math.min(230, Math.round(height / 4)));
+  // scrolling. With the 'Start with' label + radios now sharing the lower
+  // block, the play button had to give up more height — clamp 140-190.
+  const playSize = Math.max(140, Math.min(190, Math.round(height / 5)));
 
   // Smart default: pick the first step the user hasn't listened to yet, so
   // reopening the home surfaces the next natural step. Falls back to 1 min.
@@ -139,7 +139,7 @@ export default function StartScreen() {
             </View>
 
             <View style={styles.block} onLayout={onPlayLayout}>
-              <Text style={styles.sectionLabel}>Start with</Text>
+              <Text style={[styles.sectionLabel, styles.startLabel]}>Start with</Text>
 
               <View style={styles.radioRow}>
                 {MODES.map(m => {
@@ -213,7 +213,10 @@ const styles = StyleSheet.create({
     fontSize: 10, letterSpacing: 2, textAlign: 'center',
     marginBottom: spacing.md,
   },
-  orRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.xs },
+  // Extra margin above the 'Start with' label so the OR divider has
+  // breathing room rather than kissing the label under it.
+  startLabel: { marginBottom: spacing.sm },
+  orRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.md },
   orLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.16)' },
   orLabel: { ...type.overline, color: colors.textMuted, fontSize: 10, letterSpacing: 2 },
   eyebrow: {
@@ -229,7 +232,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: spacing.md,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   radio: {
     flexDirection: 'row',
