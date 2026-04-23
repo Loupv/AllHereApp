@@ -47,10 +47,23 @@ const TOKEN_FIXES: Record<string, string> = {
   'allhere': 'All Here',
 };
 
+/**
+ * Non-lexical noise words Whisper sometimes emits for the bell / chime
+ * that cues the end of a round. They're never actual speech, so we drop
+ * them entirely from the transcript.
+ */
+const NOISE_TOKENS = new Set(['ding', 'dings', 'ding-', 'ding.', 'dong']);
+
 const applyCorrections = (words: TranscriptWord[]): TranscriptWord[] => {
   const out: TranscriptWord[] = [];
   for (let i = 0; i < words.length; i++) {
     const w = { ...words[i] };
+
+    // Drop transcribed chime-like noise ("ding", "dong", …). Punctuation
+    // attached to the previous real word is preserved on that word, we just
+    // skip the noise token itself.
+    const [noiseCore] = splitTrailingPunct(w.text.toLowerCase());
+    if (NOISE_TOKENS.has(noiseCore)) continue;
 
     // Merge leading-hyphen tokens: previous + "-body" -> "previous-body"
     if (/^-\S/.test(w.text) && out.length > 0) {

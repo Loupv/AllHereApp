@@ -1,7 +1,12 @@
-import { ScrollView, Text, View, Image, StyleSheet } from 'react-native';
+import { ScrollView, Text, View, Image, Pressable, Linking, Platform, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import { Background } from '../src/components/Background';
 import { colors, radius, spacing, type } from '../src/theme';
+
+const openExternal = (url: string) => {
+  if (Platform.OS === 'web') window.open(url, '_blank', 'noopener,noreferrer');
+  else Linking.openURL(url).catch(() => {});
+};
 
 const pillars = [
   {
@@ -67,6 +72,15 @@ export default function AboutScreen() {
             By combining ancient traditions with neuroscience and technology we advance
             appreciation of meditation and reveal pathways to heightened consciousness.
           </Text>
+
+          <Pressable
+            onPress={() => openExternal('https://allhere.org')}
+            hitSlop={8}
+            style={({ pressed }) => [styles.siteLink, pressed && { opacity: 0.7 }]}
+          >
+            <Text style={styles.siteLinkLabel}>LEARN MORE AT</Text>
+            <Text style={styles.siteLinkUrl}>allhere.org →</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </Background>
@@ -116,4 +130,17 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     textAlign: 'center',
   },
+  siteLink: {
+    alignSelf: 'center',
+    marginTop: spacing.xl,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.pill,
+    borderColor: colors.accent,
+    borderWidth: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  siteLinkLabel: { ...type.overline, color: colors.accent, fontSize: 10 },
+  siteLinkUrl: { ...type.h2, color: colors.text, fontSize: 16 },
 });

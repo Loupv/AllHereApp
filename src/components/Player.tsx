@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Image, PanResponder } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, Image, PanResponder, Platform } from 'react-native';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { usePlayerStore } from '../player/store';
@@ -296,10 +296,91 @@ function PlayerInner() {
   };
   const handleScrollBegin = () => markUserScrolling();
 
+  // The RN PanResponder used to drive this scrubber was flaky on Chrome
+  // Android — touch events did not consistently register as a responder
+  // grant on web. Web now uses raw DOM pointer / touch / mouse listeners
+  // attached to the bar element; native keeps PanResponder.
+  const progressEl = useRef<View>(null);
+
+  const commitSeek = () => {
+    const target = scrubValue.current;
+    if (Number.isFinite(target) && target >= 0) {
+      try { Promise.resolve(player.seekTo(target)).catch(() => {}); } catch {}
+    }
+    setScrubbing(false);
+  };
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node: any = progressEl.current;
+    const el: HTMLElement | null = node?._nativeRef?._node ?? node ?? null;
+    if (!el) return;
+
+    let dragging = false;
+    const applyClientX = (clientX: number) => {
+      const rect = el.getBoundingClientRect();
+      const x = clientX - rect.left;
+      barWidth.current = rect.width;
+      seekFromX(x, barWidth, durationRef, scrubValue);
+    };
+
+    const onDown = (clientX: number) => {
+      dragging = true;
+      setScrubbing(true);
+      applyClientX(clientX);
+    };
+    const onMove = (clientX: number) => {
+      if (!dragging) return;
+      applyClientX(clientX);
+    };
+    const onUp = () => {
+      if (!dragging) return;
+      dragging = false;
+      commitSeek();
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches[0]) onDown(e.touches[0].clientX);
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches[0]) {
+        e.preventDefault(); // prevent page scroll while scrubbing
+        onMove(e.touches[0].clientX);
+      }
+    };
+    const onTouchEnd = () => onUp();
+
+    const onMouseDown = (e: MouseEvent) => { onDown(e.clientX); };
+    const onMouseMove = (e: MouseEvent) => onMove(e.clientX);
+    const onMouseUp = () => onUp();
+
+    // Touch stays on the element so we can preventDefault. Mouse moves /
+    // ups go on the window so a drag that leaves the bar still updates.
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    el.addEventListener('touchcancel', onTouchEnd, { passive: true });
+    el.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+      el.removeEventListener('touchcancel', onTouchEnd);
+      el.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [player]);
+
+  // Native-only PanResponder fallback. On web we ignore these and drive
+  // everything through the effect above.
   const pan = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => Platform.OS !== 'web',
+      onMoveShouldSetPanResponder: () => Platform.OS !== 'web',
       onPanResponderGrant: (e) => {
         setScrubbing(true);
         seekFromX(e.nativeEvent.locationX, barWidth, durationRef, scrubValue);
@@ -307,13 +388,7 @@ function PlayerInner() {
       onPanResponderMove: (e) => {
         seekFromX(e.nativeEvent.locationX, barWidth, durationRef, scrubValue);
       },
-      onPanResponderRelease: () => {
-        const target = scrubValue.current;
-        if (Number.isFinite(target) && target >= 0) {
-          try { Promise.resolve(player.seekTo(target)).catch(() => {}); } catch {}
-        }
-        setScrubbing(false);
-      },
+      onPanResponderRelease: commitSeek,
       onPanResponderTerminate: () => setScrubbing(false),
     }),
   ).current;
@@ -356,23 +431,31 @@ function PlayerInner() {
           <View style={styles.artworkOverlay} />
         </View>
         <View style={styles.titleRow}>
-          <Pressable
-            onPress={playPrev}
-            disabled={!hasPrev}
-            hitSlop={10}
-            style={[styles.navBtn, !hasPrev && styles.navBtnDisabled]}
-          >
-            <Text style={[styles.navBtnText, { color: accent }, !hasPrev && styles.navBtnTextDisabled]}>‹</Text>
-          </Pressable>
+          {/* Hide the track-switch chevrons on QM sessions — users kept reading
+              them as 'next round' and were surprised when the whole audio
+              skipped. QM rounds are already navigated from inside the player
+              via 'End this round →' / 'Skip to round N+1 →'. */}
+          {rounds ? null : (
+            <Pressable
+              onPress={playPrev}
+              disabled={!hasPrev}
+              hitSlop={10}
+              style={[styles.navBtn, !hasPrev && styles.navBtnDisabled]}
+            >
+              <Text style={[styles.navBtnText, { color: accent }, !hasPrev && styles.navBtnTextDisabled]}>‹</Text>
+            </Pressable>
+          )}
           <Text style={styles.title} numberOfLines={2}>{track.title}</Text>
-          <Pressable
-            onPress={playNext}
-            disabled={!hasNext}
-            hitSlop={10}
-            style={[styles.navBtn, !hasNext && styles.navBtnDisabled]}
-          >
-            <Text style={[styles.navBtnText, { color: accent }, !hasNext && styles.navBtnTextDisabled]}>›</Text>
-          </Pressable>
+          {rounds ? null : (
+            <Pressable
+              onPress={playNext}
+              disabled={!hasNext}
+              hitSlop={10}
+              style={[styles.navBtn, !hasNext && styles.navBtnDisabled]}
+            >
+              <Text style={[styles.navBtnText, { color: accent }, !hasNext && styles.navBtnTextDisabled]}>›</Text>
+            </Pressable>
+          )}
         </View>
         {rounds ? (
           <View style={styles.roundBar}>
@@ -527,6 +610,7 @@ function PlayerInner() {
           {hasStarted && !finished ? (
             <>
               <View
+                ref={progressEl}
                 style={styles.progressHit}
                 onLayout={(e) => { barWidth.current = e.nativeEvent.layout.width; }}
                 {...pan.panHandlers}
