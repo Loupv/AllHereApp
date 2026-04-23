@@ -83,7 +83,9 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     marginBottom: spacing.md,
-    borderColor: colors.accent,
+    // Dark blue-tinted grey ring instead of the magenta accent, so the
+    // big circular image doesn't compete with the rest of the header.
+    borderColor: '#2A3A5C',
     borderWidth: 2,
   },
   eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.sm },

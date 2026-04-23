@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import { useRef, useState, useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet, useWindowDimensions, LayoutChangeEvent } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { AnimatedGradient } from '../../src/components/AnimatedGradient';
@@ -82,11 +82,34 @@ export default function StartScreen() {
 
   const introVolet = silentMindVolets.find(v => v.id === 'intro');
 
+  // Measure where the play button sits so the radial gradient centres on
+  // it rather than on the viewport midpoint. onLayout on the play block
+  // gives its y/height inside the content box; dividing by the content
+  // height gives the 0..1 ratio the gradient expects.
+  const [playCenterY, setPlayCenterY] = useState(0.6);
+  const contentHeight = useRef(0);
+  const playBlockLayout = useRef({ y: 0, height: 0 });
+  const recompute = () => {
+    const h = contentHeight.current;
+    const { y, height } = playBlockLayout.current;
+    if (h > 0 && height > 0) {
+      setPlayCenterY(Math.max(0, Math.min(1, (y + height / 2) / h)));
+    }
+  };
+  const onContentLayout = (e: LayoutChangeEvent) => {
+    contentHeight.current = e.nativeEvent.layout.height;
+    recompute();
+  };
+  const onPlayLayout = (e: LayoutChangeEvent) => {
+    playBlockLayout.current = { y: e.nativeEvent.layout.y, height: e.nativeEvent.layout.height };
+    recompute();
+  };
+
   return (
     <View style={styles.root}>
       <SwipeTabs current="index">
-        <AnimatedGradient>
-          <View style={styles.content}>
+        <AnimatedGradient centerY={playCenterY}>
+          <View style={styles.content} onLayout={onContentLayout}>
             <View style={styles.header}>
               <Text style={styles.eyebrow}>MEDITATION · STEP BY STEP</Text>
               <Text style={styles.title}>To the Silent Mind</Text>
@@ -115,7 +138,7 @@ export default function StartScreen() {
               <View style={styles.orLine} />
             </View>
 
-            <View style={styles.block}>
+            <View style={styles.block} onLayout={onPlayLayout}>
               <View style={styles.centerInner}>
                 <BigPlayButton
                   mode={cfg.big}
@@ -187,7 +210,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     ...type.overline, color: colors.textMuted,
     fontSize: 10, letterSpacing: 2, textAlign: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.md,
   },
   orRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.xs },
   orLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.16)' },
