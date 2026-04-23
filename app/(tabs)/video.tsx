@@ -23,7 +23,9 @@ const KIND_ICON: Record<MediaKind, string> = {
 const KIND_LABEL: Record<MediaKind, string> = {
   video: 'WATCH',
   audio: 'LISTEN',
-  article: 'READ',
+  // 'READ' was being misread as 'already read' — use ARTICLE which
+  // maps cleanly to the content type instead of the activity.
+  article: 'ARTICLE',
 };
 
 // Media-kind toggles — each can be turned on/off independently. Defaults
