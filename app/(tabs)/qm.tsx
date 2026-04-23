@@ -30,15 +30,19 @@ export default function QMScreen() {
 
           <Text style={styles.intro}>{qmProgram.intro}</Text>
 
-          {qmVolets.map((v) => (
-            <VoletCard
-              key={v.id}
-              volet={v}
-              basePath="/qm"
-              accent={colors.accentAlt}
-              accentRgb="54,160,158"
-            />
-          ))}
+          <View style={styles.topSpacer} />
+          <View style={styles.voletsList}>
+            {qmVolets.map((v) => (
+              <VoletCard
+                key={v.id}
+                volet={v}
+                basePath="/qm"
+                accent={colors.accentAlt}
+                accentRgb="54,160,158"
+              />
+            ))}
+          </View>
+          <View style={styles.bottomSpacer} />
         </View>
         <AboutFooter />
       </ScrollView>
@@ -65,4 +69,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
   },
+  voletsList: {},
+  topSpacer: { flex: 1, minHeight: spacing.sm },
+  bottomSpacer: { flex: 1, minHeight: spacing.sm },
 });

@@ -51,18 +51,14 @@ export function AnimatedGradient({ centerX = 0.5, centerY = 0.5, children }: Pro
               id="ah-start-radial"
               cx={cx}
               cy={cy}
-              // Wider than before so the violet halo reaches further out
-              // without turning the whole page magenta.
+              // Halo reaches roughly as far as before, but every stop is
+              // a touch dimmer so the violet is a whisper, not a wash.
               r="90%"
               gradientUnits="objectBoundingBox"
             >
-              {/* Violet halo at the heart. Opacity kept moderate so blue
-                  still dominates the overall feel. */}
-              <Stop offset="0%" stopColor="#9E3694" stopOpacity="0.6" />
-              {/* A longer purple bridge carries the tint out to roughly
-                  half the screen before starting to darken. */}
-              <Stop offset="50%" stopColor="#2B1C55" stopOpacity="0.9" />
-              <Stop offset="85%" stopColor="#050F2C" stopOpacity="1" />
+              <Stop offset="0%" stopColor="#9E3694" stopOpacity="0.42" />
+              <Stop offset="50%" stopColor="#241745" stopOpacity="0.8" />
+              <Stop offset="85%" stopColor="#040D26" stopOpacity="1" />
               <Stop offset="100%" stopColor="#000823" stopOpacity="1" />
             </RadialGradient>
           </Defs>
