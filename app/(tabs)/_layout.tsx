@@ -1,10 +1,15 @@
 import { Tabs } from 'expo-router';
 import { Text, View, Image, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, type } from '../../src/theme';
 import { useNotifications } from '../../src/player/notificationStore';
 import { useRemoteStore } from '../../src/content/remoteStore';
 import { newsArticles } from '../../src/content/news';
 import { videoItems } from '../../src/content/catalog';
+
+// Base height of the tab bar before adding the OS bottom inset. Exported
+// so tab screens can compute consistent contentContainer paddingBottom.
+export const TAB_BAR_BASE = 56;
 
 const LOGO = require('../../assets/images/allhere-logo.png');
 
@@ -36,6 +41,7 @@ function TwoLineLabel({ lines, focused }: { lines: [string, string]; focused: bo
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
   // Badge count on the Media tab now covers news + media together (the
   // two feeds were merged — News tab was removed in favour of About).
   const seenMedia = useNotifications(s => s.seenMedia);
@@ -55,12 +61,15 @@ export default function TabsLayout() {
         headerTintColor: colors.text,
         headerTitle: () => <Image source={LOGO} style={styles.headerLogo} resizeMode="contain" />,
         headerTitleAlign: 'center',
+        // Responsive tab bar height: base 56 + OS bottom safe area
+        // (home indicator on iPhone X+, gesture bar / nav buttons on
+        // Android). Icons stay clear of the system UI on every device.
         tabBarStyle: {
           backgroundColor: colors.bg,
           borderTopColor: colors.border,
-          height: 64,
+          height: TAB_BAR_BASE + insets.bottom,
           paddingTop: 4,
-          paddingBottom: 6,
+          paddingBottom: Math.max(4, insets.bottom),
         },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textDim,

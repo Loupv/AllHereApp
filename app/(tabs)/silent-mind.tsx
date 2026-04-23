@@ -5,13 +5,15 @@ import { Background } from '../../src/components/Background';
 import { VoletCard } from '../../src/components/VoletCard';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { silentMindVolets, silentMindProgram } from '../../src/content/catalog';
+import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
 import { colors, spacing, type } from '../../src/theme';
 
 export default function SilentMindScreen() {
+  const tabPad = useTabBarPadding();
   return (
     <Background color={colors.bgTab}>
       <SwipeTabs current="silent-mind">
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabPad }]}>
         <View style={styles.hero}>
           <Image source={silentMindProgram.banner} style={styles.banner} resizeMode="cover" />
           <View style={styles.bannerOverlay} />
@@ -43,9 +45,10 @@ export default function SilentMindScreen() {
 }
 
 const styles = StyleSheet.create({
-  // Enough padding at the bottom so the AboutFooter tagline clears the
-  // tab bar when the user scrolls all the way down.
-  content: { paddingBottom: 80 },
+  // Default bottom padding comes from useTabBarPadding(); the inline
+  // override on the ScrollView overrides this at runtime with the
+  // safe-area-aware value.
+  content: {},
   hero: { height: 130, justifyContent: 'flex-end', overflow: 'hidden' },
   banner: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.55)' },

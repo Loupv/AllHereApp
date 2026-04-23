@@ -17,7 +17,6 @@ import {
 import { IntroSplash } from '../src/components/IntroSplash';
 import { LoginScreen } from '../src/components/LoginScreen';
 import { Player } from '../src/components/Player';
-import { PhoneFrame } from '../src/components/PhoneFrame';
 import { VideoPlayerModal } from '../src/components/VideoPlayerModal';
 import { useAuth } from '../src/auth/authStore';
 import { colors } from '../src/theme';
@@ -45,7 +44,6 @@ export default function RootLayout() {
   if (!fontsLoaded) return <View style={styles.root} />;
 
   return (
-    <PhoneFrame>
     <View style={styles.root}>
       <StatusBar style="light" />
       <Stack
@@ -71,7 +69,6 @@ export default function RootLayout() {
       {!user ? <LoginScreen /> : null}
       {!introDone && <IntroSplash onDone={() => setIntroDone(true)} />}
     </View>
-    </PhoneFrame>
   );
 }
 

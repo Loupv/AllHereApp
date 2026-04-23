@@ -2,6 +2,7 @@ import { Text, View, Image, Pressable, Linking, Platform, StyleSheet } from 'rea
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
+import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
 import { colors, radius, spacing, type } from '../../src/theme';
 
 const openExternal = (url: string) => {
@@ -31,10 +32,11 @@ const pillars = [
 ];
 
 export default function AboutTabScreen() {
+  const tabPad = useTabBarPadding();
   return (
     <Background color={colors.bgTab}>
       <SwipeTabs current="about">
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabPad }]}>
           {/* Clip the hero to a shorter frame and push the image up so the
               bottom of the picture stays visible (default cover-centre
               was hiding the lower portion). */}
@@ -95,7 +97,7 @@ export default function AboutTabScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: 120 },
+  content: {},
   // Clipping frame: 160 px tall. The image inside is rendered taller
   // and anchored to the bottom of the wrapper, so the bottom of the
   // photo stays in view while the top is clipped.

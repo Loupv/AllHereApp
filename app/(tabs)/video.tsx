@@ -12,6 +12,7 @@ import { newsArticles, type NewsArticle } from '../../src/content/news';
 import { useVideoStore } from '../../src/player/videoStore';
 import { useNotifications } from '../../src/player/notificationStore';
 import { KindIcon } from '../../src/components/KindIcon';
+import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
 import { colors, radius, spacing, type } from '../../src/theme';
 
 const KIND_ICON: Record<MediaKind, string> = {
@@ -77,6 +78,7 @@ const toNewsRow = (a: NewsArticle): MediaRow => ({
 
 export default function VideoScreen() {
   const router = useRouter();
+  const tabPad = useTabBarPadding();
   const openVideo = useVideoStore(s => s.open);
   const seen = useNotifications(s => s.seenMedia);
   const markSeen = useNotifications(s => s.markSeen);
@@ -118,7 +120,7 @@ export default function VideoScreen() {
     <Background color={colors.bgTab}>
       <SwipeTabs current="video">
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: tabPad }]}
         onRefresh={refresh}
         refreshing={refreshing}
       >
@@ -216,7 +218,7 @@ export default function VideoScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: 120 },
+  content: {},
   hero: { height: 180, justifyContent: 'flex-end', overflow: 'hidden', marginBottom: spacing.md },
   heroImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.55)' },
