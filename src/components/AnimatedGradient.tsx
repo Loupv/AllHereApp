@@ -33,19 +33,20 @@ export function AnimatedGradient({ children }: { children?: React.ReactNode }) {
 
   return (
     <View style={styles.root} pointerEvents="box-none">
-      {/* Layer A — blue → violet → red running one way */}
+      {/* Layer A — Silent Mind side: app bg blue → deep magenta → magenta */}
       <LinearGradient
-        colors={['#0B1A4A', '#3A2568', '#7A2D91', '#A92C58', '#8B1A2B']}
+        colors={['#000823', '#00162A', '#1B1742', '#6F1F68', '#9E3694']}
         locations={[0, 0.28, 0.55, 0.82, 1]}
         start={[0.1, 0]}
         end={[0.9, 1]}
         style={StyleSheet.absoluteFill}
       />
-      {/* Layer B — same palette rotated, cross-fades in and out so the sky
-          feels like it's slowly shifting without ever looping a hard frame */}
+      {/* Layer B — QM side: same spine, crossing to the teal accent so the
+          Start tab's backdrop silently alternates between the two mirror
+          programs that branch out of it (Silent Mind magenta ↔ QM teal) */}
       <AniGradient
-        colors={['#081236', '#5C2D6E', '#B5356A', '#C23B4B', '#5C0F1F']}
-        locations={[0, 0.3, 0.6, 0.85, 1]}
+        colors={['#000823', '#001C2B', '#0F3A44', '#1F6F6E', '#36A09E']}
+        locations={[0, 0.28, 0.55, 0.82, 1]}
         start={[0.9, 0]}
         end={[0.1, 1]}
         style={[StyleSheet.absoluteFill, layerB]}

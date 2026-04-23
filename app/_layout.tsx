@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { kv } from '../src/content/kv';
 import { useNotifications } from '../src/player/notificationStore';
-import { View, StyleSheet } from 'react-native';
+import { View, Image, StyleSheet } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+
+const LOGO = require('../assets/images/allhere-logo.png');
 import {
   useFonts,
   Montserrat_400Regular,
@@ -52,6 +54,12 @@ export default function RootLayout() {
           headerTintColor: colors.text,
           headerTitleStyle: { color: colors.text },
           contentStyle: { backgroundColor: colors.bg },
+          // Render the All Here wordmark in the header for every stack
+          // screen (detail pages like /about, /news/[id], /silent-mind/[id]
+          // …) — the (tabs) group overrides headerShown:false so its own
+          // tab-layout logo stays in charge there.
+          headerTitle: () => <Image source={LOGO} style={styles.headerLogo} resizeMode="contain" />,
+          headerTitleAlign: 'center',
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -70,4 +78,5 @@ export default function RootLayout() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  headerLogo: { width: 100, height: 32 },
 });

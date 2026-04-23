@@ -1,5 +1,4 @@
 import { ScrollView, Text, View, Image, Pressable, Linking, Platform, StyleSheet } from 'react-native';
-import { Stack } from 'expo-router';
 import { Background } from '../src/components/Background';
 import { colors, radius, spacing, type } from '../src/theme';
 
@@ -32,7 +31,6 @@ const pillars = [
 export default function AboutScreen() {
   return (
     <Background>
-      <Stack.Screen options={{ title: '' }} />
       <ScrollView contentContainerStyle={styles.content}>
         <Image source={require('../assets/images/lounge-1.jpg')} style={styles.hero} resizeMode="cover" />
         <View style={styles.body}>
