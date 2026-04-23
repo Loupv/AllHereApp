@@ -11,10 +11,8 @@ import { videoItems } from '../../src/content/catalog';
 // to accommodate the icon (28 px) + a two-line label ('Silent Mind',
 // 'QM Format') without cropping the bottom of the second line.
 export const TAB_BAR_BASE = 72;
-// Max width of the tab-items row on wide viewports — a touch wider
-// than CONTENT_MAX_WIDTH so the five tabs breathe a bit more than the
-// reading column around them.
-const TAB_BAR_ITEMS_MAX_WIDTH = 640;
+// Max width of the tab-items row on wide viewports.
+const TAB_BAR_ITEMS_MAX_WIDTH = 900;
 
 const LOGO = require('../../assets/images/allhere-logo.png');
 
