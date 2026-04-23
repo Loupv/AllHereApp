@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Text, View, Image, StyleSheet } from 'react-native';
 import { colors, type } from '../../src/theme';
-import { useNotifications, countUnread } from '../../src/player/notificationStore';
+import { useNotifications } from '../../src/player/notificationStore';
 import { useRemoteStore } from '../../src/content/remoteStore';
 import { newsArticles } from '../../src/content/news';
 import { videoItems } from '../../src/content/catalog';
@@ -36,21 +36,17 @@ function TwoLineLabel({ lines, focused }: { lines: [string, string]; focused: bo
 }
 
 export default function TabsLayout() {
-  // Subscribe to the seen maps so the badges re-render when items are marked.
-  const seenNews = useNotifications(s => s.seenNews);
+  // Badge count on the Media tab now covers news + media together (the
+  // two feeds were merged — News tab was removed in favour of About).
   const seenMedia = useNotifications(s => s.seenMedia);
   const remoteNews = useRemoteStore(s => s.news);
   const remoteMedia = useRemoteStore(s => s.videos);
 
-  // Count the SAME list the tab screen actually renders, otherwise the badge
-  // can stay stuck at a number while "Mark all as read" sits disabled. Once
-  // the tab has fetched (or loaded its cache), remoteStore holds the live
-  // list; before that we fall back to the bundled static items.
   const newsList = remoteNews.length > 0 ? remoteNews : newsArticles;
   const mediaList = remoteMedia.length > 0 ? remoteMedia : videoItems;
-  const newsUnread = newsList.filter(a => !seenNews[a.id]).length;
-  const videoUnread = mediaList.filter(v => !seenMedia[v.id]).length;
-  void countUnread; // kept for external use
+  // Dedupe in case a remote id happens to appear in both streams.
+  const mergedIds = Array.from(new Set([...newsList.map(a => a.id), ...mediaList.map(v => v.id)]));
+  const videoUnread = mergedIds.filter(id => !seenMedia[id]).length;
 
   return (
     <Tabs
@@ -96,17 +92,17 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="news"
-        options={{
-          title: 'News',
-          tabBarIcon: ({ focused }) => <TabIcon label="◇" focused={focused} badge={newsUnread} />,
-        }}
-      />
-      <Tabs.Screen
         name="video"
         options={{
           title: 'Media',
           tabBarIcon: ({ focused }) => <TabIcon label="▷" focused={focused} badge={videoUnread} />,
+        }}
+      />
+      <Tabs.Screen
+        name="about"
+        options={{
+          title: 'About',
+          tabBarIcon: ({ focused }) => <TabIcon label="◆" focused={focused} />,
         }}
       />
     </Tabs>

@@ -2,17 +2,17 @@ import { ReactNode, useRef } from 'react';
 import { View, PanResponder, PanResponderGestureState } from 'react-native';
 import { useRouter } from 'expo-router';
 
-type TabName = 'index' | 'silent-mind' | 'qm' | 'news' | 'video';
+type TabName = 'index' | 'silent-mind' | 'qm' | 'video' | 'about';
 
 // Order mirrors the bottom tab bar (see app/(tabs)/_layout.tsx)
-const TABS: TabName[] = ['index', 'silent-mind', 'qm', 'news', 'video'];
+const TABS: TabName[] = ['index', 'silent-mind', 'qm', 'video', 'about'];
 
 const HREF: Record<TabName, string> = {
   index: '/',
   'silent-mind': '/silent-mind',
   qm: '/qm',
-  news: '/news',
   video: '/video',
+  about: '/about',
 };
 
 type Props = {

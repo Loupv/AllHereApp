@@ -65,7 +65,6 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="silent-mind/[id]" options={{ title: '' }} />
         <Stack.Screen name="news/[id]" options={{ title: '' }} />
-        <Stack.Screen name="about" options={{ title: '' }} />
       </Stack>
       <Player />
       <VideoPlayerModal />

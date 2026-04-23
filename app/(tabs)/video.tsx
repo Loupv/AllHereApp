@@ -5,8 +5,9 @@ import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { SeeMoreLink } from '../../src/components/SeeMoreLink';
-import { videoItems, MediaKind } from '../../src/content/catalog';
-import { useVideoFeed } from '../../src/content/remote';
+import { videoItems, type VideoItem, type MediaKind } from '../../src/content/catalog';
+import { useVideoFeed, useNewsFeed } from '../../src/content/remote';
+import { newsArticles, type NewsArticle } from '../../src/content/news';
 import { useVideoStore } from '../../src/player/videoStore';
 import { useNotifications } from '../../src/player/notificationStore';
 import { colors, radius, spacing, type } from '../../src/theme';
@@ -23,6 +24,48 @@ const KIND_LABEL: Record<MediaKind, string> = {
   article: 'READ',
 };
 
+// Normalised shape used by the unified list — covers video items AND
+// news articles so the tab can render both with the same card component.
+type MediaRow = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  duration?: string;
+  poster: any;
+  kind: MediaKind;
+  date?: string;          // ISO-ish yyyy-mm-dd, used to sort newest-first
+  // source: either a playable video (video), or a route on the News
+  // detail page (article), or the remote link (remote items).
+  href:
+    | { type: 'video-inline'; video: VideoItem }
+    | { type: 'video-detail'; id: string }
+    | { type: 'news-detail'; id: string };
+};
+
+const toVideoRow = (v: VideoItem): MediaRow => ({
+  id: v.id,
+  title: v.title,
+  subtitle: v.subtitle,
+  duration: v.duration,
+  poster: v.poster,
+  kind: v.kind ?? (v.source ? 'video' : 'article'),
+  date: v.duration, // for remote items duration holds the ISO date
+  href: v.remote
+    ? { type: 'video-detail', id: v.id }
+    : { type: 'video-inline', video: v },
+});
+
+const toNewsRow = (a: NewsArticle): MediaRow => ({
+  id: a.id,
+  title: a.title,
+  subtitle: a.excerpt,
+  duration: a.date,
+  poster: a.image,
+  kind: 'article',
+  date: a.date,
+  href: { type: 'news-detail', id: a.id },
+});
+
 export default function VideoScreen() {
   const router = useRouter();
   const openVideo = useVideoStore(s => s.open);
@@ -30,8 +73,26 @@ export default function VideoScreen() {
   const markSeen = useNotifications(s => s.markSeen);
   const markAllSeen = useNotifications(s => s.markAllSeen);
 
-  const { items, loading, refreshing, refresh } = useVideoFeed(videoItems);
-  const unreadCount = items.filter(v => !seen[v.id]).length;
+  // Merged feed: WP news + WP media + bundled fallbacks. Both hooks keep
+  // their own cache / refresh controls; we fire refresh on both at once.
+  const video = useVideoFeed(videoItems);
+  const news = useNewsFeed(newsArticles);
+
+  const rows: MediaRow[] = [
+    ...video.items.map(toVideoRow),
+    ...news.items.map(toNewsRow),
+  ];
+  // Sort newest-first when a date is available, otherwise keep insertion
+  // order so bundled placeholders stay grouped.
+  rows.sort((a, b) => {
+    if (a.date && b.date) return a.date < b.date ? 1 : a.date > b.date ? -1 : 0;
+    return 0;
+  });
+  const loading = video.loading || news.loading;
+  const refreshing = video.refreshing || news.refreshing;
+  const refresh = () => { video.refresh(); news.refresh(); };
+
+  const unreadCount = rows.filter(r => !seen[r.id]).length;
 
   return (
     <Background color={colors.bgTab}>
@@ -53,13 +114,7 @@ export default function VideoScreen() {
           <View style={styles.toolbar}>
             <Text style={styles.toolbarHint}>{unreadCount} unread</Text>
             <Pressable
-              onPress={() => {
-                const every = Array.from(new Set([
-                  ...videoItems.map(v => v.id),
-                  ...items.map(v => v.id),
-                ]));
-                markAllSeen('media', every);
-              }}
+              onPress={() => markAllSeen('media', rows.map(r => r.id))}
               hitSlop={8}
               style={({ pressed }) => [styles.markAll, pressed && { opacity: 0.6 }]}
             >
@@ -67,44 +122,45 @@ export default function VideoScreen() {
             </Pressable>
           </View>
         ) : null}
-        {loading && items.length === 0 ? (
+        {loading && rows.length === 0 ? (
           <Text style={styles.loading}>Loading…</Text>
         ) : null}
-        {items.map(v => {
-          const kind: MediaKind = v.kind ?? (v.source ? 'video' : 'article');
-          const isUnread = !seen[v.id];
+        {rows.map(r => {
+          const isUnread = !seen[r.id];
           return (
             <Pressable
-              key={v.id}
+              key={r.id}
               onPress={() => {
-                markSeen('media', v.id);
-                if (v.remote) router.push(`/video/${v.id}`);
-                else if (v.source) openVideo(v);
+                markSeen('media', r.id);
+                const h = r.href;
+                if (h.type === 'video-inline') openVideo(h.video);
+                else if (h.type === 'video-detail') router.push(`/video/${h.id}` as any);
+                else if (h.type === 'news-detail') router.push(`/news/${h.id}` as any);
               }}
               style={({ pressed }) => [styles.card, pressed && styles.pressed]}
             >
               {isUnread ? <View style={styles.unreadStrip} /> : null}
               <View style={styles.posterWrap}>
-                <Image source={v.poster} style={styles.poster} resizeMode="cover" />
+                <Image source={r.poster} style={styles.poster} resizeMode="cover" />
                 <View style={styles.posterOverlay} />
-                {kind === 'video' ? (
+                {r.kind === 'video' ? (
                   <View style={styles.playBadge}>
                     <Text style={styles.playIcon}>▶</Text>
                   </View>
                 ) : null}
                 <View style={styles.kindBadge}>
-                  <Text style={styles.kindIcon}>{KIND_ICON[kind]}</Text>
-                  <Text style={styles.kindText}>{KIND_LABEL[kind]}</Text>
+                  <Text style={styles.kindIcon}>{KIND_ICON[r.kind]}</Text>
+                  <Text style={styles.kindText}>{KIND_LABEL[r.kind]}</Text>
                 </View>
-                {v.duration ? (
+                {r.duration ? (
                   <View style={styles.durationBadge}>
-                    <Text style={styles.durationText}>{v.duration}</Text>
+                    <Text style={styles.durationText}>{r.duration}</Text>
                   </View>
                 ) : null}
               </View>
               <View style={styles.cardBody}>
-                <Text style={styles.cardTitle} numberOfLines={2}>{v.title}</Text>
-                {v.subtitle ? <Text style={styles.cardSubtitle} numberOfLines={2}>{v.subtitle}</Text> : null}
+                <Text style={styles.cardTitle} numberOfLines={2}>{r.title}</Text>
+                {r.subtitle ? <Text style={styles.cardSubtitle} numberOfLines={2}>{r.subtitle}</Text> : null}
               </View>
             </Pressable>
           );
