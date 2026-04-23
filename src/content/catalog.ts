@@ -91,51 +91,49 @@ export const silentMindProgram = {
   banner: require('../../assets/images/hero/space.jpg'),
 };
 
-export const silentMindVolets: Volet[] = [
+/**
+ * Introduction audios. Previously wrapped in a Silent Mind "intro"
+ * volet, now promoted to a first-class list surfaced directly on the
+ * Start page — the intro is the welcome onto the app itself, not a
+ * sub-part of the Silent Mind program.
+ */
+export const introAudios: AudioTrack[] = [
   {
-    id: 'intro',
-    title: 'Intro',
-    subtitle: 'Welcome and orientation',
-    tagline: 'Before we begin',
-    description: 'A short welcome and a preparation of the space to settle in before your first practice.',
-    image: require('../../assets/images/hero/intro.jpg'),
-    tracks: [
-      {
-        id: 'intro-1', title: 'Welcome',
-        source: require('../../assets/audio/Part0/1. Welcome.mp3'),
-        transcript: require('../../assets/audio/Part0/Words/1. Welcome.wjson'),
-        durationHint: '2:30',
-        description: "Welcome to the Silent Mind program, All Here's journey into a quiet and attentive way of being. A vertical progression toward advanced meditation practice.",
-      },
-      {
-        id: 'intro-3', title: 'Prepare the space',
-        source: require('../../assets/audio/Part0/3. Prepare the space.mp3'),
-        transcript: require('../../assets/audio/Part0/Words/3. Prepare the space.wjson'),
-        durationHint: '3:01',
-        description: 'Simple practical guidance for preparing your meditation space. Creating supportive conditions helps the mind settle more easily and encourages a steady practice.',
-      },
-      {
-        id: 'intro-2', title: 'Silent Mind',
-        source: require('../../assets/audio/Part0/2. Silent Mind.mp3'),
-        transcript: require('../../assets/audio/Part0/Words/2. Silent Mind.wjson'),
-        durationHint: '2:17',
-        description: "At the heart of our practice is the development of the Silent Mind — a practical method to reduce fluctuations of consciousness and cultivate a profound inner presence.",
-      },
-      {
-        id: 'intro-4', title: 'QM Format',
-        source: require('../../assets/audio/Part0/4. QM Format.mp3'),
-        transcript: require('../../assets/audio/Part0/Words/4. QM Format.wjson'),
-        durationHint: '1:13',
-        description: [
-          // Line break before "Quantified" keeps the two-line heading tidy
-          { text: 'An introduction to the\nQuantified Meditation format', style: 'bold' },
-          { text: 'High intensity training', style: 'italic' },
-          { text: 'Multiple rounds, short breaks', style: 'italic' },
-          { text: 'Train to reproduce the same meditative state on demand', style: 'italic' },
-        ],
-      },
+    id: 'intro-1', title: 'Welcome',
+    source: require('../../assets/audio/Part0/1. Welcome.mp3'),
+    transcript: require('../../assets/audio/Part0/Words/1. Welcome.wjson'),
+    durationHint: '2:30',
+    description: "Welcome to the Silent Mind program, All Here's journey into a quiet and attentive way of being. A vertical progression toward advanced meditation practice.",
+  },
+  {
+    id: 'intro-3', title: 'Prepare the space',
+    source: require('../../assets/audio/Part0/3. Prepare the space.mp3'),
+    transcript: require('../../assets/audio/Part0/Words/3. Prepare the space.wjson'),
+    durationHint: '3:01',
+    description: 'Simple practical guidance for preparing your meditation space. Creating supportive conditions helps the mind settle more easily and encourages a steady practice.',
+  },
+  {
+    id: 'intro-2', title: 'Silent Mind',
+    source: require('../../assets/audio/Part0/2. Silent Mind.mp3'),
+    transcript: require('../../assets/audio/Part0/Words/2. Silent Mind.wjson'),
+    durationHint: '2:17',
+    description: "At the heart of our practice is the development of the Silent Mind — a practical method to reduce fluctuations of consciousness and cultivate a profound inner presence.",
+  },
+  {
+    id: 'intro-4', title: 'QM Format',
+    source: require('../../assets/audio/Part0/4. QM Format.mp3'),
+    transcript: require('../../assets/audio/Part0/Words/4. QM Format.wjson'),
+    durationHint: '1:13',
+    description: [
+      { text: 'An introduction to the\nQuantified Meditation format', style: 'bold' },
+      { text: 'High intensity training', style: 'italic' },
+      { text: 'Multiple rounds, short breaks', style: 'italic' },
+      { text: 'Train to reproduce the same meditative state on demand', style: 'italic' },
     ],
   },
+];
+
+export const silentMindVolets: Volet[] = [
   {
     id: 'part1',
     title: 'Part 1',
@@ -413,6 +411,11 @@ const qm3RoundsHome: AudioTrack = {
     max: 3,
     roundLengthMinutes: 3,
     breakSeconds: 60,
+    // The gateway QM session leads with the short "QM Format" audio
+    // so a first-time listener gets the framing before the rounds
+    // begin — same file served in the home intro list.
+    introSource: require('../../assets/audio/Part0/4. QM Format.mp3'),
+    introTranscript: require('../../assets/audio/Part0/Words/4. QM Format.wjson'),
     roundSources: [
       require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round01.mp3'),
       require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/round02.mp3'),
@@ -450,7 +453,7 @@ export const startJourneySteps = [
   {
     id: 'step-qm3',
     label: 'QM · 3 rounds',
-    description: 'A first Quantified Meditation session: three short rounds with one-minute pauses.',
+    description: 'A first Quantified Meditation session:\nthree short rounds with one-minute pauses.',
     track: qm3RoundsHome,
   },
 ];
@@ -500,6 +503,10 @@ export const qmVolets: Volet[] = [
     tagline: voletById('part3').tagline,
     description: 'QM format for the deeper contemplative practices of Part 3 is on its way.',
     image: require('../../assets/images/hero/space.jpg'),
+    // All three rounds are still in production — `locked: true` greys out
+    // the whole card in QM and removes the chevron so users don't tap
+    // into an empty detail page.
+    locked: true,
     tracks: [
       { id: 'qm3-1', title: 'Emptiness (QM)', comingSoon: true },
       { id: 'qm3-2', title: 'The Dark Practice (QM)', comingSoon: true },

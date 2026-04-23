@@ -1,5 +1,6 @@
-import { useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, useWindowDimensions, LayoutChangeEvent } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLayout } from '../../src/hooks/useLayout';
@@ -7,46 +8,50 @@ import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrol
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { AnimatedGradient } from '../../src/components/AnimatedGradient';
 import { BigPlayButton, type BigPlayMode } from '../../src/components/BigPlayButton';
-import { VoletCard } from '../../src/components/VoletCard';
-import { startJourneySteps, silentMindVolets } from '../../src/content/catalog';
+import { KindIcon } from '../../src/components/KindIcon';
+import { startJourneySteps, introAudios, type AudioTrack } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { useProgress } from '../../src/player/progressStore';
 import { colors, radius, spacing, type } from '../../src/theme';
 
 type ModeKey = 'step-1min' | 'step-3min' | 'step-qm3';
 
-const MODES: {
+/**
+ * Module-level flag so the reveal sweep only plays once per app
+ * launch — switching tabs and coming back shouldn't retrigger it, but
+ * a cold start / app reload should. The flag resets naturally on
+ * full reload since the module is re-evaluated.
+ */
+let didRevealOnce = false;
+
+type ModeCfg = {
   key: ModeKey;
   big: BigPlayMode;
-  /** Short label used on the radio row */
+  /** Line 2 of the pill — discoverable intent */
   short: string;
-  /** Full label shown inside the big play button */
+  /** Shown inside the big play button (brand/voice, kept per user request) */
   playLabel: string;
-  playLabelDone: string;
+  /** Line 1 of the pill — primary info for scan-to-decide */
   duration: string;
-}[] = [
-  {
-    key: 'step-1min', big: 'one',
-    short: 'first practice',
-    playLabel: '60s',
-    playLabelDone: '60s',
-    duration: '1 min',
-  },
-  {
-    key: 'step-3min', big: 'three',
-    short: 'go deeper',
-    playLabel: '3min',
-    playLabelDone: '3min',
-    duration: '3 min',
-  },
-  {
-    key: 'step-qm3', big: 'qm3',
-    short: 'QM format',
-    playLabel: '3x3min',
-    playLabelDone: '3x3min',
-    duration: '11 min',
-  },
+};
+
+const MODES: ModeCfg[] = [
+  { key: 'step-1min', big: 'one',   short: 'first practice', playLabel: '60s',    duration: '1 min'  },
+  { key: 'step-3min', big: 'three', short: 'go deeper',      playLabel: '3min',   duration: '3 min'  },
+  { key: 'step-qm3',  big: 'qm3',   short: 'QM format',      playLabel: '3x3min', duration: '11 min' },
 ];
+
+/**
+ * Start page follows the user's lifecycle: a new user sees a big intro
+ * card + a first session; an in-progress user sees a progress counter +
+ * the next step's big play button; a completed user sees the two full
+ * programs (Silent Mind, QM) and a tiny revisit row for the gateway.
+ *
+ *   phase A  0/3 gateway done and intro not touched  →  "Welcome"
+ *   phase B  1–2/3 gateway done (or intro touched)  →  "In progress"
+ *   phase C  3/3 gateway done                        →  "Ready for the program"
+ */
+type Phase = 'A' | 'B' | 'C';
 
 export default function StartScreen() {
   const router = useRouter();
@@ -56,14 +61,42 @@ export default function StartScreen() {
   const insets = useSafeAreaInsets();
   const { isTablet, columnMax } = useLayout();
   const usableH = Math.max(360, height - insets.top - insets.bottom);
-  // Generous clamps on tablet (play control can grow a lot), tight on
-  // phone. Divisor also loosens so the button scales up with viewport.
   const playSize = isTablet
     ? Math.max(220, Math.min(320, Math.round(usableH / 4)))
     : Math.max(130, Math.min(180, Math.round(usableH / 5.5)));
 
-  // Smart default: pick the first step the user hasn't listened to yet, so
-  // reopening the home surfaces the next natural step. Falls back to 1 min.
+  // Introduction audios — four short tracks that welcome the user and
+  // prepare the space. Surfaced directly on the Start page; no
+  // dedicated volet page exists for them anymore.
+  const introTracks = introAudios;
+
+  // Play the staggered reveal only on the app's first Start-screen
+  // mount. `useState` initializer runs once per component instance,
+  // and the module flag survives remounts during the same session.
+  const [reveal] = useState(() => {
+    if (didRevealOnce) return false;
+    didRevealOnce = true;
+    return true;
+  });
+
+  // Phase detection: read from progressStore so the page mutates as the
+  // user progresses through the gateway.
+  const gatewayTrackIds = useMemo(
+    () => startJourneySteps.map(s => s.track?.id).filter(Boolean) as string[],
+    [],
+  );
+  const introTrackIds = useMemo(
+    () => introTracks.map(t => t.id),
+    [introTracks],
+  );
+  const gatewayDone = gatewayTrackIds.filter(id => listened[id]).length;
+  const introTouched = introTrackIds.some(id => listened[id]);
+  const phase: Phase =
+    gatewayDone >= 3 ? 'C'
+    : (gatewayDone === 0 && !introTouched) ? 'A'
+    : 'B';
+
+  // Smart default: first unlistened step.
   const defaultMode: ModeKey = useMemo(() => {
     for (const s of startJourneySteps) {
       if (s.track && !listened[s.track.id]) return s.id as ModeKey;
@@ -71,149 +104,124 @@ export default function StartScreen() {
     return 'step-1min';
   }, [listened]);
   const [mode, setMode] = useState<ModeKey>(defaultMode);
-
-  const cfg = MODES.find(m => m.key === mode)!;
-  const step = startJourneySteps.find(s => s.id === cfg.key);
-  const track = step?.track;
-  const isDone = !!(track && listened[track.id]);
-
-  const onPlay = () => {
-    if (!track) return;
-    const pl = startJourneySteps.map(s => s.track).filter(Boolean) as any;
-    // Intent is unambiguous here — the user just tapped the big play
-    // button. Skip the pre-play screen and go straight to playback.
-    openPlayer(track, pl, { autoStart: true });
-  };
-
-  const allDone = startJourneySteps.every(s => s.track && listened[s.track.id]);
-
-  const introVolet = silentMindVolets.find(v => v.id === 'intro');
-
-  // Measure where the play button sits so the radial gradient centres on
-  // it rather than on the viewport midpoint. onLayout on the play block
-  // gives its y/height inside the content box; dividing by the content
-  // height gives the 0..1 ratio the gradient expects.
-  const [playCenterY, setPlayCenterY] = useState(0.6);
-  const contentHeight = useRef(0);
-  const playBlockLayout = useRef({ y: 0, height: 0 });
-  const recompute = () => {
-    const h = contentHeight.current;
-    const { y, height } = playBlockLayout.current;
-    if (h > 0 && height > 0) {
-      setPlayCenterY(Math.max(0, Math.min(1, (y + height / 2) / h)));
+  // Auto-advance fires **only** when the currently-selected step
+  // just transitioned from unlistened to listened (i.e. the user
+  // really did finish it this session). Comparing against the
+  // previous `listened` snapshot lets a user tap a completed pill
+  // to replay it without the selection snapping away.
+  const prevListened = useRef(listened);
+  useEffect(() => {
+    const currentTrackId = startJourneySteps.find(s => s.id === mode)?.track?.id;
+    if (currentTrackId) {
+      const wasListened = !!prevListened.current[currentTrackId];
+      const isListened = !!listened[currentTrackId];
+      if (!wasListened && isListened && defaultMode !== mode) {
+        setMode(defaultMode);
+      }
     }
+    prevListened.current = listened;
+  }, [listened, mode, defaultMode]);
+  const cfg = MODES.find(m => m.key === mode)!;
+
+  const playMode = (key: ModeKey) => {
+    const step = startJourneySteps.find(s => s.id === key);
+    if (!step?.track) return;
+    const pl = startJourneySteps.map(s => s.track).filter(Boolean) as any;
+    openPlayer(step.track, pl, { autoStart: true });
   };
-  const onContentLayout = (e: LayoutChangeEvent) => {
-    contentHeight.current = e.nativeEvent.layout.height;
-    recompute();
-  };
-  const onPlayLayout = (e: LayoutChangeEvent) => {
-    playBlockLayout.current = { y: e.nativeEvent.layout.y, height: e.nativeEvent.layout.height };
-    recompute();
-  };
+
+  const onPlay = () => playMode(mode);
+
+  // Gradient climbs with the user's progress through the onboarding:
+  //   0/3 done → glow sits on the big play button (bottom-ish)
+  //   1/3     → rises toward mid
+  //   2/3     → above mid
+  //   3/3     → top of the viewport
+  // The AnimatedGradient component eases the transition in ~800ms so
+  // completing a step feels like the page itself is reaching upward.
+  const gradientCenterY = 0.78 - (gatewayDone / 3) * 0.60;
+
+  // onPrimaryLayout is kept as a no-op hook so children can attach it
+  // without knowing the gradient is now phase-driven. Eventually we
+  // can remove the prop entirely.
+  const onPrimaryLayout = (_e: LayoutChangeEvent) => {};
+  const onContentLayout = (_e: LayoutChangeEvent) => {};
 
   return (
     <View style={styles.root}>
       <SwipeTabs current="index">
-        <AnimatedGradient centerY={playCenterY}>
+        <AnimatedGradient centerY={gradientCenterY}>
           <ScrollView
-            // Scroll only kicks in if the layout can't fit the viewport
-            // (e.g. small Android device with a tall system nav bar).
-            // flexGrow:1 keeps the inner flex-based layout intact when
-            // there's enough room.
             contentContainerStyle={[
               styles.scrollContainer,
               { paddingBottom: Math.max(insets.bottom, 0) },
             ]}
           >
-          <View style={[styles.content, { maxWidth: columnMax, alignSelf: 'center' }]} onLayout={onContentLayout}>
-            <View style={styles.header}>
-              <Text style={styles.eyebrow}>MEDITATION · STEP BY STEP</Text>
-              <Text style={[styles.title, isTablet && styles.titleTablet]}>To the Silent Mind</Text>
-            </View>
-
-            {/* Spacer above the intro block that mirrors orSpacerTop below
-                it, so the Intro card sits at the vertical midpoint
-                between the title and the 'or' divider. */}
-            <View style={styles.introSpacerTop} />
-            {introVolet ? (
-              <View style={styles.block}>
-                <Text style={[styles.sectionLabel, isTablet && styles.sectionLabelTablet]}>What you will find on this app</Text>
-                {/* VoletCard carries its own horizontal margin that assumes
-                    it lives inside a padded scroll view — cancel the extra
-                    inset here so it lines up flush with the rest. */}
-                <View style={{ marginHorizontal: -spacing.lg }}>
-                  <VoletCard
-                    volet={introVolet}
-                    basePath="/silent-mind"
-                    accent={colors.accent}
-                    accentRgb="158,54,148"
-                    elevated
-                  />
-                </View>
-              </View>
-            ) : null}
-
-            {/* Flex spacers around the 'or' divider. Top:bottom ratio
-                2:1 so the Start block below rides higher. */}
-            <View style={styles.orSpacerTop} />
-            <View style={styles.orRow}>
-              <View style={styles.orLine} />
-              <Text style={styles.orLabel}>or</Text>
-              <View style={styles.orLine} />
-            </View>
-            <View style={styles.orSpacerBottom} />
-
-            <View style={styles.startBlock} onLayout={onPlayLayout}>
-              <Text style={[styles.sectionLabel, styles.startLabel, isTablet && styles.sectionLabelTablet]}>Start with</Text>
-
-              <View style={styles.radioRow}>
-                {MODES.map(m => {
-                  const selected = m.key === mode;
-                  const done = (() => {
-                    const s = startJourneySteps.find(s => s.id === m.key);
-                    return !!(s?.track && listened[s.track.id]);
-                  })();
-                  return (
-                    <Pressable
-                      key={m.key}
-                      onPress={() => setMode(m.key)}
-                      hitSlop={6}
-                      style={({ pressed }) => [
-                        styles.radio,
-                        selected && styles.radioSelected,
-                        pressed && { opacity: 0.8 },
-                      ]}
-                    >
-                      <Text style={[styles.radioLabel, isTablet && styles.radioLabelTablet, selected && styles.radioLabelSelected]}>
-                        {m.short}{done ? ' ✓' : ''}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              <View style={styles.centerInner}>
-                <BigPlayButton
-                  mode={cfg.big}
-                  label={cfg.playLabel}
-                  size={playSize}
-                  onPress={onPlay}
-                />
-              </View>
-            </View>
-            <View style={styles.bottomSpacer} />
-
-            {allDone ? (
-              <Pressable
-                onPress={() => router.push('/silent-mind')}
-                style={({ pressed }) => [styles.explore, pressed && { opacity: 0.85 }]}
+            <View style={[styles.content, { maxWidth: columnMax, alignSelf: 'center' }]} onLayout={onContentLayout}>
+              <Animated.View
+                style={styles.header}
+                entering={reveal ? FadeInDown.duration(600) : undefined}
               >
-                <Text style={styles.exploreEyebrow}>READY FOR MORE ?</Text>
-                <Text style={styles.exploreTitle}>Explore the Silent Mind Program →</Text>
-              </Pressable>
-            ) : null}
-          </View>
+                <Text style={styles.eyebrow}>STEP BY STEP</Text>
+                <Text style={[styles.title, isTablet && styles.titleTablet]}>
+                  {phase === 'A' ? 'Welcome' : phase === 'B' ? 'Welcome back' : 'Ready for more'}
+                </Text>
+                <Text style={styles.subtitle}>Your journey to the Silent Mind</Text>
+              </Animated.View>
+
+              {phase === 'A' && (
+                <PhaseA
+                  reveal={reveal}
+                  isTablet={isTablet}
+                  introTracks={introTracks}
+                  onPlayIntroTrack={(t) => {
+                    openPlayer(t, introTracks as any, { autoStart: true });
+                  }}
+                  modes={MODES}
+                  mode={mode}
+                  setMode={setMode}
+                  playSize={playSize}
+                  playLabel={cfg.playLabel}
+                  playBig={cfg.big}
+                  onPlay={onPlay}
+                  onPrimaryLayout={onPrimaryLayout}
+                  listened={listened}
+                />
+              )}
+
+              {phase === 'B' && (
+                <PhaseB
+                  reveal={reveal}
+                  isTablet={isTablet}
+                  introTracks={introTracks}
+                  onPlayIntroTrack={(t) => openPlayer(t, introTracks as any, { autoStart: true })}
+                  gatewayDone={gatewayDone}
+                  modes={MODES}
+                  mode={mode}
+                  setMode={setMode}
+                  playSize={playSize}
+                  playLabel={cfg.playLabel}
+                  playBig={cfg.big}
+                  onPlay={onPlay}
+                  onPrimaryLayout={onPrimaryLayout}
+                  listened={listened}
+                />
+              )}
+
+              {phase === 'C' && (
+                <PhaseC
+                  reveal={reveal}
+                  isTablet={isTablet}
+                  onOpenSM={() => router.push('/silent-mind')}
+                  onOpenQM={() => router.push('/qm')}
+                  introTracks={introTracks}
+                  onPlayIntroTrack={(t) => openPlayer(t, introTracks as any, { autoStart: true })}
+                  modes={MODES}
+                  onRevisitMode={playMode}
+                  onPrimaryLayout={onPrimaryLayout}
+                />
+              )}
+            </View>
           </ScrollView>
         </AnimatedGradient>
       </SwipeTabs>
@@ -221,37 +229,415 @@ export default function StartScreen() {
   );
 }
 
+// --------- Shared section-label divider --------------------------------
+
+/**
+ * Section label flanked by thin horizontal lines — the visual motif
+ * used everywhere on the Start page so every phase breathes the same
+ * way. Text is auto-uppercased (via `type.overline`) so callers can
+ * pass plain case.
+ *
+ * Default tint is `textDim` (the neutral separator) — pass `accent`
+ * for counters / status lines that should pop (STEP X OF 3, GATEWAY
+ * COMPLETED). When `onPress` is provided the whole row is tappable;
+ * pass `trailing` for accessory text like a chevron.
+ */
+function DividerLabel(props: {
+  text: string;
+  color?: string;
+  trailing?: string;
+  onPress?: () => void;
+  isTablet?: boolean;
+  style?: any;
+}) {
+  const { text, color, trailing, onPress, isTablet, style } = props;
+  const label = (
+    <View style={[styles.orRow, style]}>
+      <View style={styles.orLine} />
+      <Text style={[styles.orLabel, isTablet && styles.sectionLabelTablet, color ? { color } : null]}>
+        {text}{trailing ? ` ${trailing}` : ''}
+      </Text>
+      <View style={styles.orLine} />
+    </View>
+  );
+  if (!onPress) return label;
+  return (
+    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button">
+      {label}
+    </Pressable>
+  );
+}
+
+// --------- Phase A — "Welcome" -----------------------------------------
+
+function PhaseA(props: {
+  reveal: boolean;
+  isTablet: boolean;
+  introTracks: AudioTrack[];
+  onPlayIntroTrack: (t: AudioTrack) => void;
+  modes: ModeCfg[];
+  mode: ModeKey;
+  setMode: (k: ModeKey) => void;
+  playSize: number;
+  playLabel: string;
+  playBig: BigPlayMode;
+  onPlay: () => void;
+  onPrimaryLayout: (e: LayoutChangeEvent) => void;
+  listened: Record<string, true>;
+}) {
+  const { reveal, isTablet, introTracks, onPlayIntroTrack, modes, mode, setMode, playSize, playLabel, playBig, onPlay, onPrimaryLayout, listened } = props;
+  // Staggered reveal — header at 0ms (handled by parent), intro block
+  // at 180ms, OR divider at 360ms, start block at 520ms. Each uses a
+  // mild downward slide so the page "fills in" from top to bottom.
+  const enter = (delay: number) =>
+    reveal ? FadeInDown.delay(delay).duration(550) : undefined;
+  return (
+    <>
+      <View style={styles.introSpacerTop} />
+      {introTracks.length > 0 ? (
+        <Animated.View style={styles.block} entering={enter(180)}>
+          <DividerLabel
+            text="New here? Start with the intro"
+            isTablet={isTablet}
+            style={{ marginBottom: spacing.md }}
+          />
+          {/* Unpacked intro volet — each of the 4 audios is directly
+              launchable from the home, with a headphone glyph to make
+              the medium unambiguous. Kept tight (compact rows) so the
+              list doesn't steal the whole first screen. */}
+          <View style={styles.introList}>
+            {introTracks.map((t) => (
+              <Pressable
+                key={t.id}
+                onPress={() => onPlayIntroTrack(t)}
+                accessibilityRole="button"
+                accessibilityLabel={`Play intro audio: ${t.title}${t.durationHint ? `, ${t.durationHint}` : ''}`}
+                style={({ pressed }) => [styles.introRow, pressed && { opacity: 0.85 }]}
+              >
+                <KindIcon kind="audio" color={colors.accent} size={18} />
+                <Text style={styles.introRowTitle} numberOfLines={1}>{t.title}</Text>
+                {t.durationHint ? (
+                  <Text style={styles.introRowMeta}>{t.durationHint}</Text>
+                ) : null}
+                <Text style={styles.introRowChevron}>→</Text>
+              </Pressable>
+            ))}
+          </View>
+        </Animated.View>
+      ) : null}
+
+      <View style={styles.orSpacerTop} />
+      <Animated.View entering={enter(360)}>
+        <DividerLabel text="or start a quick meditation" isTablet={isTablet} />
+      </Animated.View>
+      <View style={styles.orSpacerBottom} />
+
+      <Animated.View entering={enter(520)}>
+        <StartBlock
+          isTablet={isTablet}
+          modes={modes}
+          mode={mode}
+          setMode={setMode}
+          playSize={playSize}
+          playLabel={playLabel}
+          playBig={playBig}
+          onPlay={onPlay}
+          onPrimaryLayout={onPrimaryLayout}
+          listened={listened}
+          showLabel={false}
+        />
+      </Animated.View>
+      <View style={styles.bottomSpacer} />
+    </>
+  );
+}
+
+// --------- Phase B — "In progress" -------------------------------------
+
+function PhaseB(props: {
+  reveal: boolean;
+  isTablet: boolean;
+  introTracks: AudioTrack[];
+  onPlayIntroTrack: (t: AudioTrack) => void;
+  gatewayDone: number;
+  modes: ModeCfg[];
+  mode: ModeKey;
+  setMode: (k: ModeKey) => void;
+  playSize: number;
+  playLabel: string;
+  playBig: BigPlayMode;
+  onPlay: () => void;
+  onPrimaryLayout: (e: LayoutChangeEvent) => void;
+  listened: Record<string, true>;
+}) {
+  const { reveal, isTablet, introTracks, onPlayIntroTrack, gatewayDone, modes, mode, setMode, playSize, playLabel, playBig, onPlay, onPrimaryLayout, listened } = props;
+  const enter = (delay: number) =>
+    reveal ? FadeInDown.delay(delay).duration(550) : undefined;
+  return (
+    <>
+      <View style={styles.introSpacerTop} />
+      <Animated.View style={styles.block} entering={enter(180)}>
+        <DividerLabel
+          text="Intro audios"
+          isTablet={isTablet}
+          style={{ marginBottom: spacing.md }}
+        />
+        <View style={styles.introList}>
+          {introTracks.map((t) => (
+            <Pressable
+              key={t.id}
+              onPress={() => onPlayIntroTrack(t)}
+              accessibilityRole="button"
+              accessibilityLabel={`Play intro audio: ${t.title}${t.durationHint ? `, ${t.durationHint}` : ''}`}
+              style={({ pressed }) => [styles.introRow, pressed && { opacity: 0.85 }]}
+            >
+              <KindIcon kind="audio" color={colors.accent} size={18} />
+              <Text style={styles.introRowTitle} numberOfLines={1}>{t.title}</Text>
+              {t.durationHint ? (
+                <Text style={styles.introRowMeta}>{t.durationHint}</Text>
+              ) : null}
+              <Text style={styles.introRowChevron}>→</Text>
+            </Pressable>
+          ))}
+        </View>
+      </Animated.View>
+
+      <View style={styles.orSpacerTop} />
+      <Animated.View entering={enter(320)}>
+        <DividerLabel
+          text={`Step ${gatewayDone + 1} of 3`}
+          isTablet={isTablet}
+          style={{ marginBottom: spacing.md }}
+        />
+        <StartBlock
+          isTablet={isTablet}
+          modes={modes}
+          mode={mode}
+          setMode={setMode}
+          playSize={playSize}
+          playLabel={playLabel}
+          playBig={playBig}
+          onPlay={onPlay}
+          onPrimaryLayout={onPrimaryLayout}
+          listened={listened}
+          showLabel={false}
+        />
+      </Animated.View>
+      <View style={styles.bottomSpacer} />
+    </>
+  );
+}
+
+// --------- Phase C — "Ready for the program" ---------------------------
+
+function PhaseC(props: {
+  reveal: boolean;
+  isTablet: boolean;
+  onOpenSM: () => void;
+  onOpenQM: () => void;
+  introTracks: AudioTrack[];
+  onPlayIntroTrack: (t: AudioTrack) => void;
+  modes: ModeCfg[];
+  onRevisitMode: (k: ModeKey) => void;
+  onPrimaryLayout: (e: LayoutChangeEvent) => void;
+}) {
+  const { reveal, isTablet, onOpenSM, onOpenQM, introTracks, onPlayIntroTrack, modes, onRevisitMode, onPrimaryLayout } = props;
+  const enter = (delay: number) =>
+    reveal ? FadeInDown.delay(delay).duration(550) : undefined;
+  return (
+    <>
+      <View style={styles.introSpacerTop} />
+      <Animated.View style={styles.block} entering={enter(180)}>
+        <DividerLabel
+          text="Intro audios"
+          isTablet={isTablet}
+          style={{ marginBottom: spacing.md }}
+        />
+        <View style={styles.introList}>
+          {introTracks.map((t) => (
+            <Pressable
+              key={t.id}
+              onPress={() => onPlayIntroTrack(t)}
+              accessibilityRole="button"
+              accessibilityLabel={`Play intro audio: ${t.title}${t.durationHint ? `, ${t.durationHint}` : ''}`}
+              style={({ pressed }) => [styles.introRow, pressed && { opacity: 0.85 }]}
+            >
+              <KindIcon kind="audio" color={colors.accent} size={18} />
+              <Text style={styles.introRowTitle} numberOfLines={1}>{t.title}</Text>
+              {t.durationHint ? (
+                <Text style={styles.introRowMeta}>{t.durationHint}</Text>
+              ) : null}
+              <Text style={styles.introRowChevron}>→</Text>
+            </Pressable>
+          ))}
+        </View>
+      </Animated.View>
+
+      <View style={styles.orSpacerTop} />
+
+      <Animated.View style={styles.programsWrap} onLayout={onPrimaryLayout} entering={enter(340)}>
+        <Pressable
+          onPress={onOpenSM}
+          accessibilityRole="button"
+          accessibilityLabel="Open Silent Mind program — three guided parts"
+          style={({ pressed }) => [styles.programCta, styles.programCtaSM, pressed && { opacity: 0.88 }]}
+        >
+          <Text style={styles.programEyebrow}>SILENT MIND PROGRAM</Text>
+          <Text style={styles.programTitle}>To the Silent Mind →</Text>
+          <Text style={styles.programHint}>Three guided parts, at your pace.</Text>
+        </Pressable>
+        <Pressable
+          onPress={onOpenQM}
+          accessibilityRole="button"
+          accessibilityLabel="Open QM Format — timed rounds"
+          style={({ pressed }) => [styles.programCta, styles.programCtaQM, pressed && { opacity: 0.88 }]}
+        >
+          <Text style={[styles.programEyebrow, { color: colors.accentAlt }]}>QM FORMAT</Text>
+          <Text style={styles.programTitle}>Quantified Meditation →</Text>
+          <Text style={styles.programHint}>Timed rounds, same practices, on demand.</Text>
+        </Pressable>
+      </Animated.View>
+
+      <View style={styles.orSpacerBottom} />
+
+      <Animated.View entering={enter(540)}>
+        <DividerLabel
+          text="Replay quick meditation"
+          isTablet={isTablet}
+          style={{ marginBottom: spacing.sm }}
+        />
+        <View style={styles.revisitRow}>
+          {modes.map(m => (
+            <Pressable
+              key={m.key}
+              onPress={() => onRevisitMode(m.key)}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={`Replay ${m.duration} session`}
+              style={({ pressed }) => [styles.miniPill, pressed && { opacity: 0.75 }]}
+            >
+              <Text style={styles.miniPillLabel}>{m.duration}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </Animated.View>
+
+      <View style={styles.bottomSpacer} />
+    </>
+  );
+}
+
+// --------- Shared pills + big play block -------------------------------
+
+function StartBlock(props: {
+  isTablet: boolean;
+  modes: ModeCfg[];
+  mode: ModeKey;
+  setMode: (k: ModeKey) => void;
+  playSize: number;
+  playLabel: string;
+  playBig: BigPlayMode;
+  onPlay: () => void;
+  onPrimaryLayout: (e: LayoutChangeEvent) => void;
+  listened: Record<string, true>;
+  showLabel: boolean;
+}) {
+  const { isTablet, modes, mode, setMode, playSize, playLabel, playBig, onPlay, onPrimaryLayout, listened, showLabel } = props;
+
+  // Description of the currently-selected track — shown between the
+  // pills and the big play button so the user knows what starts on tap
+  // (autoStart skips pre-play). Pulled from startJourneySteps so the
+  // strings live with the content, not in the UI.
+  const selectedStep = startJourneySteps.find(s => s.id === mode);
+  const description = selectedStep?.description ?? '';
+
+  return (
+    <View style={styles.startBlock} onLayout={onPrimaryLayout}>
+      {showLabel ? (
+        <Text style={[styles.sectionLabel, styles.startLabel, isTablet && styles.sectionLabelTablet]}>Start with</Text>
+      ) : null}
+
+      <View style={styles.radioRow} accessibilityRole="radiogroup">
+        {modes.map(m => {
+          const selected = m.key === mode;
+          const done = (() => {
+            const s = startJourneySteps.find(s => s.id === m.key);
+            return !!(s?.track && listened[s.track.id]);
+          })();
+          return (
+            <Pressable
+              key={m.key}
+              onPress={() => setMode(m.key)}
+              hitSlop={4}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+              accessibilityLabel={`${m.duration}, ${m.short}${done ? ', completed' : ''}`}
+              style={({ pressed }) => [
+                styles.radio,
+                selected && styles.radioSelected,
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.radioDuration,
+                  isTablet && styles.radioDurationTablet,
+                  selected && styles.radioDurationSelected,
+                ]}
+                numberOfLines={1}
+              >
+                {m.duration}{done ? ' ✓' : ''}
+              </Text>
+              <Text
+                style={[
+                  styles.radioSub,
+                  isTablet && styles.radioSubTablet,
+                  selected && styles.radioSubSelected,
+                ]}
+                numberOfLines={1}
+              >
+                {m.short}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {description ? (
+        <Text style={styles.descLine} numberOfLines={3}>{description}</Text>
+      ) : null}
+
+      <View style={styles.centerInner}>
+        <BigPlayButton
+          mode={playBig}
+          label={playLabel}
+          size={playSize}
+          onPress={onPlay}
+        />
+      </View>
+    </View>
+  );
+}
+
+// --------- styles ------------------------------------------------------
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  // Scroll container: flexGrow:1 makes the inner content box fill the
-  // viewport when there's room, and grow scrollable only if the phone
-  // can't fit the full layout (Android with a tall nav bar, etc.)
   scrollContainer: { flexGrow: 1, alignItems: 'center' },
   content: {
-    // flexGrow (not flex:1) plays well inside a ScrollView's content
-    // container — fills the viewport when it can, lets the ScrollView
-    // handle overflow when it can't.
     flexGrow: 1,
     width: '100%',
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
-  // Fixed-height top block so the title lands at the same level as the
-  // hero-positioned titles on Silent Mind / QM tabs (SM/QM hero also
-  // shrunk to 100). Less dead space above the title.
+  // Header now carries eyebrow + title + subtitle — a touch taller to
+  // absorb the extra line without clipping.
   header: {
-    height: 100,
+    height: 120,
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingBottom: spacing.sm,
   },
-  // Intro + start blocks sit at their natural height. Spacer flex values:
-  //   introSpacerTop : 2   — above the intro card
-  //   orSpacerTop    : 2   — below the intro card, above the 'or' row
-  //   orSpacerBottom : 1   — below the 'or' row
-  //   bottomSpacer   : 1   — below the Start block
-  // introSpacerTop == orSpacerTop keeps the intro card vertically
-  // centered between the title and the 'or' divider.
   block: { justifyContent: 'center' },
   startBlock: { alignItems: 'stretch' },
   introSpacerTop: { flex: 2, minHeight: spacing.md },
@@ -259,63 +645,166 @@ const styles = StyleSheet.create({
   orSpacerBottom: { flex: 1, minHeight: spacing.sm },
   bottomSpacer: { flex: 1, minHeight: spacing.md },
   centerInner: { alignItems: 'center', justifyContent: 'center' },
-  sectionLabel: {
-    ...type.overline, color: colors.textMuted,
-    fontSize: 10, letterSpacing: 2, textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  // Extra margin above the 'Start with' label so the OR divider has
-  // breathing room rather than kissing the label under it.
-  startLabel: { marginBottom: spacing.sm },
-  orRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  orLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.16)' },
-  orLabel: { ...type.overline, color: colors.textMuted, fontSize: 10, letterSpacing: 2 },
+  // Tier 1 — brand eyebrow at the very top, strongest presence.
   eyebrow: {
     ...type.overline, color: colors.accent,
     marginBottom: spacing.xs, fontSize: 10, letterSpacing: 3,
+    textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 },
   },
   title: {
     ...type.display, color: colors.text,
-    fontSize: 22, lineHeight: 28, textAlign: 'center',
+    fontSize: 24, lineHeight: 30, textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 8, textShadowOffset: { width: 0, height: 1 },
   },
-  titleTablet: { fontSize: 28, lineHeight: 34 },
-  radioLabelTablet: { fontSize: 11, letterSpacing: 1.5 },
+  titleTablet: { fontSize: 30, lineHeight: 36 },
+  // Subtitle under the contextual title — brand/positioning line.
+  subtitle: {
+    ...type.caption, color: colors.textMuted,
+    fontSize: 11, fontStyle: 'italic',
+    textAlign: 'center', marginTop: 4,
+    textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 },
+  },
+  // Tier 2 — section helpers (New here?, Start with).
+  sectionLabel: {
+    ...type.overline, color: colors.textDim,
+    fontSize: 10, letterSpacing: 2, textAlign: 'center',
+    marginBottom: spacing.md,
+    textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 },
+  },
+  startLabel: { marginBottom: spacing.sm },
+  orRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  orLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.16)' },
+  // Tier 3 — connectors / metadata (or …, REVISIT GATEWAY).
+  orLabel: {
+    ...type.overline, color: colors.textDim, fontSize: 10, letterSpacing: 2,
+    textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 },
+  },
   sectionLabelTablet: { fontSize: 12, letterSpacing: 2.5 },
 
   radioRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
-  // Outlined pill instead of a filled dot. Unselected → thin white
-  // outline + muted text. Selected → accent outline + accent text.
-  // Padding / font tight enough that the three radios fit on a single
-  // row without spilling outside the viewport.
+  // Two-line pill: duration (primary) stacked above intent (sub-label).
+  // Padding and font sizes bumped to meet HIG tap-target / readability.
   radio: {
-    paddingVertical: 5,
-    paddingHorizontal: 9,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    alignItems: 'center',
+    minWidth: 78,
+  },
+  radioSelected: {
+    borderColor: colors.accent,
+    backgroundColor: 'rgba(158,54,148,0.12)',
+  },
+  radioDuration: {
+    ...type.h2, color: colors.text,
+    fontSize: 13, lineHeight: 16, textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 },
+  },
+  radioDurationTablet: { fontSize: 15, lineHeight: 18 },
+  radioDurationSelected: { color: colors.accent },
+  radioSub: {
+    ...type.overline, color: 'rgba(255,255,255,0.72)',
+    fontSize: 9, letterSpacing: 0.8, textAlign: 'center',
+    marginTop: 2,
+  },
+  radioSubTablet: { fontSize: 10, letterSpacing: 1 },
+  radioSubSelected: { color: colors.accent },
+  // Description of the active mode — the "what actually happens when I
+  // tap play" line. Italicised, centred, capped to 2 lines.
+  descLine: {
+    ...type.caption, color: colors.textMuted,
+    fontSize: 12, fontStyle: 'italic',
+    textAlign: 'center', marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+    textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 },
+  },
+
+  // Phase A — unpacked intro audio list.
+  introList: { gap: 6 },
+  introRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(0, 8, 35, 0.45)',
+  },
+  introRowTitle: {
+    ...type.h2, color: colors.text,
+    fontSize: 14, flex: 1,
+  },
+  introRowMeta: {
+    ...type.overline, color: colors.textDim,
+    fontSize: 10, letterSpacing: 0.6,
+  },
+  introRowChevron: { ...type.display, fontSize: 14, color: colors.accent, marginLeft: 2 },
+
+  // Phase B / C — compact intro list (collapsible).
+  introListCompact: { gap: 4, marginTop: 4 },
+  introRowCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(0, 8, 35, 0.35)',
+  },
+  introRowTitleCompact: {
+    ...type.caption, color: colors.text,
+    fontSize: 12, flex: 1,
+  },
+
+  // Phase C — program CTAs
+  programsWrap: { gap: spacing.md },
+  programCta: {
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    gap: 4,
+    alignItems: 'center',
+  },
+  programCtaSM: {
+    borderColor: colors.accent,
+    backgroundColor: 'rgba(158,54,148,0.10)',
+  },
+  programCtaQM: {
+    borderColor: colors.accentAlt,
+    backgroundColor: 'rgba(32,120,108,0.10)',
+  },
+  programEyebrow: { ...type.overline, color: colors.accent, fontSize: 10, letterSpacing: 2.5 },
+  programTitle: { ...type.h2, color: colors.text, fontSize: 18, textAlign: 'center' },
+  programHint: { ...type.caption, color: colors.textMuted, fontSize: 12, textAlign: 'center' },
+
+  // Phase C — revisit row of mini pills.
+  revisitRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  miniPill: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.40)',
-    backgroundColor: 'transparent',
+    borderColor: 'rgba(255,255,255,0.25)',
   },
-  radioSelected: { borderColor: colors.accent },
-  radioLabel: {
-    ...type.overline, fontSize: 9, letterSpacing: 0.8,
-    color: 'rgba(255,255,255,0.70)', textAlign: 'center',
+  miniPillLabel: {
+    ...type.overline, color: colors.textMuted,
+    fontSize: 10, letterSpacing: 0.8,
   },
-  radioLabelSelected: { color: colors.accent },
-
-  explore: {
-    marginTop: spacing.sm,
-    padding: spacing.sm + 2,
-    borderRadius: radius.lg,
-    borderColor: 'rgba(255,255,255,0.25)', borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    alignItems: 'center',
-    gap: 2,
-  },
-  exploreEyebrow: { ...type.overline, color: colors.accent, fontSize: 9 },
-  exploreTitle: { ...type.h2, color: colors.text, fontSize: 13, textAlign: 'center' },
 });

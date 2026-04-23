@@ -11,6 +11,7 @@ import { findCueIndex, TranscriptCue } from '../content/transcript';
 import { trackProgram } from '../content/catalog';
 import { colors, radius, spacing, type } from '../theme';
 import { CircleButton } from './CircleButton';
+import { AnimatedGradient, GRADIENT_SM, GRADIENT_QM } from './AnimatedGradient';
 
 const DEFAULT_ARTWORK = require('../../assets/images/lounge-2.jpg');
 const DEFAULT_DESCRIPTION = 'Take a moment to arrive. When you are ready, begin.';
@@ -241,7 +242,11 @@ function PlayerInner() {
     }
     const hasMore = track?.rounds && currentRound < selectedRounds;
     if (!hasMore) {
-      setFinished(true);
+      // No end-of-audio splash — the "AUDIO ENDED" panel added little
+      // value and interrupted the after-practice settle. Just dismiss
+      // the player; the user lands back wherever they opened it from.
+      try { player.pause(); } catch {}
+      close();
       return;
     }
     const hasInter = !!track?.rounds?.roundInters?.[currentRound - 1];
@@ -423,8 +428,23 @@ function PlayerInner() {
   const accent = rounds ? colors.accentAlt : colors.accent;
   const accentBg = rounds ? colors.accentAltSoft : colors.accentSoft;
 
+  // Progress-driven background gradient: the bright spot starts near
+  // the bottom at 0s and climbs to the top as the audio plays. The
+  // gradient's internal withTiming (~800ms) absorbs scrubs so ±15s
+  // jumps ease rather than snap.
+  const progressRatio = canSeek && duration > 0
+    ? Math.max(0, Math.min(1, t / duration))
+    : 0;
+  const playerCenterY = 0.80 - progressRatio * 0.65;
+  // Palette follows the same SM / QM split as `accent`.
+  const gradientPalette = rounds ? GRADIENT_QM : GRADIENT_SM;
+
   return (
     <View style={styles.root}>
+      <AnimatedGradient
+        centerY={playerCenterY}
+        palette={gradientPalette}
+      />
       <View style={styles.header}>
         {!finished ? (
           <Pressable
@@ -775,7 +795,11 @@ function CueLine({ cue, time, onLayout }: { cue: TranscriptCue; time: number; on
 
 const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bg, zIndex: 80 },
-  root: { flex: 1, backgroundColor: colors.bg, paddingTop: 56 },
+  // Transparent so the absolutely-positioned AnimatedGradient (first
+  // child) is visible. The outer `overlay` still carries `colors.bg` as
+  // a fallback solid, and the gradient's own edge stops fade to near-
+  // black opacity 1 so there's no "see-through" effect.
+  root: { flex: 1, backgroundColor: 'transparent', paddingTop: 56 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -926,6 +950,11 @@ const styles = StyleSheet.create({
 
   transcriptFrame: {
     height: 220,
+    // Stretch to the parent's content width rather than shrinking to
+    // the text inside. The `middle` column uses `alignItems: center`
+    // which would otherwise collapse this frame whenever cues are
+    // short, making the panel width jump around between tracks.
+    alignSelf: 'stretch',
     marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,
     borderRadius: radius.lg,
