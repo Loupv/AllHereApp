@@ -416,7 +416,7 @@ function PlayerInner() {
   // QM tracks (anything with a rounds config) carry the QM tab accent so the
   // player feels visually consistent with where the user opened it from.
   const accent = rounds ? colors.accentAlt : colors.accent;
-  const accentBg = rounds ? 'rgba(54,160,158,0.35)' : colors.accentSoft;
+  const accentBg = rounds ? colors.accentAltSoft : colors.accentSoft;
 
   return (
     <View style={styles.root}>
