@@ -464,7 +464,7 @@ export const qmProgram = {
   intro:
     'High intensity training\n' +
     'Multiple rounds, short breaks\n' +
-    'reproduce the same meditative state on demand',
+    'Reproduce the same meditative state on demand',
   banner: require('../../assets/images/hero/space.jpg'),
 };
 

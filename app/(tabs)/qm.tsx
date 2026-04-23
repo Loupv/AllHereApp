@@ -51,11 +51,14 @@ const styles = StyleSheet.create({
   intro: {
     ...type.body,
     color: colors.textMuted,
-    paddingHorizontal: spacing.lg,
+    // Tighter horizontal padding + slightly smaller type so the
+    // 'Reproduce the same meditative state on demand' third line
+    // fits on one line without wrapping.
+    paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
     textAlign: 'center',
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 18,
   },
 });
