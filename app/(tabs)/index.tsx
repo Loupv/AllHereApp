@@ -127,6 +127,7 @@ export default function StartScreen() {
                     basePath="/silent-mind"
                     accent={colors.accent}
                     accentRgb="158,54,148"
+                    elevated
                   />
                 </View>
               </View>

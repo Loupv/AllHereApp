@@ -74,7 +74,9 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
   // ---- outer ring orbit (only 'qm3') ----
   const orbit = useSharedValue(0);
   useEffect(() => {
-    orbit.value = withRepeat(withTiming(1, { duration: 22000, easing: Easing.linear }), -1, false);
+    // Slow enough that the dashes really feel like they're drifting rather
+    // than spinning. 48 s for a full revolution.
+    orbit.value = withRepeat(withTiming(1, { duration: 48000, easing: Easing.linear }), -1, false);
   }, []);
 
   // ---- per-mode masks to turn animations on/off smoothly ----

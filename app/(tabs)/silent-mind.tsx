@@ -45,18 +45,20 @@ export default function SilentMindScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: spacing.xxl },
-  hero: { height: 220, justifyContent: 'flex-end', overflow: 'hidden' },
+  hero: { height: 150, justifyContent: 'flex-end', overflow: 'hidden' },
   banner: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.55)' },
-  heroText: { padding: spacing.lg, alignItems: 'center' },
-  eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.sm, textAlign: 'center' },
-  title: { ...type.display, color: colors.text, fontSize: 30, textAlign: 'center', lineHeight: 36 },
+  heroText: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, alignItems: 'center' },
+  eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.xs, textAlign: 'center', fontSize: 10 },
+  title: { ...type.display, color: colors.text, fontSize: 24, textAlign: 'center', lineHeight: 30 },
   intro: {
     ...type.body,
     color: colors.textMuted,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
     textAlign: 'center',
+    fontSize: 13,
+    lineHeight: 19,
   },
 });

@@ -17,6 +17,11 @@ type Props = {
   accent?: string;
   accentRgb?: string;
   secondary?: boolean;
+  /**
+   * More opaque surface — useful when the card sits on top of a busy or
+   * low-contrast backdrop (e.g. the radial gradient on the Start page).
+   */
+  elevated?: boolean;
 };
 
 /**
@@ -30,6 +35,7 @@ export function VoletCard({
   accent = colors.accent,
   accentRgb = '158,54,148',
   secondary = false,
+  elevated = false,
 }: Props) {
   const router = useRouter();
   const nextTrackId = useProgress(s => s.nextTrackId());
@@ -112,6 +118,7 @@ export function VoletCard({
     <Animated.View
       style={[
         styles.card,
+        elevated && styles.cardElevated,
         secondary && styles.cardSecondary,
         locked && styles.cardLocked,
         pulseStyle,
@@ -155,6 +162,12 @@ const styles = StyleSheet.create({
   cardSecondary: {
     backgroundColor: 'transparent',
     borderColor: 'rgba(255,255,255,0.10)',
+  },
+  // Darker, more opaque variant used when the card needs to stand out
+  // against a busy / low-contrast backdrop.
+  cardElevated: {
+    backgroundColor: 'rgba(0, 8, 35, 0.55)',
+    borderColor: 'rgba(255,255,255,0.22)',
   },
   cardLocked: { opacity: 0.45 },
   pressable: {
