@@ -13,12 +13,12 @@ export const colors = {
   accent: '#9E3694',
   accentSoft: 'rgba(158,54,148,0.35)',
   accentDeep: '#6F1F68',
-  // QM tab accent — closer to the original teal, a touch darker and
-  // slightly less saturated for a more grounded feel.
-  accentAlt: '#2C8581',
-  accentAltSoft: 'rgba(44,133,129,0.35)',
-  accentAltDeep: '#185653',
-  bgTabAlt: '#002428',
+  // QM tab accent — original teal, complementary to the Silent Mind
+  // magenta.
+  accentAlt: '#36A09E',
+  accentAltSoft: 'rgba(54,160,158,0.35)',
+  accentAltDeep: '#1F6F6E',
+  bgTabAlt: '#00252B',
   placeholder: '#718096',
 };
 

@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderColor: colors.accentAlt,
     borderWidth: 1,
-    backgroundColor: 'rgba(44,133,129,0.10)',
+    backgroundColor: 'rgba(54,160,158,0.10)',
     alignItems: 'center',
     gap: 4,
   },
