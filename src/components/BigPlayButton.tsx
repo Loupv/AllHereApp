@@ -207,5 +207,5 @@ const styles = StyleSheet.create({
   playGlyph: { color: colors.text, marginLeft: 3, marginBottom: 2, opacity: 0.95 },
   // textTransform:'none' so mixed-case labels ('QM Format / 3 × 3 min')
   // render as authored rather than being force-uppercased.
-  label: { ...type.overline, color: colors.text, fontSize: 10, letterSpacing: 1.8, textAlign: 'center', lineHeight: 13, textTransform: 'none' },
+  label: { ...type.overline, color: colors.text, fontSize: 14, letterSpacing: 1.4, textAlign: 'center', lineHeight: 18, textTransform: 'none' },
 });

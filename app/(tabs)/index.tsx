@@ -24,23 +24,23 @@ const MODES: {
 }[] = [
   {
     key: 'step-1min', big: 'one',
-    short: '60 sec',
-    playLabel: 'START WITH 60 SEC',
-    playLabelDone: 'LISTEN AGAIN · 60 SEC',
+    short: 'first practice',
+    playLabel: '60s',
+    playLabelDone: '60s',
     duration: '1 min',
   },
   {
     key: 'step-3min', big: 'three',
-    short: '3 min',
-    playLabel: 'CONTINUE WITH 3 MIN',
-    playLabelDone: 'LISTEN AGAIN · 3 MIN',
+    short: 'go deeper',
+    playLabel: '3min',
+    playLabelDone: '3min',
     duration: '3 min',
   },
   {
     key: 'step-qm3', big: 'qm3',
-    short: '3 × 3 min',
-    playLabel: 'QM Format\n3 × 3 min',
-    playLabelDone: 'LISTEN AGAIN · 3 × 3 MIN',
+    short: 'QM format',
+    playLabel: '3x3min',
+    playLabelDone: '3x3min',
     duration: '11 min',
   },
 ];
@@ -170,6 +170,7 @@ export default function StartScreen() {
               <View style={styles.centerInner}>
                 <BigPlayButton
                   mode={cfg.big}
+                  label={cfg.playLabel}
                   size={playSize}
                   onPress={onPlay}
                 />
@@ -203,12 +204,14 @@ const styles = StyleSheet.create({
   },
   // Fixed-height top block so the title lands at the same level as the
   // hero-positioned titles on Silent Mind / QM / About tabs (hero height
-  // 150, title bottom-aligned). Keeps the brand rhythm consistent.
+  // 150, title bottom-aligned). Extra marginBottom pushes the intro
+  // section a bit further below the title for breathing room.
   header: {
     height: 150,
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   // Intro block shrinks to its natural size so the 'or' divider sits
   // right under the card — no wasted air above it. The start block
