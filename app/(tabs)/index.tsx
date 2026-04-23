@@ -1,12 +1,10 @@
 import { useState, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { AnimatedGradient } from '../../src/components/AnimatedGradient';
 import { BigPlayButton, type BigPlayMode } from '../../src/components/BigPlayButton';
 import { VoletCard } from '../../src/components/VoletCard';
-import { AboutFooter } from '../../src/components/AboutFooter';
 import { startJourneySteps, silentMindVolets } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { useProgress } from '../../src/player/progressStore';
@@ -52,7 +50,10 @@ export default function StartScreen() {
   const openPlayer = usePlayerStore(s => s.open);
   const listened = useProgress(s => s.listened);
   const { height } = useWindowDimensions();
-  const playSize = Math.max(220, Math.min(320, Math.round(height / 3)));
+  // Smaller play control so the full Start layout fits in one page without
+  // scrolling (intro card + OR divider + play + radios + optional explore
+  // pill). Was roughly h/3, now h/4 with tighter clamps.
+  const playSize = Math.max(170, Math.min(230, Math.round(height / 4)));
 
   // Smart default: pick the first step the user hasn't listened to yet, so
   // reopening the home surfaces the next natural step. Falls back to 1 min.
@@ -85,7 +86,7 @@ export default function StartScreen() {
     <View style={styles.root}>
       <SwipeTabs current="index">
         <AnimatedGradient>
-          <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.content}>
             <View style={styles.header}>
               <Text style={styles.eyebrow}>MEDITATION · STEP BY STEP</Text>
               <Text style={styles.title}>To the Silent Mind</Text>
@@ -135,12 +136,9 @@ export default function StartScreen() {
                     <View style={[styles.radioDot, selected && styles.radioDotSelected]}>
                       {selected ? <View style={styles.radioDotInner} /> : null}
                     </View>
-                    <View style={{ alignItems: 'center' }}>
-                      <Text style={[styles.radioLabel, selected && styles.radioLabelSelected]}>
-                        {m.short}
-                      </Text>
-                      <Text style={styles.radioDuration}>{m.duration}{done ? ' · ✓' : ''}</Text>
-                    </View>
+                    <Text style={[styles.radioLabel, selected && styles.radioLabelSelected]}>
+                      {m.short}{done ? ' ✓' : ''}
+                    </Text>
                   </Pressable>
                 );
               })}
@@ -155,10 +153,7 @@ export default function StartScreen() {
                 <Text style={styles.exploreTitle}>Explore the Silent Mind Program →</Text>
               </Pressable>
             ) : null}
-
-            <View style={styles.footerSpacer} />
-            <AboutFooter />
-          </ScrollView>
+          </View>
         </AnimatedGradient>
       </SwipeTabs>
     </View>
@@ -167,77 +162,77 @@ export default function StartScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  // No scrolling on Start — every block competes for height via flex, and
+  // the middle 'center' slot takes whatever's left over.
   content: {
-    flexGrow: 1,
+    flex: 1,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.md,
     paddingBottom: spacing.md,
   },
-  header: { alignItems: 'center', marginBottom: spacing.lg },
+  header: { alignItems: 'center', marginBottom: spacing.sm },
   // Cancel the content's horizontal padding so VoletCard's own margins line
-  // up with the Silent Mind / QM screens, where it's usually the first-level
-  // child of a padded scroll view.
-  introBlock: { marginHorizontal: -spacing.lg, marginBottom: spacing.md },
+  // up with the Silent Mind / QM screens.
+  introBlock: { marginHorizontal: -spacing.lg, marginBottom: spacing.xs },
   sectionLabel: {
     ...type.overline, color: colors.textMuted,
     fontSize: 10, letterSpacing: 2, textAlign: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
-  orRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginVertical: spacing.md },
+  orRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.xs },
   orLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.16)' },
   orLabel: { ...type.overline, color: colors.textMuted, fontSize: 10, letterSpacing: 2 },
   eyebrow: {
     ...type.overline, color: colors.accent,
-    marginBottom: spacing.sm, fontSize: 11, letterSpacing: 3,
+    marginBottom: spacing.xs, fontSize: 10, letterSpacing: 3,
   },
   title: {
     ...type.display, color: colors.text,
-    fontSize: 26, lineHeight: 32, textAlign: 'center',
+    fontSize: 22, lineHeight: 28, textAlign: 'center',
   },
 
-  center: { alignItems: 'center', justifyContent: 'center', marginVertical: spacing.xl },
+  // The center slot flex-grows so the big play button sits between the
+  // intro card and the radio row without needing explicit margins. This is
+  // also how the page auto-balances on very tall / very short viewports.
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   radioRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: spacing.sm,
     paddingHorizontal: spacing.md,
+    marginTop: spacing.xs,
   },
   radio: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   radioDot: {
-    width: 18, height: 18, borderRadius: 9,
+    width: 14, height: 14, borderRadius: 7,
     borderColor: 'rgba(255,255,255,0.45)', borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 4,
   },
   radioDotSelected: { borderColor: colors.accent },
-  radioDotInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
+  radioDotInner: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent },
   radioLabel: {
-    ...type.overline, fontSize: 10, letterSpacing: 1.5,
+    ...type.overline, fontSize: 9, letterSpacing: 1.5,
     color: 'rgba(255,255,255,0.55)', textAlign: 'center',
   },
   radioLabelSelected: { color: colors.text },
-  radioDuration: {
-    ...type.caption, color: colors.textMuted, fontSize: 10,
-    marginTop: 2,
-  },
 
   explore: {
-    marginTop: spacing.xl,
-    padding: spacing.md,
+    marginTop: spacing.sm,
+    padding: spacing.sm + 2,
     borderRadius: radius.lg,
     borderColor: 'rgba(255,255,255,0.25)', borderWidth: 1,
     backgroundColor: 'rgba(255,255,255,0.06)',
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
   },
-  exploreEyebrow: { ...type.overline, color: colors.accent, fontSize: 10 },
-  exploreTitle: { ...type.h2, color: colors.text, fontSize: 14, textAlign: 'center' },
-
-  footerSpacer: { flex: 1, minHeight: spacing.xl },
+  exploreEyebrow: { ...type.overline, color: colors.accent, fontSize: 9 },
+  exploreTitle: { ...type.h2, color: colors.text, fontSize: 13, textAlign: 'center' },
 });
