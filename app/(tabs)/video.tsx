@@ -11,6 +11,7 @@ import { useVideoFeed, useNewsFeed } from '../../src/content/remote';
 import { newsArticles, type NewsArticle } from '../../src/content/news';
 import { useVideoStore } from '../../src/player/videoStore';
 import { useNotifications } from '../../src/player/notificationStore';
+import { KindIcon } from '../../src/components/KindIcon';
 import { colors, radius, spacing, type } from '../../src/theme';
 
 const KIND_ICON: Record<MediaKind, string> = {
@@ -25,13 +26,10 @@ const KIND_LABEL: Record<MediaKind, string> = {
   article: 'READ',
 };
 
-type Filter = 'all' | MediaKind;
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: 'all',     label: 'All' },
-  { key: 'video',   label: 'Watch' },
-  { key: 'audio',   label: 'Listen' },
-  { key: 'article', label: 'Read' },
-];
+// Media-kind toggles — each can be turned on/off independently. Defaults
+// to all three on, so the Media tab surfaces everything. The user can
+// peel back types they're not interested in right now.
+const TOGGLE_KINDS: MediaKind[] = ['video', 'audio', 'article'];
 
 // Normalised shape used by the unified list — covers video items AND
 // news articles so the tab can render both with the same card component.
@@ -101,12 +99,12 @@ export default function VideoScreen() {
   const refreshing = video.refreshing || news.refreshing;
   const refresh = () => { video.refresh(); news.refresh(); };
 
-  const [filter, setFilter] = useState<Filter>('all');
-  const visible = filter === 'all' ? rows : rows.filter(r => r.kind === filter);
-  // Count per-kind so the chips can show how many items live behind each
-  // label without the user having to tap through
-  const counts: Record<Filter, number> = {
-    all: rows.length,
+  const [enabled, setEnabled] = useState<Record<MediaKind, boolean>>({
+    video: true, audio: true, article: true,
+  });
+  const toggle = (k: MediaKind) => setEnabled(s => ({ ...s, [k]: !s[k] }));
+  const visible = rows.filter(r => enabled[r.kind]);
+  const counts: Record<MediaKind, number> = {
     video: rows.filter(r => r.kind === 'video').length,
     audio: rows.filter(r => r.kind === 'audio').length,
     article: rows.filter(r => r.kind === 'article').length,
@@ -131,24 +129,22 @@ export default function VideoScreen() {
           </View>
         </View>
         <View style={styles.filterRow}>
-          {FILTERS.map(f => {
-            const selected = f.key === filter;
-            const n = counts[f.key];
+          {TOGGLE_KINDS.map(k => {
+            const on = enabled[k];
+            const n = counts[k];
             return (
               <Pressable
-                key={f.key}
-                onPress={() => setFilter(f.key)}
+                key={k}
+                onPress={() => toggle(k)}
                 hitSlop={6}
                 style={({ pressed }) => [
-                  styles.chip,
-                  selected && styles.chipSelected,
+                  styles.toggle,
+                  on && styles.toggleOn,
                   pressed && { opacity: 0.8 },
                 ]}
               >
-                <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
-                  {f.label}
-                  {n > 0 ? <Text style={styles.chipCount}>{' · ' + n}</Text> : null}
-                </Text>
+                <KindIcon kind={k} color={on ? colors.text : colors.textDim} size={18} />
+                <Text style={[styles.toggleCount, on && styles.toggleCountOn]}>{n}</Text>
               </Pressable>
             );
           })}
@@ -227,29 +223,30 @@ const styles = StyleSheet.create({
   title: { ...type.display, color: colors.text, fontSize: 32, textAlign: 'center' },
   filterRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
   },
-  chip: {
+  toggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: radius.pill,
     borderColor: colors.border,
     borderWidth: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: 'transparent',
+    opacity: 0.5,
   },
-  chipSelected: {
+  toggleOn: {
     borderColor: colors.accent,
     backgroundColor: 'rgba(158,54,148,0.15)',
+    opacity: 1,
   },
-  chipLabel: {
-    ...type.overline, color: colors.textMuted,
-    fontSize: 10, letterSpacing: 1.5,
-  },
-  chipLabelSelected: { color: colors.text },
-  chipCount: { color: colors.textDim, fontSize: 9 },
+  toggleCount: { ...type.overline, color: colors.textDim, fontSize: 10 },
+  toggleCountOn: { color: colors.text },
   toolbar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,

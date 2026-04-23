@@ -1,7 +1,13 @@
 import Svg, { Path } from 'react-native-svg';
 import { View, StyleSheet } from 'react-native';
+import type { MediaKind as CatalogMediaKind } from '../content/catalog';
 
-export type MediaKind = 'audio' | 'video' | 'text';
+/**
+ * Re-export the catalog's MediaKind alias so every consumer shares the
+ * exact same union type. The two types were structurally identical but
+ * nominally different, which made TS refuse a cross-assignment.
+ */
+export type MediaKind = CatalogMediaKind;
 
 // Emoji glyphs render multicolor on iOS / colored on web — they can't be
 // tinted via `color`. These tiny SVGs use `currentColor`-style fills driven
@@ -44,6 +50,7 @@ function Text_({ color, size = 22 }: { color: string; size?: number }) {
 export function KindIcon({ kind, color, size = 22 }: { kind: MediaKind; color: string; size?: number }) {
   if (kind === 'audio') return <Headphones color={color} size={size} />;
   if (kind === 'video') return <Play color={color} size={size} />;
+  // 'text' + 'article' both render the paragraph glyph
   return <Text_ color={color} size={size} />;
 }
 
