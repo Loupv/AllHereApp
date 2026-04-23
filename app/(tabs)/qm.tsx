@@ -29,7 +29,7 @@ export default function QMScreen() {
             volet={v}
             basePath="/qm"
             accent={colors.accentAlt}
-            accentRgb="46,111,88"
+            accentRgb="44,133,129"
           />
         ))}
         <AboutFooter />
