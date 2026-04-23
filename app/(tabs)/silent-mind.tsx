@@ -23,16 +23,19 @@ export default function SilentMindScreen() {
 
         <Text style={styles.intro}>{silentMindProgram.intro}</Text>
 
-        {silentMindVolets.map((v) => (
-          <VoletCard
-            key={v.id}
-            volet={v}
-            basePath="/silent-mind"
-            accent={colors.accent}
-            accentRgb="158,54,148"
-            secondary={v.id === 'intro'}
-          />
-        ))}
+        {silentMindVolets
+          // The Intro volet now lives on the Start tab; hide it here to
+          // avoid duplicating it in two places.
+          .filter(v => v.id !== 'intro')
+          .map((v) => (
+            <VoletCard
+              key={v.id}
+              volet={v}
+              basePath="/silent-mind"
+              accent={colors.accent}
+              accentRgb="158,54,148"
+            />
+          ))}
         <AboutFooter />
       </ScrollView>
       </SwipeTabs>

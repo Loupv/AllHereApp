@@ -4,58 +4,65 @@ import Animated, {
   useSharedValue, useAnimatedStyle,
   withRepeat, withSequence, withTiming, Easing,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-
-const AniGradient = Animated.createAnimatedComponent(LinearGradient as any) as any;
+import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 
 /**
- * Slow-morphing full-bleed background gradient. Two layered LinearGradients
- * cross-fade on a ~16 s loop — layer A (deep blue → magenta) and layer B
- * (deep blue → teal) take turns dominating, so the hero reads as calm and
- * alive without looping a hard animation.
+ * Full-bleed radial background.
  *
- * Pure decoration: pointerEvents=none and positioned absolutely so it sits
- * behind whatever is laid on top.
+ * A violet accent glow at the centre of the viewport fades out to the
+ * app's deep-blue bg at the edges. The whole gradient slowly pulses —
+ * scale 1 ↔ 1.06 on a ~10 s sine — so the backdrop feels alive without
+ * ever looping a hard animation. Scaling the Svg keeps the edges fully
+ * covered (the Rect is 100 % wide/tall) while only the gradient centre
+ * appears to breathe.
  */
 export function AnimatedGradient({ children }: { children?: React.ReactNode }) {
   const t = useSharedValue(0);
   useEffect(() => {
     t.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 8000, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 8000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1, { duration: 5000, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 5000, easing: Easing.inOut(Easing.sin) }),
       ),
       -1, false,
     );
   }, []);
 
-  const layerB = useAnimatedStyle(() => ({ opacity: t.value }));
+  const breathStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + t.value * 0.06 }],
+  }));
 
   return (
     <View style={styles.root} pointerEvents="box-none">
-      {/* Layer A — Silent Mind side: app bg blue → deep magenta → magenta */}
-      <LinearGradient
-        colors={['#000823', '#00162A', '#1B1742', '#6F1F68', '#9E3694']}
-        locations={[0, 0.28, 0.55, 0.82, 1]}
-        start={[0.1, 0]}
-        end={[0.9, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-      {/* Layer B — QM side: same spine, crossing to the teal accent so the
-          Start tab's backdrop silently alternates between the two mirror
-          programs that branch out of it (Silent Mind magenta ↔ QM teal) */}
-      <AniGradient
-        colors={['#000823', '#001C2B', '#0F3A44', '#1F6F6E', '#36A09E']}
-        locations={[0, 0.28, 0.55, 0.82, 1]}
-        start={[0.9, 0]}
-        end={[0.1, 1]}
-        style={[StyleSheet.absoluteFill, layerB]}
-      />
+      <Animated.View style={[StyleSheet.absoluteFill, breathStyle]} pointerEvents="none">
+        <Svg width="100%" height="100%">
+          <Defs>
+            <RadialGradient
+              id="ah-start-radial"
+              cx="50%"
+              cy="50%"
+              r="75%"
+              gradientUnits="objectBoundingBox"
+            >
+              {/* Violet accent at the heart */}
+              <Stop offset="0%" stopColor="#9E3694" stopOpacity="0.85" />
+              {/* Deeper magenta bridge so the transition to blue is smooth */}
+              <Stop offset="45%" stopColor="#3C1742" stopOpacity="0.95" />
+              {/* App bg at the edges */}
+              <Stop offset="100%" stopColor="#000823" stopOpacity="1" />
+            </RadialGradient>
+          </Defs>
+          <Rect width="100%" height="100%" fill="url(#ah-start-radial)" />
+        </Svg>
+      </Animated.View>
+      {/* Fallback solid bg behind the scaled svg so the corners stay
+          blue during the +6 % scale extent */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000823', zIndex: -1 }]} pointerEvents="none" />
       {children}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+  root: { ...StyleSheet.absoluteFillObject, overflow: 'hidden', backgroundColor: '#000823' },
 });
