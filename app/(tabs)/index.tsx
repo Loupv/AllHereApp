@@ -229,14 +229,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   // Fixed-height top block so the title lands at the same level as the
-  // hero-positioned titles on Silent Mind / QM / About tabs (hero height
-  // 150, title bottom-aligned). Extra marginBottom pushes the intro
-  // section a bit further below the title for breathing room.
+  // hero-positioned titles on Silent Mind / QM tabs (SM/QM hero also
+  // shrunk to 100). Less dead space above the title.
   header: {
-    height: 150,
+    height: 100,
     alignItems: 'center',
     justifyContent: 'flex-end',
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.sm,
     marginBottom: spacing.lg,
   },
   // Intro + start blocks sit at their natural height. Two equal-flex

@@ -65,7 +65,7 @@ export default function SilentMindScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: 0 },
-  hero: { height: 150, justifyContent: 'flex-end', overflow: 'hidden' },
+  hero: { height: 100, justifyContent: 'flex-end', overflow: 'hidden' },
   banner: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.55)' },
   heroText: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, alignItems: 'center' },
