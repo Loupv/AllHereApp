@@ -153,8 +153,13 @@ function PlayerInner() {
   useEffect(() => { durationRef.current = duration; }, [duration]);
 
   useEffect(() => {
-    setHasStarted(false);
-    setCurrentRound(1);
+    // Call sites can ask the player to bypass the pre-play screen (big
+    // play button on Start, etc.). Consume the one-shot flag once per
+    // track swap so it doesn't re-fire on future round changes.
+    const auto = usePlayerStore.getState().consumeAutoStart();
+    const startAtIntro = !!(auto && track?.rounds?.introSource);
+    setHasStarted(!!auto);
+    setCurrentRound(auto ? (startAtIntro ? 0 : 1) : 1);
     setSelectedRounds(track?.rounds?.max ?? 1);
     setIncludeIntro(!!track?.rounds?.introSource);
     setInBreak(false);

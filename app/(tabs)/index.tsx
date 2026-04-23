@@ -70,7 +70,9 @@ export default function StartScreen() {
   const onPlay = () => {
     if (!track) return;
     const pl = startJourneySteps.map(s => s.track).filter(Boolean) as any;
-    openPlayer(track, pl);
+    // Intent is unambiguous here — the user just tapped the big play
+    // button. Skip the pre-play screen and go straight to playback.
+    openPlayer(track, pl, { autoStart: true });
   };
 
   const allDone = startJourneySteps.every(s => s.track && listened[s.track.id]);

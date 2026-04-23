@@ -1,12 +1,25 @@
 import { create } from 'zustand';
 import type { AudioTrack } from '../content/catalog';
 
+type OpenOptions = {
+  /**
+   * When true the player skips the pre-play screen (description + QM
+   * params + 'Begin' circle) and starts playback right away. Used for
+   * call sites where the user's intent is unambiguous — typically the
+   * big play button on the Start tab.
+   */
+  autoStart?: boolean;
+};
+
 type PlayerState = {
   track: AudioTrack | null;
   playlist: AudioTrack[];
   index: number;
   isOpen: boolean;
-  open: (track: AudioTrack, playlist?: AudioTrack[]) => void;
+  /** Consumed once by the Player on mount / track swap, then cleared. */
+  autoStart: boolean;
+  open: (track: AudioTrack, playlist?: AudioTrack[], opts?: OpenOptions) => void;
+  consumeAutoStart: () => boolean;
   close: () => void;
   playNext: () => void;
   playPrev: () => void;
@@ -23,12 +36,24 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   playlist: [],
   index: -1,
   isOpen: true && false,
-  open: (track, playlist) => {
+  autoStart: false,
+  open: (track, playlist, opts) => {
     const pl = playable(playlist && playlist.length ? playlist : [track]);
     const idx = Math.max(0, pl.findIndex((t) => t.id === track.id));
-    set({ track: pl[idx] ?? track, playlist: pl, index: idx, isOpen: true });
+    set({
+      track: pl[idx] ?? track,
+      playlist: pl,
+      index: idx,
+      isOpen: true,
+      autoStart: !!opts?.autoStart,
+    });
   },
-  close: () => set({ isOpen: false }),
+  consumeAutoStart: () => {
+    const v = get().autoStart;
+    if (v) set({ autoStart: false });
+    return v;
+  },
+  close: () => set({ isOpen: false, autoStart: false }),
   playNext: () => {
     const { playlist, index } = get();
     if (index < 0 || index >= playlist.length - 1) return;
