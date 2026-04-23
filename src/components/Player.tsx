@@ -776,7 +776,16 @@ function CueLine({ cue, time, onLayout }: { cue: TranscriptCue; time: number; on
 const styles = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bg, zIndex: 80 },
   root: { flex: 1, backgroundColor: colors.bg, paddingTop: 56 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    width: '100%',
+    maxWidth: PLAYER_CONTENT_MAX_WIDTH,
+    alignSelf: 'center',
+  },
   close: { ...type.caption, color: colors.text },
   eyebrow: { ...type.overline, color: colors.textMuted, fontSize: 10 },
   top: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: 4 },
@@ -883,7 +892,17 @@ const styles = StyleSheet.create({
   pillPrimary: { paddingVertical: 12, paddingHorizontal: spacing.lg, borderRadius: radius.pill, backgroundColor: colors.accent },
   pillPrimaryText: { ...type.h3, color: colors.text, fontSize: 14 },
 
-  body: { flex: 1, flexDirection: 'column' },
+  // Cap the vertical stack of player content (artwork, title, middle
+  // transcript/params, bottom controls) at the shared CONTENT_MAX_WIDTH
+  // so on tablet the title, transcript frame and controls stop
+  // spreading edge-to-edge. Header (Close) and overlay bg stay full-width.
+  body: {
+    flex: 1,
+    flexDirection: 'column',
+    width: '100%',
+    maxWidth: PLAYER_CONTENT_MAX_WIDTH,
+    alignSelf: 'center',
+  },
   middle: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg, gap: spacing.sm + 2, minHeight: 0 },
   bottomArea: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, alignItems: 'center' },
   aboveCircle: { width: '100%', minHeight: 42, justifyContent: 'center', marginTop: spacing.sm },
