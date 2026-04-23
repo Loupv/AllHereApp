@@ -98,10 +98,18 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
   const stroke = 1.4;
 
   // ---- animated styles ----
-  const innerStyle = useAnimatedStyle(() => ({
-    // Breath more visible than before (±5 %) when the mode asks for it.
-    transform: [{ scale: 1 + breath.value * 0.05 * breathActive.value }],
-  }));
+  const innerStyle = useAnimatedStyle(() => {
+    // When the breath is active, the inner ring not only scales a touch
+    // but also fades in and out — opacity 0.45 at the bottom of the
+    // exhale, back to 1 at the top of the inhale. The opacity sweep makes
+    // the breathing read far more clearly than the scale alone.
+    const breathOpacity = 0.45 + breath.value * 0.55;
+    const opacity = 1 - (1 - breathOpacity) * breathActive.value;
+    return {
+      opacity,
+      transform: [{ scale: 1 + breath.value * 0.07 * breathActive.value }],
+    };
+  });
   const textStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 + breath.value * 0.04 * breathActive.value }],
   }));
