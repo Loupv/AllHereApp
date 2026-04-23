@@ -44,7 +44,10 @@ export default function SilentMindScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.xxl },
+  // Generous bottom padding so the AboutFooter ('WHERE MEDITATION MEETS
+  // SCIENCE & TECHNOLOGY' block) clears the 80 px tab bar when the
+  // user scrolls to the very end.
+  content: { paddingBottom: 120 },
   hero: { height: 150, justifyContent: 'flex-end', overflow: 'hidden' },
   banner: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.55)' },

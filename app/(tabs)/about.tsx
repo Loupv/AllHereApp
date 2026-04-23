@@ -90,7 +90,7 @@ export default function AboutTabScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.xxl },
+  content: { paddingBottom: 120 },
   hero: { width: '100%', height: 200 },
   body: { padding: spacing.lg },
   eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.sm },

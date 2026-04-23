@@ -40,7 +40,9 @@ export default function QMScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.xxl },
+  // Generous bottom padding so the AboutFooter tagline clears the 80 px
+  // tab bar when the user scrolls all the way down.
+  content: { paddingBottom: 120 },
   hero: { height: 150, justifyContent: 'flex-end', overflow: 'hidden' },
   banner: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,28,40,0.55)' },

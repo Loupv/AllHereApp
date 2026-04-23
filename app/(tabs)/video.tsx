@@ -216,7 +216,7 @@ export default function VideoScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: spacing.xxl },
+  content: { paddingBottom: 120 },
   hero: { height: 180, justifyContent: 'flex-end', overflow: 'hidden', marginBottom: spacing.md },
   heroImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.55)' },
