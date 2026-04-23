@@ -35,7 +35,12 @@ export default function AboutTabScreen() {
     <Background color={colors.bgTab}>
       <SwipeTabs current="about">
         <ScrollView contentContainerStyle={styles.content}>
-          <Image source={require('../../assets/images/lounge-1.jpg')} style={styles.hero} resizeMode="cover" />
+          {/* Clip the hero to a shorter frame and push the image up so the
+              bottom of the picture stays visible (default cover-centre
+              was hiding the lower portion). */}
+          <View style={styles.heroWrap}>
+            <Image source={require('../../assets/images/lounge-1.jpg')} style={styles.hero} resizeMode="cover" />
+          </View>
           <View style={styles.body}>
             <Text style={styles.eyebrow}>About All Here</Text>
             <Text style={styles.title}>Where meditation meets{'\n'}science & technology</Text>
@@ -91,7 +96,12 @@ export default function AboutTabScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: 120 },
-  hero: { width: '100%', height: 200 },
+  // Clipping frame: 160 px tall. The image inside is tall enough to
+  // cover that height and gets a negative marginTop so the bottom of
+  // the picture lands inside the visible window instead of being
+  // cropped out.
+  heroWrap: { width: '100%', height: 160, overflow: 'hidden' },
+  hero: { width: '100%', height: 240, marginTop: -80 },
   body: { padding: spacing.lg },
   eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.sm },
   title: { ...type.display, color: colors.text, fontSize: 26, marginBottom: spacing.md },
