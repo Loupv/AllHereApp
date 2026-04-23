@@ -18,7 +18,11 @@ export const colors = {
   accentAlt: '#36A09E',
   accentAltSoft: 'rgba(54,160,158,0.35)',
   accentAltDeep: '#1F6F6E',
-  bgTabAlt: '#00252B',
+  // Muted dark green-teal backdrop. Same darkness ballpark as the
+  // Silent Mind blue (#00162A), just nudged toward a green hue instead
+  // of full-saturation teal — feels related to the SM palette rather
+  // than a separate electric-teal world.
+  bgTabAlt: '#00201C',
   placeholder: '#718096',
 };
 

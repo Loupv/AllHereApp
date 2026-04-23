@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 0 },
   hero: { height: 150, justifyContent: 'flex-end', overflow: 'hidden' },
   banner: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,28,40,0.55)' },
+  bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,32,28,0.55)' },
   heroText: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, alignItems: 'center' },
   eyebrow: { ...type.overline, color: colors.accentAlt, marginBottom: spacing.xs, textAlign: 'center', fontSize: 10 },
   title: { ...type.display, color: colors.text, fontSize: 22, textAlign: 'center', lineHeight: 28 },
