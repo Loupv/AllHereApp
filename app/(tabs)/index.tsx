@@ -199,10 +199,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    // Push the whole stack down a touch so the title and the 'What you
+    // will find' section don't kiss the header logo above.
+    paddingTop: spacing.xl,
     paddingBottom: spacing.md,
   },
-  header: { alignItems: 'center', marginBottom: spacing.sm },
+  header: { alignItems: 'center', marginBottom: spacing.md },
   // Each 'block' gets flex:1 so the intro card slot and the big-play slot
   // share the available vertical space equally, giving both sections a
   // comparable visual weight. The VoletCard and BigPlayButton are

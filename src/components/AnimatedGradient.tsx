@@ -51,17 +51,18 @@ export function AnimatedGradient({ centerX = 0.5, centerY = 0.5, children }: Pro
               id="ah-start-radial"
               cx={cx}
               cy={cy}
-              // Contained radius so the violet stays local to the play
-              // button instead of bleeding all over the page.
-              r="70%"
+              // Wider than before so the violet halo reaches further out
+              // without turning the whole page magenta.
+              r="90%"
               gradientUnits="objectBoundingBox"
             >
-              {/* Subtle violet halo at the heart (low opacity so the app's
-                  deep blue still dominates). */}
-              <Stop offset="0%" stopColor="#9E3694" stopOpacity="0.45" />
-              {/* Quick transition back to the app's deep blue */}
-              <Stop offset="35%" stopColor="#1B1846" stopOpacity="0.8" />
-              <Stop offset="70%" stopColor="#05112E" stopOpacity="1" />
+              {/* Violet halo at the heart. Opacity kept moderate so blue
+                  still dominates the overall feel. */}
+              <Stop offset="0%" stopColor="#9E3694" stopOpacity="0.6" />
+              {/* A longer purple bridge carries the tint out to roughly
+                  half the screen before starting to darken. */}
+              <Stop offset="50%" stopColor="#2B1C55" stopOpacity="0.9" />
+              <Stop offset="85%" stopColor="#050F2C" stopOpacity="1" />
               <Stop offset="100%" stopColor="#000823" stopOpacity="1" />
             </RadialGradient>
           </Defs>
