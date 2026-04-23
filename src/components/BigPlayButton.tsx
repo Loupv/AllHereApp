@@ -74,19 +74,37 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
   // ---- outer ring orbit (only 'qm3') ----
   const orbit = useSharedValue(0);
   useEffect(() => {
-    // Slow enough that the dashes really feel like they're drifting rather
-    // than spinning. 48 s for a full revolution.
     orbit.value = withRepeat(withTiming(1, { duration: 48000, easing: Easing.linear }), -1, false);
   }, []);
 
-  // ---- per-mode masks to turn animations on/off smoothly ----
-  const breathActive = useSharedValue(mode === 'one' || mode === 'qm3' ? 1 : 0);
-  const rippleActive = useSharedValue(mode === 'three' || mode === 'qm3' ? 1 : 0);
-  const orbitActive  = useSharedValue(mode === 'qm3' ? 1 : 0);
+  // ---- sweep highlight on the inner ring ('qm3') ----
+  // A bright short arc travels around the inner ring, like a meditation
+  // 'tracker' rotating over time. Slower than the outer orbit so the two
+  // motions don't feel synchronised.
+  const sweep = useSharedValue(0);
   useEffect(() => {
-    breathActive.value = withTiming(mode === 'one' || mode === 'qm3' ? 1 : 0, { duration: 500 });
-    rippleActive.value = withTiming(mode === 'three' || mode === 'qm3' ? 1 : 0, { duration: 500 });
+    sweep.value = withRepeat(withTiming(1, { duration: 9000, easing: Easing.linear }), -1, false);
+  }, []);
+
+  // ---- per-mode masks to turn animations on/off smoothly ----
+  //
+  // New mapping (per user request): ripples are the loudest visual and
+  // belong to the entry-level mode so the 60 s button already feels
+  // alive. Breath moves to mode 'three' (slightly calmer, matches the
+  // meditative 3-minute intent). 'qm3' still combines everything and
+  // gains a sweep highlight as its own signature:
+  //   'one'   → ripples
+  //   'three' → breath
+  //   'qm3'   → ripples + breath + dashed orbit + sweep
+  const breathActive = useSharedValue(mode === 'three' || mode === 'qm3' ? 1 : 0);
+  const rippleActive = useSharedValue(mode === 'one'   || mode === 'qm3' ? 1 : 0);
+  const orbitActive  = useSharedValue(mode === 'qm3' ? 1 : 0);
+  const sweepActive  = useSharedValue(mode === 'qm3' ? 1 : 0);
+  useEffect(() => {
+    breathActive.value = withTiming(mode === 'three' || mode === 'qm3' ? 1 : 0, { duration: 500 });
+    rippleActive.value = withTiming(mode === 'one'   || mode === 'qm3' ? 1 : 0, { duration: 500 });
     orbitActive.value  = withTiming(mode === 'qm3' ? 1 : 0, { duration: 500 });
+    sweepActive.value  = withTiming(mode === 'qm3' ? 1 : 0, { duration: 500 });
   }, [mode]);
 
   // ---- geometry ----
@@ -123,6 +141,15 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
     opacity: orbitActive.value * 0.85,
     transform: [{ rotate: `${orbit.value * 360 * orbitActive.value}deg` }],
   }));
+  const sweepStyle = useAnimatedStyle(() => ({
+    opacity: sweepActive.value,
+    transform: [{ rotate: `${sweep.value * 360 * sweepActive.value}deg` }],
+  }));
+  // Short arc ≈ 8 % of the inner ring's circumference lit up; the rest is
+  // transparent. Combined with a 360° rotation it looks like a meditation
+  // tracker sweeping around the ring.
+  const innerCircumference = 2 * Math.PI * innerR;
+  const sweepArc = innerCircumference * 0.08;
 
   return (
     <Pressable onPress={onPress} hitSlop={8} style={({ pressed }) => [pressed && styles.pressed]}>
@@ -171,7 +198,7 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
           </Svg>
         </Animated.View>
 
-        {/* Inner ring — always drawn; breathes in modes 'one' / 'qm3' */}
+        {/* Inner ring — always drawn; breathes in modes 'three' / 'qm3' */}
         <Animated.View style={[StyleSheet.absoluteFill, styles.center, innerStyle]} pointerEvents="none">
           <Svg width={size} height={size}>
             <Circle
@@ -181,6 +208,27 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
               stroke="rgba(255,255,255,0.95)"
               strokeWidth={stroke * 1.5}
               fill="transparent"
+            />
+          </Svg>
+        </Animated.View>
+
+        {/* Sweep highlight — a bright short arc rotating around the inner
+            ring; only in 'qm3'. Sits above the static ring and fades in
+            via the sweep mask. */}
+        <Animated.View style={[StyleSheet.absoluteFill, styles.center, sweepStyle]} pointerEvents="none">
+          <Svg width={size} height={size}>
+            <Circle
+              cx={size / 2}
+              cy={size / 2}
+              r={innerR}
+              stroke={colors.accent}
+              strokeWidth={stroke * 2}
+              strokeLinecap="round"
+              strokeDasharray={`${sweepArc} ${innerCircumference}`}
+              fill="transparent"
+              // Start the dash at the top (‑90°) so rotation reads
+              // clockwise from 12 o'clock.
+              transform={`rotate(-90 ${size / 2} ${size / 2})`}
             />
           </Svg>
         </Animated.View>
