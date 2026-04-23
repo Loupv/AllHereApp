@@ -147,16 +147,15 @@ export default function StartScreen() {
               </View>
             ) : null}
 
-            {/* Equal-flex spacers above and below the 'or' row so the
-                divider lands at the exact midpoint between the intro
-                card and the 'Start with' label. */}
-            <View style={styles.orSpacer} />
+            {/* Flex spacers around the 'or' divider. Top:bottom ratio
+                2:1 so the Start block below rides higher. */}
+            <View style={styles.orSpacerTop} />
             <View style={styles.orRow}>
               <View style={styles.orLine} />
               <Text style={styles.orLabel}>or</Text>
               <View style={styles.orLine} />
             </View>
-            <View style={styles.orSpacer} />
+            <View style={styles.orSpacerBottom} />
 
             <View style={styles.startBlock} onLayout={onPlayLayout}>
               <Text style={[styles.sectionLabel, styles.startLabel]}>Start with</Text>
@@ -196,6 +195,7 @@ export default function StartScreen() {
                 />
               </View>
             </View>
+            <View style={styles.bottomSpacer} />
 
             {allDone ? (
               <Pressable
@@ -238,13 +238,17 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     marginBottom: spacing.lg,
   },
-  // Intro + start blocks sit at their natural height. Two equal-flex
-  // spacers on either side of the 'or' row soak up the leftover
-  // vertical space, which lands the divider at the midpoint between
-  // the intro card and the 'Start with' label.
+  // Intro + start blocks sit at their natural height. The top 'or'
+  // spacer takes a bigger share of the remaining room than the bottom
+  // one, so the Start section (label + radios + play button) rides a
+  // bit higher on the screen — less dead space under the play button.
   block: { justifyContent: 'center' },
   startBlock: { alignItems: 'stretch' },
-  orSpacer: { flex: 1, minHeight: spacing.md },
+  orSpacerTop: { flex: 2, minHeight: spacing.md },
+  orSpacerBottom: { flex: 1, minHeight: spacing.sm },
+  // Eats whatever room is left below the Start block so it doesn't
+  // sink to the very bottom of the viewport when there is extra room.
+  bottomSpacer: { flex: 1, minHeight: spacing.md },
   centerInner: { alignItems: 'center', justifyContent: 'center' },
   sectionLabel: {
     ...type.overline, color: colors.textMuted,

@@ -7,7 +7,7 @@ import { AboutFooter } from '../../src/components/AboutFooter';
 import { qmVolets, qmProgram } from '../../src/content/catalog';
 import { colors, spacing, type } from '../../src/theme';
 
-const TAB_BAR_HEIGHT = 80;
+const TAB_BAR_HEIGHT = 64;
 const HEADER_HEIGHT = 60;
 
 export default function QMScreen() {
@@ -53,10 +53,10 @@ export default function QMScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: 0 },
-  hero: { height: 100, justifyContent: 'flex-end', overflow: 'hidden' },
+  hero: { height: 130, justifyContent: 'flex-end', overflow: 'hidden' },
   banner: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,26,38,0.55)' },
-  heroText: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, alignItems: 'center' },
+  heroText: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, alignItems: 'center' },
   eyebrow: { ...type.overline, color: colors.accentAlt, marginBottom: spacing.xs, textAlign: 'center', fontSize: 10 },
   title: { ...type.display, color: colors.text, fontSize: 22, textAlign: 'center', lineHeight: 28 },
   intro: {

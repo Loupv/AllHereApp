@@ -7,10 +7,9 @@ import { AboutFooter } from '../../src/components/AboutFooter';
 import { silentMindVolets, silentMindProgram } from '../../src/content/catalog';
 import { colors, spacing, type } from '../../src/theme';
 
-// Bottom tab bar height (see _layout.tsx: { height: 80 }) + a bit of
-// header to align the AboutFooter's top rule exactly with the tab bar's
-// top edge when the scroll sits at the top of the page.
-const TAB_BAR_HEIGHT = 80;
+// Bottom tab bar height (see _layout.tsx) + Stack header roughly. Used
+// to align the AboutFooter's top rule with the tab bar's top edge.
+const TAB_BAR_HEIGHT = 64;
 const HEADER_HEIGHT = 60;
 
 export default function SilentMindScreen() {
@@ -65,10 +64,13 @@ export default function SilentMindScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: 0 },
-  hero: { height: 100, justifyContent: 'flex-end', overflow: 'hidden' },
+  // Hero back near its original 150 px — but the title sits a bit
+  // higher thanks to a larger paddingBottom, leaving fewer pixels
+  // between the title and the page content underneath.
+  hero: { height: 130, justifyContent: 'flex-end', overflow: 'hidden' },
   banner: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.55)' },
-  heroText: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, alignItems: 'center' },
+  heroText: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, alignItems: 'center' },
   eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.xs, textAlign: 'center', fontSize: 10 },
   title: { ...type.display, color: colors.text, fontSize: 24, textAlign: 'center', lineHeight: 30 },
   intro: {
