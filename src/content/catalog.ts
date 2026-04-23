@@ -462,8 +462,9 @@ export const qmProgram = {
   eyebrow: 'Quantified Meditation',
   title: 'High Intensity Training',
   intro:
-    'High intensity training / Multiple rounds, short breaks\n' +
-    'Train to reproduce the same meditative state on demand',
+    'High intensity training\n' +
+    'Multiple rounds, short breaks\n' +
+    'reproduce the same meditative state on demand',
   banner: require('../../assets/images/hero/space.jpg'),
 };
 

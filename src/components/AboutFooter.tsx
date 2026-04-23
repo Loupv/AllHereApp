@@ -10,7 +10,6 @@ export function AboutFooter() {
       <Pressable onPress={() => router.push('/about')} hitSlop={8}>
         <Text style={styles.link}>About All Here →</Text>
       </Pressable>
-      <Text style={styles.copy}>© 2026 All Here</Text>
     </View>
   );
 }
@@ -26,5 +25,4 @@ const styles = StyleSheet.create({
   },
   tagline: { ...type.overline, color: colors.textMuted, textAlign: 'center', lineHeight: 18 },
   link: { ...type.caption, color: colors.accent },
-  copy: { ...type.overline, color: colors.textDim, fontSize: 10 },
 });
