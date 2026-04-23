@@ -18,10 +18,10 @@ export const colors = {
   accentAlt: '#36A09E',
   accentAltSoft: 'rgba(54,160,158,0.35)',
   accentAltDeep: '#1F6F6E',
-  // Dark grey-green backdrop. Low saturation so the hue is a hint
-  // rather than a statement, matching the restrained navy feel of
-  // Silent Mind's bgTab (#00162A) on the green side of the wheel.
-  bgTabAlt: '#131F1C',
+  // Same identity as the Silent Mind navy (#00162A), just nudged a hair
+  // toward green so the QM tab isn't a perfect clone. Minor hue shift,
+  // same darkness and saturation.
+  bgTabAlt: '#001A26',
   placeholder: '#718096',
 };
 
