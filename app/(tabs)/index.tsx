@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
+import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { AnimatedGradient } from '../../src/components/AnimatedGradient';
 import { BigPlayButton, type BigPlayMode } from '../../src/components/BigPlayButton';
+import { VoletCard } from '../../src/components/VoletCard';
 import { AboutFooter } from '../../src/components/AboutFooter';
-import { startJourneySteps } from '../../src/content/catalog';
+import { startJourneySteps, silentMindVolets } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { useProgress } from '../../src/player/progressStore';
 import { colors, radius, spacing, type } from '../../src/theme';
@@ -77,14 +79,34 @@ export default function StartScreen() {
 
   const allDone = startJourneySteps.every(s => s.track && listened[s.track.id]);
 
+  const introVolet = silentMindVolets.find(v => v.id === 'intro');
+
   return (
     <View style={styles.root}>
       <SwipeTabs current="index">
         <AnimatedGradient>
-          <View style={styles.content}>
+          <ScrollView contentContainerStyle={styles.content}>
             <View style={styles.header}>
               <Text style={styles.eyebrow}>MEDITATION · STEP BY STEP</Text>
               <Text style={styles.title}>To the Silent Mind</Text>
+            </View>
+
+            {introVolet ? (
+              <View style={styles.introBlock}>
+                <Text style={styles.sectionLabel}>What you will find on this app</Text>
+                <VoletCard
+                  volet={introVolet}
+                  basePath="/silent-mind"
+                  accent={colors.accent}
+                  accentRgb="158,54,148"
+                />
+              </View>
+            ) : null}
+
+            <View style={styles.orRow}>
+              <View style={styles.orLine} />
+              <Text style={styles.orLabel}>or</Text>
+              <View style={styles.orLine} />
             </View>
 
             <View style={styles.center}>
@@ -136,7 +158,7 @@ export default function StartScreen() {
 
             <View style={styles.footerSpacer} />
             <AboutFooter />
-          </View>
+          </ScrollView>
         </AnimatedGradient>
       </SwipeTabs>
     </View>
@@ -146,12 +168,24 @@ export default function StartScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
     paddingBottom: spacing.md,
   },
   header: { alignItems: 'center', marginBottom: spacing.lg },
+  // Cancel the content's horizontal padding so VoletCard's own margins line
+  // up with the Silent Mind / QM screens, where it's usually the first-level
+  // child of a padded scroll view.
+  introBlock: { marginHorizontal: -spacing.lg, marginBottom: spacing.md },
+  sectionLabel: {
+    ...type.overline, color: colors.textMuted,
+    fontSize: 10, letterSpacing: 2, textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  orRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginVertical: spacing.md },
+  orLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.16)' },
+  orLabel: { ...type.overline, color: colors.textMuted, fontSize: 10, letterSpacing: 2 },
   eyebrow: {
     ...type.overline, color: colors.accent,
     marginBottom: spacing.sm, fontSize: 11, letterSpacing: 3,

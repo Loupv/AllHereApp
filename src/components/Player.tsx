@@ -2,10 +2,12 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Image, PanResponder, Platform } from 'react-native';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { useRouter } from 'expo-router';
 import { usePlayerStore } from '../player/store';
 import { useProgress } from '../player/progressStore';
 import { loadTranscript } from '../content/loadTranscript';
 import { findCueIndex, TranscriptCue } from '../content/transcript';
+import { trackProgram } from '../content/catalog';
 import { colors, radius, spacing, type } from '../theme';
 import { CircleButton } from './CircleButton';
 
@@ -108,6 +110,7 @@ function useSmoothTime(
 }
 
 function PlayerInner() {
+  const router = useRouter();
   const { track, close, playlist, index, playNext, playPrev } = usePlayerStore();
   const hasNext = index >= 0 && index < playlist.length - 1;
   const hasPrev = index > 0;
@@ -540,6 +543,27 @@ function PlayerInner() {
         ) : finished ? (
           <View style={styles.finishedBlock}>
             <Text style={[styles.breakLabel, { color: accent }]}>AUDIO ENDED</Text>
+            {(() => {
+              const prog = track ? trackProgram(track.id) : null;
+              if (!prog) return null;
+              const href = prog === 'qm' ? '/qm' : '/silent-mind';
+              // Labels reuse the tab names verbatim so nothing new has to be
+              // validated — users already see 'Silent Mind' / 'QM Format' in
+              // the bottom tab bar.
+              const label = prog === 'qm' ? 'QM Format →' : 'Silent Mind →';
+              return (
+                <Pressable
+                  onPress={() => { close(); router.push(href); }}
+                  style={({ pressed }) => [
+                    styles.goTabBtn,
+                    { borderColor: accent },
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <Text style={[styles.goTabText, { color: accent }]}>{label}</Text>
+                </Pressable>
+              );
+            })()}
             <Pressable onPress={close} style={[styles.pillPrimary, { backgroundColor: accent }]}>
               <Text style={styles.pillPrimaryText}>Close</Text>
             </Pressable>
@@ -836,7 +860,14 @@ const styles = StyleSheet.create({
   breakOptionTextSelected: { color: colors.text },
 
   breakLabel: { ...type.overline, color: colors.accent, fontSize: 13, letterSpacing: 4 },
-  finishedBlock: { alignItems: 'center', gap: spacing.lg },
+  finishedBlock: { alignItems: 'center', gap: spacing.md },
+  goTabBtn: {
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+  },
+  goTabText: { ...type.overline, fontSize: 11, letterSpacing: 1.5 },
   breakButtons: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md, alignItems: 'center' },
 
   pill: { paddingVertical: 12, paddingHorizontal: spacing.md, borderRadius: radius.pill, borderColor: colors.border, borderWidth: 1 },

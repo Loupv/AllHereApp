@@ -43,15 +43,15 @@ export default function AboutScreen() {
 
           <View style={styles.stats}>
             <View style={styles.stat}>
-              <Text style={styles.statValue}>Decades</Text>
+              <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>Decades</Text>
               <Text style={styles.statLabel}>of advanced meditation practice</Text>
             </View>
             <View style={styles.stat}>
-              <Text style={styles.statValue}>3 years</Text>
+              <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>3 years</Text>
               <Text style={styles.statLabel}>of neuroscience research</Text>
             </View>
             <View style={styles.stat}>
-              <Text style={styles.statValue}>+300</Text>
+              <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>+300</Text>
               <Text style={styles.statLabel}>expert meditators analyzed</Text>
             </View>
           </View>
@@ -99,14 +99,18 @@ const styles = StyleSheet.create({
   },
   stat: {
     flex: 1,
-    padding: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,
   },
-  statValue: { ...type.h2, color: colors.accent, marginBottom: 4, fontSize: 16 },
-  statLabel: { ...type.caption, color: colors.textMuted, fontSize: 11 },
+  // letterSpacing 0 so narrow columns don't force a hyphenated wrap on
+  // 'Decades' / '3 years'; adjustsFontSizeToFit + numberOfLines={1} on the
+  // Text nodes handles the very narrow-width case.
+  statValue: { ...type.h2, color: colors.accent, marginBottom: 4, fontSize: 15, letterSpacing: 0 },
+  statLabel: { ...type.caption, color: colors.textMuted, fontSize: 10, lineHeight: 14 },
   pillar: {
     flexDirection: 'row',
     gap: spacing.md,

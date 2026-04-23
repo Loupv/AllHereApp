@@ -37,6 +37,22 @@ export type AudioTrack = {
 };
 
 /**
+ * Locate the program the given track belongs to, so UI can link back to
+ * the matching tab. Returns 'silent-mind' when the id is found in any
+ * silentMindVolets track, 'qm' when found in qmVolets, or null for
+ * home-only tracks (the Start journey audios) or anything else.
+ */
+export function trackProgram(id: string): 'silent-mind' | 'qm' | null {
+  for (const v of silentMindVolets) {
+    if (v.tracks.some(t => t.id === id)) return 'silent-mind';
+  }
+  for (const v of qmVolets) {
+    if (v.tracks.some(t => t.id === id)) return 'qm';
+  }
+  return null;
+}
+
+/**
  * Display duration for a track:
  * - explicit durationHint wins (e.g. "20:54" or "11 min")
  * - otherwise derive from a QM rounds config: rounds × round length + breaks
@@ -446,7 +462,8 @@ export const qmProgram = {
   eyebrow: 'Quantified Meditation',
   title: 'High Intensity Training',
   intro:
-    'The same three-part journey, quantified. Short, timed rounds with deliberate pauses between them — designed to make presence measurable.',
+    'High intensity training / Multiple rounds, short breaks\n' +
+    'Train to reproduce the same meditative state on demand',
   banner: require('../../assets/images/hero/space.jpg'),
 };
 
