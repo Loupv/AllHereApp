@@ -80,18 +80,18 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
   // ---- per-mode masks to turn animations on/off smoothly ----
   //
   //   'one'   → ripples
-  //   'three' → ripples + breath + outer ring with orbiting dots
+  //   'three' → breath + outer ring with orbiting dots
   //   'qm3'   → ripples + breath + outer ring with orbiting dashes
   //
   // Both outer-ring variants rotate at the same slow speed (48 s/turn) so
   // the two modes feel like different 'textures' of the same gravitation.
   const breathActive = useSharedValue(mode === 'three' || mode === 'qm3' ? 1 : 0);
-  const rippleActive = useSharedValue(1);
+  const rippleActive = useSharedValue(mode === 'one' || mode === 'qm3' ? 1 : 0);
   const dotsActive   = useSharedValue(mode === 'three' ? 1 : 0);
   const dashesActive = useSharedValue(mode === 'qm3' ? 1 : 0);
   useEffect(() => {
     breathActive.value = withTiming(mode === 'three' || mode === 'qm3' ? 1 : 0, { duration: 500 });
-    rippleActive.value = withTiming(1, { duration: 500 });
+    rippleActive.value = withTiming(mode === 'one' || mode === 'qm3' ? 1 : 0, { duration: 500 });
     dotsActive.value   = withTiming(mode === 'three' ? 1 : 0, { duration: 500 });
     dashesActive.value = withTiming(mode === 'qm3' ? 1 : 0, { duration: 500 });
   }, [mode]);

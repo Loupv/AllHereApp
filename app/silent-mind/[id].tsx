@@ -39,25 +39,42 @@ export default function VoletScreen() {
 
         {(() => {
           const playable = volet.tracks.filter(t => !t.comingSoon);
-          return volet.tracks.map((t) =>
-            t.comingSoon ? (
-              <ContentCard
-                key={t.id}
-                title={t.title}
-                duration="SOON"
-                kind="audio"
-                disabled
-              />
-            ) : (
-              <ContentCard
-                key={t.id}
-                title={t.title}
-                duration={trackDuration(t)}
-                kind="audio"
-                onPress={() => openPlayer(t, playable)}
-              />
-            ),
-          );
+          // On the Intro volet only, slip an 'Our sections' divider between
+          // the onboarding pair (Welcome + Prepare the space) and the two
+          // section presentations that follow (Silent Mind + QM Format).
+          const showDividerAfter = volet.id === 'intro' ? 'intro-3' : null;
+          const cards: React.ReactNode[] = [];
+          volet.tracks.forEach((t) => {
+            cards.push(
+              t.comingSoon ? (
+                <ContentCard
+                  key={t.id}
+                  title={t.title}
+                  duration="SOON"
+                  kind="audio"
+                  disabled
+                />
+              ) : (
+                <ContentCard
+                  key={t.id}
+                  title={t.title}
+                  duration={trackDuration(t)}
+                  kind="audio"
+                  onPress={() => openPlayer(t, playable)}
+                />
+              ),
+            );
+            if (showDividerAfter && t.id === showDividerAfter) {
+              cards.push(
+                <View key="our-sections-divider" style={styles.dividerRow}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerLabel}>Our sections</Text>
+                  <View style={styles.dividerLine} />
+                </View>,
+              );
+            }
+          });
+          return cards;
         })()}
 
         {qmTwin && qmTwin.tracks.length > 0 ? (
@@ -96,6 +113,10 @@ const styles = StyleSheet.create({
   title: { ...type.display, color: colors.text, fontSize: 26, textAlign: 'center', marginBottom: spacing.sm },
   tagline: { ...type.caption, color: colors.textMuted, fontStyle: 'italic', textAlign: 'center', marginBottom: spacing.md },
   description: { ...type.body, color: colors.textMuted, textAlign: 'center' },
+  // Same visual language as the 'or' divider on Start.
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.md },
+  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.16)' },
+  dividerLabel: { ...type.overline, color: colors.textMuted, fontSize: 10, letterSpacing: 2 },
   qmCta: {
     marginTop: spacing.xl,
     padding: spacing.lg,

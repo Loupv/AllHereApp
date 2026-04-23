@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: spacing.xs,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.lg,
   },
   // Outlined pill instead of a filled dot. Unselected → thin white
   // outline + muted text. Selected → accent outline + accent text.
