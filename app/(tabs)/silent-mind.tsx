@@ -36,10 +36,9 @@ export default function SilentMindScreen() {
 
           <Text style={styles.intro}>{silentMindProgram.intro}</Text>
 
-          {/* Equal-flex spacers above and below the cards block, so the
-              Part 1/2/3 cards stay tight together but ride at the
-              midpoint of the remaining vertical space. */}
-          <View style={styles.topSpacer} />
+          {/* Cards stay tight right under the intro paragraph. Whatever
+              vertical room is left is absorbed by the bottom spacer so
+              the AboutFooter rule still lands at the tab-bar top. */}
           <View style={styles.voletsList}>
             {silentMindVolets
               .filter(v => v.id !== 'intro')
@@ -83,10 +82,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
   },
-  // Cards stay stacked tight together (as they were). The surrounding
-  // flex-grow spacers below distribute the leftover vertical room so
-  // the block doesn't collide with the hero or fall far from the footer.
   voletsList: {},
-  topSpacer: { flex: 1, minHeight: spacing.sm },
+  // Absorbs the room left over after hero + intro + cards so the
+  // AboutFooter top rule still sits at the tab-bar top edge.
   bottomSpacer: { flex: 1, minHeight: spacing.sm },
 });

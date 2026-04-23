@@ -30,7 +30,6 @@ export default function QMScreen() {
 
           <Text style={styles.intro}>{qmProgram.intro}</Text>
 
-          <View style={styles.topSpacer} />
           <View style={styles.voletsList}>
             {qmVolets.map((v) => (
               <VoletCard
@@ -70,6 +69,5 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   voletsList: {},
-  topSpacer: { flex: 1, minHeight: spacing.sm },
   bottomSpacer: { flex: 1, minHeight: spacing.sm },
 });
