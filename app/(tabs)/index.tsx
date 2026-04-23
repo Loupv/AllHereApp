@@ -139,39 +139,40 @@ export default function StartScreen() {
             </View>
 
             <View style={styles.block} onLayout={onPlayLayout}>
+              <Text style={styles.sectionLabel}>Start with</Text>
+
+              <View style={styles.radioRow}>
+                {MODES.map(m => {
+                  const selected = m.key === mode;
+                  const done = (() => {
+                    const s = startJourneySteps.find(s => s.id === m.key);
+                    return !!(s?.track && listened[s.track.id]);
+                  })();
+                  return (
+                    <Pressable
+                      key={m.key}
+                      onPress={() => setMode(m.key)}
+                      hitSlop={6}
+                      style={styles.radio}
+                    >
+                      <View style={[styles.radioDot, selected && styles.radioDotSelected]}>
+                        {selected ? <View style={styles.radioDotInner} /> : null}
+                      </View>
+                      <Text style={[styles.radioLabel, selected && styles.radioLabelSelected]}>
+                        {m.short}{done ? ' ✓' : ''}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
               <View style={styles.centerInner}>
                 <BigPlayButton
                   mode={cfg.big}
-                  label={isDone ? cfg.playLabelDone : cfg.playLabel}
                   size={playSize}
                   onPress={onPlay}
                 />
               </View>
-            </View>
-
-            <View style={styles.radioRow}>
-              {MODES.map(m => {
-                const selected = m.key === mode;
-                const done = (() => {
-                  const s = startJourneySteps.find(s => s.id === m.key);
-                  return !!(s?.track && listened[s.track.id]);
-                })();
-                return (
-                  <Pressable
-                    key={m.key}
-                    onPress={() => setMode(m.key)}
-                    hitSlop={6}
-                    style={styles.radio}
-                  >
-                    <View style={[styles.radioDot, selected && styles.radioDotSelected]}>
-                      {selected ? <View style={styles.radioDotInner} /> : null}
-                    </View>
-                    <Text style={[styles.radioLabel, selected && styles.radioLabelSelected]}>
-                      {m.short}{done ? ' ✓' : ''}
-                    </Text>
-                  </Pressable>
-                );
-              })}
             </View>
 
             {allDone ? (
@@ -226,18 +227,16 @@ const styles = StyleSheet.create({
 
   radioRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    marginTop: spacing.xs,
+    justifyContent: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
   radio: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 6,
     paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
   radioDot: {
     width: 14, height: 14, borderRadius: 7,

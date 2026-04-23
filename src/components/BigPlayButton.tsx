@@ -12,7 +12,8 @@ export type BigPlayMode = 'one' | 'three' | 'qm3';
 
 type Props = {
   mode: BigPlayMode;
-  label: string;
+  /** Optional label rendered inside the inner ring next to the play glyph */
+  label?: string;
   size: number;
   onPress: () => void;
 };
@@ -174,11 +175,10 @@ export function BigPlayButton({ mode, label, size, onPress }: Props) {
           </Svg>
         </Animated.View>
 
-        {/* Label — kept inside the inner ring thanks to the wider radius
-            and a padding clamp on its container. */}
+        {/* Play glyph (+ optional label) — breathes with the inner ring */}
         <Animated.View style={[styles.inner, { maxWidth: innerR * 1.75 }, textStyle]}>
-          <Text style={[styles.playGlyph, { fontSize: Math.round(size * 0.10) }]}>▶</Text>
-          <Text style={styles.label} numberOfLines={3}>{label}</Text>
+          <Text style={[styles.playGlyph, { fontSize: Math.round(size * 0.18) }]}>▶</Text>
+          {label ? <Text style={styles.label} numberOfLines={3}>{label}</Text> : null}
         </Animated.View>
       </View>
     </Pressable>
