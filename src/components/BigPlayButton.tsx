@@ -186,5 +186,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   playGlyph: { color: colors.text, marginLeft: 3, marginBottom: 2, opacity: 0.95 },
-  label: { ...type.overline, color: colors.text, fontSize: 11, letterSpacing: 2.2, textAlign: 'center', lineHeight: 14 },
+  // Don't force uppercase — the label may mix cases on purpose
+  // (e.g. 'QM Format\n3 × 3 min'); each call site decides.
+  label: { ...type.overline, color: colors.text, fontSize: 11, letterSpacing: 2.2, textAlign: 'center', lineHeight: 14, textTransform: 'none' },
 });

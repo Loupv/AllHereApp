@@ -39,7 +39,7 @@ const MODES: {
   {
     key: 'step-qm3', big: 'qm3',
     short: '3 × 3 min',
-    playLabel: 'EXPLORE THE QM FORMAT\n3 × 3 MIN',
+    playLabel: 'QM Format\n3 × 3 min',
     playLabelDone: 'LISTEN AGAIN · 3 × 3 MIN',
     duration: '11 min',
   },
@@ -93,14 +93,19 @@ export default function StartScreen() {
             </View>
 
             {introVolet ? (
-              <View style={styles.introBlock}>
+              <View style={styles.block}>
                 <Text style={styles.sectionLabel}>What you will find on this app</Text>
-                <VoletCard
-                  volet={introVolet}
-                  basePath="/silent-mind"
-                  accent={colors.accent}
-                  accentRgb="158,54,148"
-                />
+                {/* VoletCard carries its own horizontal margin that assumes
+                    it lives inside a padded scroll view — cancel the extra
+                    inset here so it lines up flush with the rest. */}
+                <View style={{ marginHorizontal: -spacing.lg }}>
+                  <VoletCard
+                    volet={introVolet}
+                    basePath="/silent-mind"
+                    accent={colors.accent}
+                    accentRgb="158,54,148"
+                  />
+                </View>
               </View>
             ) : null}
 
@@ -110,13 +115,15 @@ export default function StartScreen() {
               <View style={styles.orLine} />
             </View>
 
-            <View style={styles.center}>
-              <BigPlayButton
-                mode={cfg.big}
-                label={isDone ? cfg.playLabelDone : cfg.playLabel}
-                size={playSize}
-                onPress={onPlay}
-              />
+            <View style={styles.block}>
+              <View style={styles.centerInner}>
+                <BigPlayButton
+                  mode={cfg.big}
+                  label={isDone ? cfg.playLabelDone : cfg.playLabel}
+                  size={playSize}
+                  onPress={onPlay}
+                />
+              </View>
             </View>
 
             <View style={styles.radioRow}>
@@ -171,9 +178,12 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   header: { alignItems: 'center', marginBottom: spacing.sm },
-  // Cancel the content's horizontal padding so VoletCard's own margins line
-  // up with the Silent Mind / QM screens.
-  introBlock: { marginHorizontal: -spacing.lg, marginBottom: spacing.xs },
+  // Each 'block' gets flex:1 so the intro card slot and the big-play slot
+  // share the available vertical space equally, giving both sections a
+  // comparable visual weight. The VoletCard and BigPlayButton are
+  // centered inside via centerInner.
+  block: { flex: 1, justifyContent: 'center' },
+  centerInner: { alignItems: 'center', justifyContent: 'center' },
   sectionLabel: {
     ...type.overline, color: colors.textMuted,
     fontSize: 10, letterSpacing: 2, textAlign: 'center',
@@ -190,11 +200,6 @@ const styles = StyleSheet.create({
     ...type.display, color: colors.text,
     fontSize: 22, lineHeight: 28, textAlign: 'center',
   },
-
-  // The center slot flex-grows so the big play button sits between the
-  // intro card and the radio row without needing explicit margins. This is
-  // also how the page auto-balances on very tall / very short viewports.
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   radioRow: {
     flexDirection: 'row',
