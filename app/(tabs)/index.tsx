@@ -139,7 +139,7 @@ export default function StartScreen() {
               <View style={styles.orLine} />
             </View>
 
-            <View style={styles.block} onLayout={onPlayLayout}>
+            <View style={styles.startBlock} onLayout={onPlayLayout}>
               <Text style={[styles.sectionLabel, styles.startLabel]}>Start with</Text>
 
               <View style={styles.radioRow}>
@@ -199,17 +199,22 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
-    // Push the whole stack down a touch so the title and the 'What you
-    // will find' section don't kiss the header logo above.
-    paddingTop: spacing.xl,
     paddingBottom: spacing.md,
   },
-  header: { alignItems: 'center', marginBottom: spacing.md },
-  // Each 'block' gets flex:1 so the intro card slot and the big-play slot
-  // share the available vertical space equally, giving both sections a
-  // comparable visual weight. The VoletCard and BigPlayButton are
-  // centered inside via centerInner.
-  block: { flex: 1, justifyContent: 'center' },
+  // Fixed-height top block so the title lands at the same level as the
+  // hero-positioned titles on Silent Mind / QM / About tabs (hero height
+  // 150, title bottom-aligned). Keeps the brand rhythm consistent.
+  header: {
+    height: 150,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: spacing.md,
+  },
+  // Intro block shrinks to its natural size so the 'or' divider sits
+  // right under the card — no wasted air above it. The start block
+  // below still flex-grows to fill the remaining viewport.
+  block: { justifyContent: 'center' },
+  startBlock: { flex: 1, justifyContent: 'center' },
   centerInner: { alignItems: 'center', justifyContent: 'center' },
   sectionLabel: {
     ...type.overline, color: colors.textMuted,
