@@ -65,7 +65,9 @@ export default function QMVoletScreen() {
 
         {smTwin ? (
           <Pressable
-            onPress={() => router.push(`/silent-mind/${smTwin.id}` as any)}
+            // replace, not push — siblings shouldn't accumulate on the
+            // nav stack; back should pop up to the tab above.
+            onPress={() => router.replace(`/silent-mind/${smTwin.id}` as any)}
             style={({ pressed }) => [styles.backCta, pressed && { opacity: 0.85 }]}
           >
             <Text style={styles.backCtaEyebrow}>SILENT MIND PROGRAM</Text>

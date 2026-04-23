@@ -553,7 +553,10 @@ function PlayerInner() {
               const label = prog === 'qm' ? 'QM Format →' : 'Silent Mind →';
               return (
                 <Pressable
-                  onPress={() => { close(); router.push(href); }}
+                  // replace so returning from the tab (back button) pops up
+                  // to the previous origin instead of stacking detail
+                  // pages on top of each other.
+                  onPress={() => { close(); router.replace(href); }}
                   style={({ pressed }) => [
                     styles.goTabBtn,
                     { borderColor: accent },

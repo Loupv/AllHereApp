@@ -62,7 +62,11 @@ export default function VoletScreen() {
 
         {qmTwin && qmTwin.tracks.length > 0 ? (
           <Pressable
-            onPress={() => router.push(`/qm/${qmTwin.id}` as any)}
+            // replace rather than push: the two program detail pages are
+            // siblings, so tapping 'Go to QM Format' shouldn't deepen the
+            // navigation stack — the back button should always pop up to
+            // the tab, not ping-pong between the two details.
+            onPress={() => router.replace(`/qm/${qmTwin.id}` as any)}
             style={({ pressed }) => [styles.qmCta, pressed && { opacity: 0.85 }]}
           >
             <Text style={styles.qmCtaEyebrow}>QUANTIFIED MEDITATION</Text>
