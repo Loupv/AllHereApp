@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
@@ -23,6 +24,14 @@ const KIND_LABEL: Record<MediaKind, string> = {
   audio: 'LISTEN',
   article: 'READ',
 };
+
+type Filter = 'all' | MediaKind;
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: 'all',     label: 'All' },
+  { key: 'video',   label: 'Watch' },
+  { key: 'audio',   label: 'Listen' },
+  { key: 'article', label: 'Read' },
+];
 
 // Normalised shape used by the unified list — covers video items AND
 // news articles so the tab can render both with the same card component.
@@ -92,7 +101,18 @@ export default function VideoScreen() {
   const refreshing = video.refreshing || news.refreshing;
   const refresh = () => { video.refresh(); news.refresh(); };
 
-  const unreadCount = rows.filter(r => !seen[r.id]).length;
+  const [filter, setFilter] = useState<Filter>('all');
+  const visible = filter === 'all' ? rows : rows.filter(r => r.kind === filter);
+  // Count per-kind so the chips can show how many items live behind each
+  // label without the user having to tap through
+  const counts: Record<Filter, number> = {
+    all: rows.length,
+    video: rows.filter(r => r.kind === 'video').length,
+    audio: rows.filter(r => r.kind === 'audio').length,
+    article: rows.filter(r => r.kind === 'article').length,
+  };
+
+  const unreadCount = visible.filter(r => !seen[r.id]).length;
 
   return (
     <Background color={colors.bgTab}>
@@ -110,11 +130,35 @@ export default function VideoScreen() {
             <Text style={styles.title}>Watch, listen & read</Text>
           </View>
         </View>
+        <View style={styles.filterRow}>
+          {FILTERS.map(f => {
+            const selected = f.key === filter;
+            const n = counts[f.key];
+            return (
+              <Pressable
+                key={f.key}
+                onPress={() => setFilter(f.key)}
+                hitSlop={6}
+                style={({ pressed }) => [
+                  styles.chip,
+                  selected && styles.chipSelected,
+                  pressed && { opacity: 0.8 },
+                ]}
+              >
+                <Text style={[styles.chipLabel, selected && styles.chipLabelSelected]}>
+                  {f.label}
+                  {n > 0 ? <Text style={styles.chipCount}>{' · ' + n}</Text> : null}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
         {unreadCount > 0 ? (
           <View style={styles.toolbar}>
             <Text style={styles.toolbarHint}>{unreadCount} unread</Text>
             <Pressable
-              onPress={() => markAllSeen('media', rows.map(r => r.id))}
+              onPress={() => markAllSeen('media', visible.map(r => r.id))}
               hitSlop={8}
               style={({ pressed }) => [styles.markAll, pressed && { opacity: 0.6 }]}
             >
@@ -122,10 +166,10 @@ export default function VideoScreen() {
             </Pressable>
           </View>
         ) : null}
-        {loading && rows.length === 0 ? (
+        {loading && visible.length === 0 ? (
           <Text style={styles.loading}>Loading…</Text>
         ) : null}
-        {rows.map(r => {
+        {visible.map(r => {
           const isUnread = !seen[r.id];
           return (
             <Pressable
@@ -181,6 +225,31 @@ const styles = StyleSheet.create({
   heroText: { padding: spacing.lg, alignItems: 'center' },
   eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.sm },
   title: { ...type.display, color: colors.text, fontSize: 32, textAlign: 'center' },
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  chip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: radius.pill,
+    borderColor: colors.border,
+    borderWidth: 1,
+    backgroundColor: colors.surface,
+  },
+  chipSelected: {
+    borderColor: colors.accent,
+    backgroundColor: 'rgba(158,54,148,0.15)',
+  },
+  chipLabel: {
+    ...type.overline, color: colors.textMuted,
+    fontSize: 10, letterSpacing: 1.5,
+  },
+  chipLabelSelected: { color: colors.text },
+  chipCount: { color: colors.textDim, fontSize: 9 },
   toolbar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
