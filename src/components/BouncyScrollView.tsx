@@ -221,15 +221,15 @@ export const BouncyScrollView = forwardRef<ScrollView, Props>(function BouncyScr
         <View
           ref={indicatorRef}
           // Drawn inside the wrapper so it follows the pull translate. Sits
-          // above the top edge by default (opacity 0) and peeks into view as
-          // the user drags.
+          // above the top edge by default (opacity 0) and peeks into view
+          // as the user drags — rotation from 0° to 180° is driven by the
+          // wrapper effect based on pull distance.
           style={styles.indicator}
           pointerEvents="none"
         >
-          <View style={[styles.indicatorInner, refreshing && styles.indicatorSpinning]}>
-            <Text style={styles.indicatorArrow}>{refreshing ? '◴' : '↓'}</Text>
+          <View style={styles.indicatorInner}>
+            <Text style={styles.indicatorArrow}>↓</Text>
           </View>
-          {refreshing ? <Text style={styles.indicatorLabel}>Refreshing…</Text> : null}
         </View>
       ) : null}
       <ScrollView
@@ -268,21 +268,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  indicatorSpinning: {
-    // Use a CSS animation on web only; native wouldn't use this path anyway.
-    ...(Platform.OS === 'web' ? ({ animation: 'ah-spin 800ms linear infinite' } as any) : null),
-  },
   indicatorArrow: { ...type.caption, color: colors.accent, fontSize: 14, lineHeight: 16 },
-  indicatorLabel: { ...type.overline, color: colors.textDim, fontSize: 9 },
 });
 
-// Inject the keyframes once on web.
-if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  const id = 'ah-bouncy-spin';
-  if (!document.getElementById(id)) {
-    const s = document.createElement('style');
-    s.id = id;
-    s.innerHTML = '@keyframes ah-spin { to { transform: rotate(360deg); } }';
-    document.head.appendChild(s);
-  }
-}

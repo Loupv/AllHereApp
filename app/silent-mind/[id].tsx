@@ -37,15 +37,34 @@ export default function VoletScreen() {
           {volet.description ? <Text style={styles.description}>{volet.description}</Text> : null}
         </View>
 
-        {volet.tracks.map((t) => (
-          <ContentCard
-            key={t.id}
-            title={t.title}
-            duration={trackDuration(t)}
-            kind="audio"
-            onPress={() => openPlayer(t, volet.tracks)}
-          />
-        ))}
+        {(() => {
+          const playable = volet.tracks.filter(t => !t.comingSoon);
+          const soon = volet.tracks.filter(t => t.comingSoon);
+          return (
+            <>
+              {playable.map((t) => (
+                <ContentCard
+                  key={t.id}
+                  title={t.title}
+                  duration={trackDuration(t)}
+                  kind="audio"
+                  onPress={() => openPlayer(t, playable)}
+                />
+              ))}
+              {soon.length > 0 ? (
+                <>
+                  <Text style={[styles.sectionLabel, { marginTop: spacing.md }]}>Coming soon</Text>
+                  {soon.map(t => (
+                    <View key={t.id} style={styles.soonCard}>
+                      <Text style={styles.soonTitle}>{t.title}</Text>
+                      <Text style={styles.soonBadge}>SOON</Text>
+                    </View>
+                  ))}
+                </>
+              ) : null}
+            </>
+          );
+        })()}
 
         {qmTwin && qmTwin.tracks.length > 0 ? (
           <Pressable
@@ -78,6 +97,14 @@ const styles = StyleSheet.create({
   tagline: { ...type.caption, color: colors.textMuted, fontStyle: 'italic', textAlign: 'center', marginBottom: spacing.md },
   description: { ...type.body, color: colors.textMuted, textAlign: 'center' },
   sectionLabel: { ...type.overline, color: colors.textMuted, marginBottom: spacing.md },
+  soonCard: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: spacing.md, marginBottom: spacing.sm,
+    borderRadius: radius.md, borderColor: colors.border, borderWidth: 1, borderStyle: 'dashed',
+    opacity: 0.5,
+  },
+  soonTitle: { ...type.h2, color: colors.text, fontSize: 15 },
+  soonBadge: { ...type.overline, color: colors.textDim, fontSize: 9 },
   qmCta: {
     marginTop: spacing.xl,
     padding: spacing.lg,
