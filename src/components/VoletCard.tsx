@@ -1,10 +1,10 @@
-import { useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Pressable, View, Text, Image, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle,
-  withRepeat, withSequence, withTiming, Easing, cancelAnimation, runOnJS,
+  withRepeat, withSequence, withTiming, Easing, cancelAnimation,
 } from 'react-native-reanimated';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import type { Volet } from '../content/catalog';
 import { useProgress } from '../player/progressStore';
 import { colors, radius, spacing, type } from '../theme';
@@ -74,41 +74,12 @@ export function VoletCard({
     };
   });
 
-  // Opening animation: a calm press-in / fade-out pair. No vertical stretch
-  // (that felt cartoonish). The card shrinks a hair and fades while routing,
-  // then resets instantly — the navigation itself carries the motion.
-  const openScale = useSharedValue(1);
-  const openOpacity = useSharedValue(1);
-  const navigate = () => router.push(`${basePath}/${volet.id}` as any);
-
+  // No preparatory animation on press — the Stack's slide-from-right owns
+  // the transition. Fading the card out first would leave nothing to slide.
   const onPress = () => {
     if (locked) return;
-    openScale.value = withTiming(0.97, {
-      duration: 180,
-      easing: Easing.out(Easing.quad),
-    });
-    openOpacity.value = withTiming(0, {
-      duration: 260,
-      easing: Easing.in(Easing.cubic),
-    }, (finished) => {
-      if (finished) runOnJS(navigate)();
-    });
+    router.push(`${basePath}/${volet.id}` as any);
   };
-
-  // Reset when the tab regains focus — the tab screen often stays mounted
-  // while the detail screen is on top, so a mount-only reset would leave
-  // the card stuck at opacity 0 when the user comes back.
-  useFocusEffect(
-    useCallback(() => {
-      openScale.value = withTiming(1, { duration: 220 });
-      openOpacity.value = withTiming(1, { duration: 220 });
-    }, []),
-  );
-
-  const openStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: openScale.value }],
-    opacity: openOpacity.value,
-  }));
 
   const countLabel = playable.length > 0
     ? `${playable.length} audio${playable.length > 1 ? 's' : ''}`
@@ -122,7 +93,6 @@ export function VoletCard({
         secondary && styles.cardSecondary,
         locked && styles.cardLocked,
         pulseStyle,
-        openStyle,
       ]}
     >
       <Pressable
