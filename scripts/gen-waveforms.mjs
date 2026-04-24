@@ -1,0 +1,153 @@
+#!/usr/bin/env node
+/**
+ * gen-waveforms.mjs
+ *
+ * Walks assets/audio/** for .mp3 files (skipping `excluded/`), decodes each to
+ * 8kHz mono 16-bit PCM via ffmpeg, buckets the samples, and writes a TS module
+ * at src/content/waveforms.generated.ts mapping a normalized filename key to a
+ * normalized peaks array (160 floats in [0, 1]).
+ *
+ * Run with:   node scripts/gen-waveforms.mjs
+ *
+ * The Player uses `Asset.fromModule(source).name` at runtime to look up peaks
+ * by the same normalized key (see WaveformProgress + player integration).
+ */
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '..');
+const AUDIO_ROOT = path.join(ROOT, 'assets', 'audio');
+const OUT_FILE = path.join(ROOT, 'src', 'content', 'waveforms.generated.ts');
+const BUCKETS = 160;                    // peaks per track — enough density for a 320px bar
+const SAMPLE_RATE = 8000;               // plenty for peak extraction
+const BYTES_PER_SAMPLE = 2;             // s16le
+
+/** Walks dir and returns all .mp3 paths (absolute), skipping `excluded/`. */
+function findMp3s(dir, acc = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === 'excluded') continue;
+      findMp3s(full, acc);
+    } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.mp3')) {
+      acc.push(full);
+    }
+  }
+  return acc;
+}
+
+/**
+ * The runtime lookup key must survive Metro's asset hashing and the expo-asset
+ * `name` field, which drops the extension but keeps the original filename. So
+ * our key is just the lowercase stem with spaces / special chars collapsed.
+ */
+function keyFromFilePath(absPath) {
+  const base = path.basename(absPath, path.extname(absPath));
+  return base
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')   // strip accents
+    .replace(/[^a-z0-9]+/g, '_')       // collapse non-alphanum
+    .replace(/^_+|_+$/g, '');
+}
+
+/** Decode mp3 → raw s16le mono PCM, returned as a Buffer. */
+function decodePcm(absPath) {
+  const res = spawnSync('ffmpeg', [
+    '-v', 'error',
+    '-i', absPath,
+    '-ac', '1',
+    '-ar', String(SAMPLE_RATE),
+    '-f', 's16le',
+    '-',
+  ], { maxBuffer: 1024 * 1024 * 256 });
+  if (res.status !== 0) {
+    throw new Error(`ffmpeg failed on ${absPath}: ${res.stderr?.toString() || '?'}`);
+  }
+  return res.stdout;
+}
+
+/**
+ * Convert a PCM buffer (s16le, mono) into a normalized peaks array of length
+ * `BUCKETS`. Each bucket reports the RMS of its window rather than the max
+ * absolute value — RMS is visually more stable (max-abs makes bars strobe
+ * around sharp consonants), and normalizing against the per-track max keeps
+ * quiet tracks still readable.
+ */
+function pcmToPeaks(buf) {
+  const totalSamples = Math.floor(buf.length / BYTES_PER_SAMPLE);
+  if (totalSamples === 0) return new Array(BUCKETS).fill(0);
+  const windowSize = Math.max(1, Math.floor(totalSamples / BUCKETS));
+  const peaks = new Array(BUCKETS).fill(0);
+  let maxRms = 0;
+  for (let b = 0; b < BUCKETS; b++) {
+    const start = b * windowSize;
+    const end = b === BUCKETS - 1 ? totalSamples : start + windowSize;
+    let sumSq = 0;
+    for (let i = start; i < end; i++) {
+      const sample = buf.readInt16LE(i * BYTES_PER_SAMPLE);
+      sumSq += sample * sample;
+    }
+    const rms = Math.sqrt(sumSq / Math.max(1, (end - start))) / 32768;
+    peaks[b] = rms;
+    if (rms > maxRms) maxRms = rms;
+  }
+  if (maxRms <= 0) return peaks;
+  // Normalize to [0, 1] against per-track peak, then apply a mild curve so low
+  // values stay visible (log-ish feel without the branching).
+  return peaks.map(v => Math.pow(v / maxRms, 0.7));
+}
+
+function main() {
+  if (!fs.existsSync(AUDIO_ROOT)) {
+    console.error('audio root not found:', AUDIO_ROOT);
+    process.exit(1);
+  }
+  const mp3s = findMp3s(AUDIO_ROOT).sort();
+  console.log(`Found ${mp3s.length} mp3 files (excluding excluded/).`);
+
+  const out = {};
+  const collisions = [];
+  for (const abs of mp3s) {
+    const key = keyFromFilePath(abs);
+    if (key in out) {
+      collisions.push(`${key}  ←  ${path.relative(AUDIO_ROOT, abs)}`);
+      continue;
+    }
+    try {
+      const pcm = decodePcm(abs);
+      const peaks = pcmToPeaks(pcm);
+      out[key] = peaks.map(v => Math.round(v * 1000) / 1000); // 3 decimals — keep bundle small
+      process.stdout.write('.');
+    } catch (e) {
+      process.stdout.write('!');
+      console.error(`\n  failed on ${abs}:`, e.message);
+    }
+  }
+  process.stdout.write('\n');
+  if (collisions.length) {
+    console.warn('\nKey collisions (second occurrence ignored):');
+    for (const c of collisions) console.warn('  -', c);
+  }
+
+  const header = [
+    '/* AUTO-GENERATED by scripts/gen-waveforms.mjs — do not edit by hand. */',
+    '/* eslint-disable */',
+    '',
+    'export const WAVEFORMS: Record<string, number[]> = {',
+  ].join('\n');
+  const body = Object.keys(out)
+    .sort()
+    .map(k => `  ${JSON.stringify(k)}: [${out[k].join(',')}],`)
+    .join('\n');
+  const footer = '\n};\n';
+  fs.mkdirSync(path.dirname(OUT_FILE), { recursive: true });
+  fs.writeFileSync(OUT_FILE, header + '\n' + body + footer, 'utf8');
+  const sizeKb = (fs.statSync(OUT_FILE).size / 1024).toFixed(1);
+  console.log(`Wrote ${Object.keys(out).length} waveforms (${sizeKb} kB) → ${path.relative(ROOT, OUT_FILE)}`);
+}
+
+main();

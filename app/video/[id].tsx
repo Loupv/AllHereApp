@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   column: { width: '100%', alignSelf: 'center' },
   hero: { width: '100%', height: 220 },
   body: { padding: spacing.lg, alignItems: 'center' },
-  date: { ...type.overline, color: colors.accent, marginBottom: spacing.sm },
+  date: { ...type.overline, color: colors.textDim, marginBottom: spacing.sm },
   title: {
     ...type.display, color: colors.text, fontSize: 22,
     textAlign: 'center', marginBottom: spacing.md, lineHeight: 28, maxWidth: 620,

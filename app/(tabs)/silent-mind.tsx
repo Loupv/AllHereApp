@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
   column: { width: '100%', alignSelf: 'center' },
   hero: { height: 130, justifyContent: 'flex-end', overflow: 'hidden' },
   banner: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.55)' },
+  bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.35)' },
   heroText: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, alignItems: 'center' },
   eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.xs, textAlign: 'center', fontSize: 10 },
   title: { ...type.display, color: colors.text, fontSize: 24, textAlign: 'center', lineHeight: 30 },

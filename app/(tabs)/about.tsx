@@ -4,7 +4,7 @@ import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
 import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
 import { useLayout } from '../../src/hooks/useLayout';
-import { colors, radius, spacing, type } from '../../src/theme';
+import { colors, spacing, type } from '../../src/theme';
 
 const openExternal = (url: string) => {
   if (Platform.OS === 'web') window.open(url, '_blank', 'noopener,noreferrer');
@@ -54,6 +54,8 @@ export default function AboutTabScreen() {
               quantifiable services.
             </Text>
 
+            {/* Inline stats: no cards / borders — three quiet columns
+                of value + label, aligned to the text above. */}
             <View style={styles.stats}>
               <View style={styles.stat}>
                 <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>Decades</Text>
@@ -79,17 +81,17 @@ export default function AboutTabScreen() {
               </View>
             ))}
 
-            <Text style={styles.outro}>
-              By combining ancient traditions with neuroscience and technology we advance
-              appreciation of meditation and reveal pathways to heightened consciousness.
-            </Text>
+            {/* The old "outro" paragraph used to live here — it repeated the
+                lead's positioning ("we combine traditions with neuroscience…")
+                so it was dropped to let the three pillars carry that story. */}
 
+            {/* Plain text link — no pill, no accent border. The arrow
+                and underline carry the affordance. */}
             <Pressable
               onPress={() => openExternal('https://allhere.org')}
               hitSlop={8}
-              style={({ pressed }) => [styles.siteLink, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.siteLink, pressed && { opacity: 0.6 }]}
             >
-              <Text style={styles.siteLinkLabel}>LEARN MORE AT</Text>
               <Text style={styles.siteLinkUrl}>allhere.org →</Text>
             </Pressable>
           </View>
@@ -106,56 +108,58 @@ const styles = StyleSheet.create({
   // Clipping frame: 160 px tall. The image inside is rendered taller
   // and anchored to the bottom of the wrapper, so the bottom of the
   // photo stays in view while the top is clipped.
+  // Hero framing — restored to the original 160 / 320 pair. The image
+  // is rendered taller than the wrapper and bottom-anchored so the
+  // lower half of the picture (the part we actually want to show) lands
+  // on screen. Don't change these numbers in a pass where you're only
+  // tightening typography — the crop is tuned visually.
   heroWrap: { width: '100%', height: 160, overflow: 'hidden', position: 'relative' },
   hero: { position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', height: 320 },
   body: { padding: spacing.lg },
-  eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.sm },
-  title: { ...type.display, color: colors.text, fontSize: 26, marginBottom: spacing.md },
-  lead: { ...type.body, color: colors.text, fontSize: 16, lineHeight: 24, marginBottom: spacing.xl },
-  stats: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.xl },
-  stat: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
+  // Sentence-case section label — brand/positioning cue without the
+  // uppercase/accent weight.
+  eyebrow: { ...type.sectionLabel, color: colors.textDim, marginBottom: spacing.sm },
+  // Dropped from 26 → 22: the hero image already carries most of the
+  // "landing" weight, the title doesn't need to compete with it.
+  title: { ...type.display, color: colors.text, fontSize: 22, marginBottom: spacing.md, lineHeight: 28 },
+  // Lead now reads as a prose paragraph, not a second hero banner.
+  lead: { ...type.body, color: colors.textMuted, fontSize: 14, lineHeight: 21, marginBottom: spacing.lg },
+  // No filled cards — just three quiet columns. A hairline below the row
+  // separates it from the pillars that follow.
+  stats: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+    paddingBottom: spacing.md,
+    borderBottomColor: 'rgba(255,255,255,0.09)',
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  statValue: { ...type.h2, color: colors.accent, marginBottom: 4, fontSize: 15, letterSpacing: 0 },
+  stat: { flex: 1 },
+  statValue: { ...type.h3, color: colors.text, marginBottom: 2, fontSize: 14 },
   statLabel: { ...type.caption, color: colors.textMuted, fontSize: 10, lineHeight: 14 },
+  // Hairline pillar rows — same list motif as ContentCard / VoletCard.
+  // Tightened sizes so the stack of three pillars doesn't dominate.
   pillar: {
     flexDirection: 'row',
     gap: spacing.md,
     alignItems: 'flex-start',
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
+    paddingVertical: spacing.md,
+    borderBottomColor: 'rgba(255,255,255,0.09)',
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  pillarIcon: { width: 48, height: 48 },
-  pillarTitle: { ...type.h2, color: colors.text, marginBottom: spacing.xs, fontSize: 18 },
-  pillarBody: { ...type.body, color: colors.textMuted, fontSize: 14, lineHeight: 21 },
-  outro: {
-    ...type.body,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-    marginTop: spacing.md,
-    textAlign: 'center',
-  },
+  pillarIcon: { width: 36, height: 36 },
+  pillarTitle: { ...type.h3, color: colors.text, marginBottom: 2, fontSize: 14 },
+  pillarBody: { ...type.body, color: colors.textMuted, fontSize: 13, lineHeight: 19 },
+  // Borderless text link — underline + arrow carry the affordance.
   siteLink: {
     alignSelf: 'center',
-    marginTop: spacing.xl,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
-    borderColor: colors.accent,
-    borderWidth: 1,
-    alignItems: 'center',
-    gap: 4,
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
   },
-  siteLinkLabel: { ...type.overline, color: colors.accent, fontSize: 10 },
-  siteLinkUrl: { ...type.h2, color: colors.text, fontSize: 16 },
+  siteLinkUrl: {
+    ...type.body,
+    color: colors.text,
+    fontSize: 15,
+    textDecorationLine: 'underline',
+  },
 });

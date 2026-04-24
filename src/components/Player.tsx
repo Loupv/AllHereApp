@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Image, PanResponder, Platform } from 'react-native';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { Asset } from 'expo-asset';
 import { useRouter } from 'expo-router';
 import { useLayout, CONTENT_MAX_WIDTH as PLAYER_CONTENT_MAX_WIDTH } from '../hooks/useLayout';
 import { usePlayerStore } from '../player/store';
@@ -9,9 +10,64 @@ import { useProgress } from '../player/progressStore';
 import { loadTranscript } from '../content/loadTranscript';
 import { findCueIndex, TranscriptCue } from '../content/transcript';
 import { trackProgram } from '../content/catalog';
+import { WAVEFORMS } from '../content/waveforms.generated';
 import { colors, radius, spacing, type } from '../theme';
 import { CircleButton } from './CircleButton';
 import { AnimatedGradient, GRADIENT_SM, GRADIENT_QM } from './AnimatedGradient';
+import { WaveformProgress } from './WaveformProgress';
+
+/**
+ * Normalize a filename stem into the same key used by scripts/gen-waveforms.mjs.
+ * Keeping the transform in sync matters: the script writes keys like
+ * "one_minute_meditation" and the Player must produce the same for lookup.
+ */
+function waveformKey(name: string): string {
+  return name
+    // Strip any trailing audio extension — on web Asset.name includes
+    // ".mp3" whereas native gives just the stem, and our generated keys
+    // are always extensionless.
+    .replace(/\.(mp3|wav|m4a|ogg)$/i, '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+/**
+ * Look up the precomputed peaks array for a given `require()`'d mp3 source.
+ * Tries `Asset.name` first (stem without extension), falls back to parsing
+ * the asset uri — which is what web/dev serves when Asset.name isn't
+ * populated synchronously. Returns undefined on any miss; the player falls
+ * back to the thin progress bar.
+ */
+function peaksForSource(source: any): number[] | undefined {
+  if (source == null) return undefined;
+  try {
+    const asset: any = Asset.fromModule(source);
+    let stem: string | undefined = asset?.name;
+    if (!stem && typeof asset?.uri === 'string') {
+      const last = asset.uri.split('?')[0].split('/').pop() || '';
+      stem = decodeURIComponent(last)
+        // metro sometimes appends a content hash: "file.abc123.mp3" → "file"
+        .replace(/\.[a-f0-9]{6,}\.(mp3|wav|m4a|ogg)$/i, '')
+        .replace(/\.(mp3|wav|m4a|ogg)$/i, '');
+    }
+    if (!stem) return undefined;
+    const key = waveformKey(stem);
+    const hit = WAVEFORMS[key];
+    if (!hit && typeof console !== 'undefined') {
+      // Log once per missing key so we can see which source is unresolved
+      // without spamming on every status tick.
+      if (!(globalThis as any).__wfMiss) (globalThis as any).__wfMiss = new Set<string>();
+      const miss = (globalThis as any).__wfMiss as Set<string>;
+      if (!miss.has(key)) { miss.add(key); console.warn('[waveforms] miss for key:', key, '(stem:', stem, ')'); }
+    }
+    return hit;
+  } catch {
+    return undefined;
+  }
+}
 
 const DEFAULT_ARTWORK = require('../../assets/images/lounge-2.jpg');
 const DEFAULT_DESCRIPTION = 'Take a moment to arrive. When you are ready, begin.';
@@ -439,6 +495,16 @@ function PlayerInner() {
   // Palette follows the same SM / QM split as `accent`.
   const gradientPalette = rounds ? GRADIENT_QM : GRADIENT_SM;
 
+  // Precomputed waveform peaks for the currently-playing audio source.
+  // QM rounds + inters have unique filenames (session-tag prefixed), so
+  // every source maps to its own peaks. Falls back to the thin progress
+  // bar only when the lookup genuinely misses (new audio not yet in the
+  // generated map — rerun `npm run gen:waveforms`).
+  const peaks = useMemo(
+    () => peaksForSource(roundSource),
+    [roundSource],
+  );
+
   return (
     <View style={styles.root}>
       <AnimatedGradient
@@ -672,10 +738,14 @@ function PlayerInner() {
                 onLayout={(e) => { barWidth.current = e.nativeEvent.layout.width; }}
                 {...pan.panHandlers}
               >
-                <View style={styles.progressTrack}>
-                  <View style={[styles.progressFill, { width: `${Math.min(100, progress * 100)}%`, backgroundColor: accent }]} />
-                  <View style={[styles.progressThumb, { left: `${Math.min(100, progress * 100)}%`, backgroundColor: accent }]} />
-                </View>
+                {peaks ? (
+                  <WaveformProgress peaks={peaks} progress={progress} accent={accent} height={36} />
+                ) : (
+                  <View style={styles.progressTrack}>
+                    <View style={[styles.progressFill, { width: `${Math.min(100, progress * 100)}%`, backgroundColor: accent }]} />
+                    <View style={[styles.progressThumb, { left: `${Math.min(100, progress * 100)}%`, backgroundColor: accent }]} />
+                  </View>
+                )}
               </View>
               <View style={styles.timesRow}>
                 <Text style={styles.time}>{fmt(t)}</Text>
@@ -814,12 +884,12 @@ const styles = StyleSheet.create({
   eyebrow: { ...type.overline, color: colors.textMuted, fontSize: 10 },
   top: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: 4 },
   artwork: {
-    width: 90, height: 90, borderRadius: radius.lg,
+    width: 56, height: 56, borderRadius: radius.md,
     alignItems: 'center', justifyContent: 'center',
     marginBottom: spacing.xs, overflow: 'hidden',
     borderColor: colors.border, borderWidth: 1,
   },
-  artworkLarge: { width: 130, height: 130 },
+  artworkLarge: { width: 80, height: 80, borderRadius: radius.lg },
   artworkImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   artworkOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.35)' },
   title: { ...type.h1, color: colors.text, textAlign: 'center', fontSize: 18, flexShrink: 1 },
@@ -850,7 +920,9 @@ const styles = StyleSheet.create({
   description: { ...type.body, color: colors.textMuted, textAlign: 'center', maxWidth: 360, fontSize: 13, lineHeight: 20 },
   descriptionBlock: { alignItems: 'center', gap: 6, maxWidth: 380 },
   descriptionBold: { color: colors.text, fontFamily: 'Montserrat_800ExtraBold', fontSize: 15, lineHeight: 22, marginBottom: 6, textAlign: 'center' },
-  descriptionItalic: { fontStyle: 'italic' },
+  // Italic was doing visual noise work on description lines; the bold tier and
+  // line-break rhythm carry enough emphasis on their own.
+  descriptionItalic: {},
   durationHint: { ...type.overline, color: colors.textDim, fontSize: 10, textAlign: 'center' },
 
   paramsCard: {

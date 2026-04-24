@@ -58,11 +58,18 @@ export default function RootLayout() {
           // tab-layout logo stays in charge there.
           headerTitle: () => <Image source={LOGO} style={styles.headerLogo} resizeMode="contain" />,
           headerTitleAlign: 'center',
+          // Horizontal slide when pushing a detail page from a tab — the
+          // "opening a sub-folder" cue. Applies to every non-(tabs) child
+          // (silent-mind/[id], qm/[id], news/[id], video/[id]). Tab
+          // switches themselves keep their own root-level behaviour.
+          animation: 'slide_from_right',
         }}
       >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen name="silent-mind/[id]" options={{ title: '' }} />
+        <Stack.Screen name="qm/[id]" options={{ title: '' }} />
         <Stack.Screen name="news/[id]" options={{ title: '' }} />
+        <Stack.Screen name="video/[id]" options={{ title: '' }} />
       </Stack>
       <Player />
       <VideoPlayerModal />

@@ -48,20 +48,22 @@ export function ContentCard({
 }
 
 const styles = StyleSheet.create({
+  // Borderless + background-less row matching the Start intro list and
+  // the VoletCard: a hairline between rows gives structure without the
+  // weight of stacked filled cards. The 4px coloured accent rail on the
+  // left keeps per-row identity (and the disabled / Part-3 state).
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: radius.lg,
+    backgroundColor: 'transparent',
+    borderBottomColor: 'rgba(255,255,255,0.09)',
+    borderBottomWidth: StyleSheet.hairlineWidth,
     paddingVertical: spacing.md,
-    paddingLeft: spacing.md,
-    paddingRight: spacing.md,
-    marginBottom: spacing.sm + 4,
+    paddingLeft: spacing.sm,
+    paddingRight: spacing.sm,
     gap: spacing.md,
   },
-  pressed: { opacity: 0.7, backgroundColor: colors.surfaceElevated },
+  pressed: { opacity: 0.7, backgroundColor: 'rgba(255,255,255,0.04)' },
   cardDisabled: { opacity: 0.5 },
   textDisabled: { color: colors.textDim },
   accent: {

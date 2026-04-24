@@ -52,6 +52,19 @@ export const radius = {
   pill: 999,
 };
 
+// Four intentional tiers + a section helper.
+//
+//   title     — hero-level display (landing pages, player track title)
+//   h2/h3     — card / block headings
+//   body      — prose
+//   caption   — inline secondary text
+//   sectionLabel — "Start with", "Intro audios", "Replay quick meditation":
+//                  sentence-case, medium weight. NOT uppercase. Section
+//                  titles should read as labels, not as pressed state.
+//   overline  — reserved for **true state labels** only: ROUND 1/3,
+//                  GATEWAY COMPLETED, the program CTA eyebrow. Avoid using
+//                  it as a generic small-caps style.
+//   button    — primary CTA.
 export const type = {
   display: { fontFamily: fonts.displayBlack, fontSize: 32, letterSpacing: 1.5, textTransform: 'uppercase' as const },
   h1: { fontFamily: fonts.display, fontSize: 26, letterSpacing: 1, textTransform: 'uppercase' as const },
@@ -59,6 +72,7 @@ export const type = {
   h3: { fontFamily: fonts.bodySemibold, fontSize: 16 },
   body: { fontFamily: fonts.body, fontSize: 15, lineHeight: 23 },
   caption: { fontFamily: fonts.body, fontSize: 13, letterSpacing: 0.3 },
+  sectionLabel: { fontFamily: fonts.bodyMedium, fontSize: 12, letterSpacing: 0.4 },
   overline: { fontFamily: fonts.bodySemibold, fontSize: 11, letterSpacing: 2.5, textTransform: 'uppercase' as const },
   button: { fontFamily: fonts.displayBlack, fontSize: 14, letterSpacing: 2, textTransform: 'uppercase' as const },
 };

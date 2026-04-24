@@ -296,11 +296,12 @@ function PhaseA(props: {
       <View style={styles.introSpacerTop} />
       {introTracks.length > 0 ? (
         <Animated.View style={styles.block} entering={enter(180)}>
-          <DividerLabel
-            text="New here? Start with the intro"
-            isTablet={isTablet}
-            style={{ marginBottom: spacing.md }}
-          />
+          {/* Plain centered label (no flanking lines) — reserves the
+              divider-with-lines motif for real semantic splits like
+              "or …" below, where two alternatives sit either side. */}
+          <Text style={[styles.sectionLabel, isTablet && styles.sectionLabelTablet]}>
+            New here? Start with the intro
+          </Text>
           {/* Unpacked intro volet — each of the 4 audios is directly
               launchable from the home, with a headphone glyph to make
               the medium unambiguous. Kept tight (compact rows) so the
@@ -314,7 +315,7 @@ function PhaseA(props: {
                 accessibilityLabel={`Play intro audio: ${t.title}${t.durationHint ? `, ${t.durationHint}` : ''}`}
                 style={({ pressed }) => [styles.introRow, pressed && { opacity: 0.85 }]}
               >
-                <KindIcon kind="audio" color={colors.accent} size={18} />
+                <KindIcon kind="audio" color={colors.textDim} size={18} />
                 <Text style={styles.introRowTitle} numberOfLines={1}>{t.title}</Text>
                 {t.durationHint ? (
                   <Text style={styles.introRowMeta}>{t.durationHint}</Text>
@@ -377,11 +378,9 @@ function PhaseB(props: {
     <>
       <View style={styles.introSpacerTop} />
       <Animated.View style={styles.block} entering={enter(180)}>
-        <DividerLabel
-          text="Intro audios"
-          isTablet={isTablet}
-          style={{ marginBottom: spacing.md }}
-        />
+        <Text style={[styles.sectionLabel, isTablet && styles.sectionLabelTablet]}>
+          Intro audios
+        </Text>
         <View style={styles.introList}>
           {introTracks.map((t) => (
             <Pressable
@@ -448,11 +447,9 @@ function PhaseC(props: {
     <>
       <View style={styles.introSpacerTop} />
       <Animated.View style={styles.block} entering={enter(180)}>
-        <DividerLabel
-          text="Intro audios"
-          isTablet={isTablet}
-          style={{ marginBottom: spacing.md }}
-        />
+        <Text style={[styles.sectionLabel, isTablet && styles.sectionLabelTablet]}>
+          Intro audios
+        </Text>
         <View style={styles.introList}>
           {introTracks.map((t) => (
             <Pressable
@@ -646,40 +643,40 @@ const styles = StyleSheet.create({
   bottomSpacer: { flex: 1, minHeight: spacing.md },
   centerInner: { alignItems: 'center', justifyContent: 'center' },
   // Tier 1 — brand eyebrow at the very top, strongest presence.
+  // Text shadows removed site-wide on Start: with the softer gradient,
+  // they read as weight/noise rather than separation.
   eyebrow: {
     ...type.overline, color: colors.accent,
     marginBottom: spacing.xs, fontSize: 10, letterSpacing: 3,
-    textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 },
   },
   title: {
     ...type.display, color: colors.text,
     fontSize: 24, lineHeight: 30, textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 8, textShadowOffset: { width: 0, height: 1 },
   },
   titleTablet: { fontSize: 30, lineHeight: 36 },
   // Subtitle under the contextual title — brand/positioning line.
   subtitle: {
     ...type.caption, color: colors.textMuted,
-    fontSize: 11, fontStyle: 'italic',
+    fontSize: 11,
     textAlign: 'center', marginTop: 4,
-    textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 },
   },
-  // Tier 2 — section helpers (New here?, Start with).
+  // Tier 2 — section helpers (New here?, Start with, Intro audios).
+  // Sentence-case medium weight (theme's sectionLabel tier) — reserves
+  // uppercase overline for true state labels (ROUND 1/3 etc.).
   sectionLabel: {
-    ...type.overline, color: colors.textDim,
-    fontSize: 10, letterSpacing: 2, textAlign: 'center',
+    ...type.sectionLabel, color: colors.textDim,
+    textAlign: 'center',
     marginBottom: spacing.md,
-    textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 },
   },
   startLabel: { marginBottom: spacing.sm },
   orRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   orLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.16)' },
-  // Tier 3 — connectors / metadata (or …, REVISIT GATEWAY).
+  // Tier 3 — connectors between row groups ("or", "Replay quick
+  // meditation"). Matches the same label grammar as sectionLabel.
   orLabel: {
-    ...type.overline, color: colors.textDim, fontSize: 10, letterSpacing: 2,
-    textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 },
+    ...type.sectionLabel, color: colors.textDim,
   },
-  sectionLabelTablet: { fontSize: 12, letterSpacing: 2.5 },
+  sectionLabelTablet: { fontSize: 13, letterSpacing: 0.5 },
 
   radioRow: {
     flexDirection: 'row',
@@ -689,24 +686,24 @@ const styles = StyleSheet.create({
   },
   // Two-line pill: duration (primary) stacked above intent (sub-label).
   // Padding and font sizes bumped to meet HIG tap-target / readability.
+  // Borderless column pill — selection shown as a 2px accent underline
+  // (see radioSelected), no filled background / no outline. Keeps the
+  // rhythm of the three options clean and signals "this is a radio"
+  // without the heavy chip look.
   radio: {
     paddingVertical: 8,
     paddingHorizontal: 14,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
     alignItems: 'center',
     minWidth: 78,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
   radioSelected: {
-    borderColor: colors.accent,
-    backgroundColor: 'rgba(158,54,148,0.12)',
+    borderBottomColor: colors.accent,
   },
   radioDuration: {
     ...type.h2, color: colors.text,
     fontSize: 13, lineHeight: 16, textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 },
   },
   radioDurationTablet: { fontSize: 15, lineHeight: 18 },
   radioDurationSelected: { color: colors.accent },
@@ -718,27 +715,27 @@ const styles = StyleSheet.create({
   radioSubTablet: { fontSize: 10, letterSpacing: 1 },
   radioSubSelected: { color: colors.accent },
   // Description of the active mode — the "what actually happens when I
-  // tap play" line. Italicised, centred, capped to 2 lines.
+  // tap play" line. Centred, capped to 2 lines.
   descLine: {
     ...type.caption, color: colors.textMuted,
-    fontSize: 12, fontStyle: 'italic',
+    fontSize: 12,
     textAlign: 'center', marginBottom: spacing.md,
     paddingHorizontal: spacing.md,
-    textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 6, textShadowOffset: { width: 0, height: 1 },
   },
 
   // Phase A — unpacked intro audio list.
-  introList: { gap: 6 },
+  // Borderless + background-less list: a thin hairline between rows
+  // gives enough structure (iOS-style inset list) without the weight
+  // of 4 bordered cards stacking on top of a soft gradient.
+  introList: { gap: 0 },
   introRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: 10,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    backgroundColor: 'rgba(0, 8, 35, 0.45)',
+    paddingVertical: 12,
+    paddingHorizontal: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.09)',
   },
   introRowTitle: {
     ...type.h2, color: colors.text,
@@ -748,7 +745,7 @@ const styles = StyleSheet.create({
     ...type.overline, color: colors.textDim,
     fontSize: 10, letterSpacing: 0.6,
   },
-  introRowChevron: { ...type.display, fontSize: 14, color: colors.accent, marginLeft: 2 },
+  introRowChevron: { ...type.display, fontSize: 14, color: colors.textDim, marginLeft: 2 },
 
   // Phase B / C — compact intro list (collapsible).
   introListCompact: { gap: 4, marginTop: 4 },

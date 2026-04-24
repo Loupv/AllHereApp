@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
   content: {},
   hero: { height: 180, justifyContent: 'flex-end', overflow: 'hidden', marginBottom: spacing.md },
   heroImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.55)' },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.35)' },
   heroText: { padding: spacing.lg, alignItems: 'center' },
   eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.sm },
   title: { ...type.display, color: colors.text, fontSize: 32, textAlign: 'center' },
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
   },
-  toolbarHint: { ...type.overline, color: colors.accent, fontSize: 10 },
+  toolbarHint: { ...type.overline, color: colors.textDim, fontSize: 10 },
   markAll: {
     paddingVertical: 4, paddingHorizontal: 10,
     borderRadius: radius.pill,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: 'rgba(0,0,0,0.6)',
   },
-  kindIcon: { color: colors.accent, fontSize: 11 },
+  kindIcon: { color: colors.textDim, fontSize: 11 },
   kindText: { ...type.overline, color: colors.text, fontSize: 9, letterSpacing: 1.5 },
   durationBadge: {
     position: 'absolute',

@@ -148,32 +148,38 @@ export function VoletCard({
 }
 
 const styles = StyleSheet.create({
+  // Borderless + background-less by default — matches the Start page
+  // intro list so the whole app reads the same way: a hairline between
+  // rows gives just enough structure without stacking opaque cards on
+  // top of a soft gradient. Border is kept at width 1 with transparent
+  // color so the `pulseStyle` (which paints borderColor) still works
+  // when this card owns the next unlistened track.
   card: {
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.sm + 2,
-    borderRadius: radius.lg,
-    borderColor: colors.border,
+    borderRadius: radius.md,
+    borderColor: 'transparent',
     borderWidth: 1,
-    backgroundColor: colors.surface,
+    borderBottomColor: 'rgba(255,255,255,0.09)',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    backgroundColor: 'transparent',
     overflow: 'hidden',
   },
-  // Intro volet reads as secondary to the three numbered parts: no surface
-  // fill, dimmer outline, lighter title so it sits back visually.
-  cardSecondary: {
-    backgroundColor: 'transparent',
-    borderColor: 'rgba(255,255,255,0.10)',
-  },
-  // Darker, more opaque variant used when the card needs to stand out
-  // against a busy / low-contrast backdrop.
+  // Intro volet reads as secondary to the three numbered parts — dimmer
+  // thumbnail + title. With the borderless default list, no extra
+  // styling is needed beyond the intrinsic hairline.
+  cardSecondary: {},
+  // Elevated variant kept as an escape hatch for callers that place the
+  // card on a truly busy backdrop. No-op in the hairline-list context.
   cardElevated: {
-    backgroundColor: 'rgba(0, 8, 35, 0.55)',
-    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(0, 8, 35, 0.45)',
+    borderBottomColor: 'rgba(255,255,255,0.14)',
   },
   cardLocked: { opacity: 0.45 },
   pressable: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
     gap: spacing.md,
   },
   pressed: { opacity: 0.85 },

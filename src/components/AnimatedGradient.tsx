@@ -20,22 +20,28 @@ export type GradientPalette = {
 
 // ---- Presets --------------------------------------------------------
 
-/** Deep violet → midnight blue. Default (Start page). */
+/** Steel blue → midnight blue. Default (Start page).
+ *  Shifted away from the earlier violet/magenta hue so the Start page
+ *  reads calm + neutral; the violet is now reserved for the Silent
+ *  Mind palette where it carries brand meaning. Centre stop kept low-
+ *  opacity and the mid stop pushed out so the halo is atmospheric. */
 export const GRADIENT_START: GradientPalette = {
   stops: [
-    { offset: 0,   color: '#9E3694', opacity: 0.42 },
-    { offset: 50,  color: '#241745', opacity: 0.8  },
-    { offset: 85,  color: '#040D26', opacity: 1    },
+    { offset: 0,   color: '#4A7FD1', opacity: 0.22 },
+    { offset: 65,  color: '#132548', opacity: 0.55 },
+    { offset: 90,  color: '#040D26', opacity: 1    },
     { offset: 100, color: '#000823', opacity: 1    },
   ],
 };
 
-/** Magenta halo for the Silent Mind player. */
+/** Magenta halo for the Silent Mind player.
+ *  Matches the softened curve used on Start — centre stop pulled down
+ *  and the fade extended so the halo is atmospheric, not painted. */
 export const GRADIENT_SM: GradientPalette = {
   stops: [
-    { offset: 0,   color: '#C04DB6', opacity: 0.48 },
-    { offset: 50,  color: '#3E1D4F', opacity: 0.85 },
-    { offset: 85,  color: '#06112A', opacity: 1    },
+    { offset: 0,   color: '#C04DB6', opacity: 0.30 },
+    { offset: 65,  color: '#3E1D4F', opacity: 0.60 },
+    { offset: 90,  color: '#06112A', opacity: 1    },
     { offset: 100, color: '#00091F', opacity: 1    },
   ],
 };
@@ -43,9 +49,9 @@ export const GRADIENT_SM: GradientPalette = {
 /** Teal halo for the QM Format player. */
 export const GRADIENT_QM: GradientPalette = {
   stops: [
-    { offset: 0,   color: '#3EC0BE', opacity: 0.45 },
-    { offset: 50,  color: '#1B3D48', opacity: 0.85 },
-    { offset: 85,  color: '#04141F', opacity: 1    },
+    { offset: 0,   color: '#3EC0BE', opacity: 0.28 },
+    { offset: 65,  color: '#1B3D48', opacity: 0.60 },
+    { offset: 90,  color: '#04141F', opacity: 1    },
     { offset: 100, color: '#001018', opacity: 1    },
   ],
 };
@@ -105,8 +111,10 @@ export function AnimatedGradient({
     );
   }, []);
 
+  // Breath amplitude dialed back from 6% to 3% — still alive, but no
+  // longer a visible pulse that competes with content.
   const breathStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + breath.value * 0.06 }],
+    transform: [{ scale: 1 + breath.value * 0.03 }],
   }));
 
   // Smoothly-animated vertical centre. New target values are chased

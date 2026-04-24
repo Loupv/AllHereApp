@@ -23,6 +23,14 @@
 - [ ] Persist progress & auth state (zustand + AsyncStorage / MMKV).
 - [ ] Fine-tune transcript sync for audios that drift (Whisper word-level + manual pass for mispronunciations / brand terms like "All Here").
 
+## UX explorations
+- [ ] Shared animated play button across the first three tabs (Start / SM / QM): the
+  bottom of the screen is a single persistent animated play control, the top of
+  the screen handles navigation between the tab's different contents. Raises
+  real UX questions (what plays when nothing is selected? how do we indicate
+  the "armed" track? does this replace the Player screen or live on top of
+  it?) — needs a discussion pass before implementation.
+
 ## Nice-to-haves
 - [ ] Persist user preferences (rounds default, break seconds) per track.
 - [ ] Settings screen (theme, notifications, language).

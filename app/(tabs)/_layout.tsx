@@ -73,7 +73,11 @@ export default function TabsLayout() {
         // ('QM Format' etc.) don't get clipped.
         tabBarStyle: {
           backgroundColor: colors.bg,
-          borderTopColor: colors.border,
+          // No hairline separator — the bar reads as part of the page.
+          borderTopWidth: 0,
+          borderTopColor: 'transparent',
+          elevation: 0,
+          shadowOpacity: 0,
           height: TAB_BAR_BASE + insets.bottom,
           paddingTop: 6,
           paddingBottom: Math.max(6, insets.bottom),
