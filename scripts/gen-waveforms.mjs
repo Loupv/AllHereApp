@@ -5,7 +5,16 @@
  * Walks assets/audio/** for .mp3 files (skipping `excluded/`), decodes each to
  * 8kHz mono 16-bit PCM via ffmpeg, buckets the samples, and writes a TS module
  * at src/content/waveforms.generated.ts mapping a normalized filename key to a
- * normalized peaks array (160 floats in [0, 1]).
+ * normalized peaks array.
+ *
+ * Density is **time-based** rather than fixed-count: each track gets
+ * `PEAKS_PER_SECOND` peaks per second of audio (so a 5-min track has 6000
+ * values, a 20-min track 24000). This is what lets the play button react
+ * tightly to the voice envelope at runtime — sampling 160 buckets across a
+ * 20-min audio yielded ≈1 peak / 7.5 s, far too coarse.
+ *
+ * The visual waveform bar in the player is downsampled at render time
+ * (see WaveformProgress) so the higher density costs nothing visually.
  *
  * Run with:   node scripts/gen-waveforms.mjs
  *
@@ -21,7 +30,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const AUDIO_ROOT = path.join(ROOT, 'assets', 'audio');
 const OUT_FILE = path.join(ROOT, 'src', 'content', 'waveforms.generated.ts');
-const BUCKETS = 160;                    // peaks per track — enough density for a 320px bar
+// Per-second density. 20 peaks/sec = 50 ms per bucket, fine enough for the
+// play button to follow the voice envelope without wobbling on every
+// consonant. Bumping this further mostly grows the bundle without a perceptible
+// gain; halving it makes the reaction noticeably laggy.
+const PEAKS_PER_SECOND = 20;
 const SAMPLE_RATE = 8000;               // plenty for peak extraction
 const BYTES_PER_SAMPLE = 2;             // s16le
 
@@ -71,21 +84,25 @@ function decodePcm(absPath) {
 }
 
 /**
- * Convert a PCM buffer (s16le, mono) into a normalized peaks array of length
- * `BUCKETS`. Each bucket reports the RMS of its window rather than the max
- * absolute value — RMS is visually more stable (max-abs makes bars strobe
- * around sharp consonants), and normalizing against the per-track max keeps
- * quiet tracks still readable.
+ * Convert a PCM buffer (s16le, mono) into a normalized peaks array.
+ *
+ * Bucket count is `PEAKS_PER_SECOND × duration_seconds` so audios of
+ * different lengths share the same time resolution (50 ms per peak at the
+ * default 20 / s). Each bucket reports RMS of its window — RMS is visually
+ * more stable than max-abs (which strobes on consonants) — then the array
+ * is normalized against the per-track max with a mild curve so quiet
+ * passages stay readable.
  */
 function pcmToPeaks(buf) {
   const totalSamples = Math.floor(buf.length / BYTES_PER_SAMPLE);
-  if (totalSamples === 0) return new Array(BUCKETS).fill(0);
-  const windowSize = Math.max(1, Math.floor(totalSamples / BUCKETS));
-  const peaks = new Array(BUCKETS).fill(0);
+  if (totalSamples === 0) return [];
+  const samplesPerBucket = Math.max(1, Math.floor(SAMPLE_RATE / PEAKS_PER_SECOND));
+  const buckets = Math.max(1, Math.floor(totalSamples / samplesPerBucket));
+  const peaks = new Array(buckets).fill(0);
   let maxRms = 0;
-  for (let b = 0; b < BUCKETS; b++) {
-    const start = b * windowSize;
-    const end = b === BUCKETS - 1 ? totalSamples : start + windowSize;
+  for (let b = 0; b < buckets; b++) {
+    const start = b * samplesPerBucket;
+    const end = b === buckets - 1 ? totalSamples : start + samplesPerBucket;
     let sumSq = 0;
     for (let i = start; i < end; i++) {
       const sample = buf.readInt16LE(i * BYTES_PER_SAMPLE);
@@ -96,8 +113,6 @@ function pcmToPeaks(buf) {
     if (rms > maxRms) maxRms = rms;
   }
   if (maxRms <= 0) return peaks;
-  // Normalize to [0, 1] against per-track peak, then apply a mild curve so low
-  // values stay visible (log-ish feel without the branching).
   return peaks.map(v => Math.pow(v / maxRms, 0.7));
 }
 

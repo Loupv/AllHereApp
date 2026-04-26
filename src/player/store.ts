@@ -18,8 +18,16 @@ type PlayerState = {
   isOpen: boolean;
   /** Consumed once by the Player on mount / track swap, then cleared. */
   autoStart: boolean;
+  /**
+   * Live "audio is currently playing" flag, mirrored from expo-audio's
+   * status inside `Player`. Lives on the store so other parts of the
+   * UI (e.g. the global RippleField background) can react to it
+   * without subscribing to expo-audio directly.
+   */
+  playing: boolean;
   open: (track: AudioTrack, playlist?: AudioTrack[], opts?: OpenOptions) => void;
   consumeAutoStart: () => boolean;
+  setPlaying: (p: boolean) => void;
   close: () => void;
   playNext: () => void;
   playPrev: () => void;
@@ -37,6 +45,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   index: -1,
   isOpen: true && false,
   autoStart: false,
+  playing: false,
   open: (track, playlist, opts) => {
     const pl = playable(playlist && playlist.length ? playlist : [track]);
     const idx = Math.max(0, pl.findIndex((t) => t.id === track.id));
@@ -53,7 +62,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (v) set({ autoStart: false });
     return v;
   },
-  close: () => set({ isOpen: false, autoStart: false }),
+  setPlaying: (p) => set({ playing: p }),
+  close: () => set({ isOpen: false, autoStart: false, playing: false }),
   playNext: () => {
     const { playlist, index } = get();
     if (index < 0 || index >= playlist.length - 1) return;

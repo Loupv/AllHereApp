@@ -1,12 +1,28 @@
-import { Text, View, Image, Pressable, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { Text, View, Pressable, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import Animated, { Keyframe } from 'react-native-reanimated';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { ContentCard } from '../../src/components/ContentCard';
+import { ProgramHeader } from '../../src/components/ProgramHeader';
 import { qmVolets, qmProgram, silentMindVolets, trackDuration } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { useLayout } from '../../src/hooks/useLayout';
 import { colors, spacing, type } from '../../src/theme';
+import { noOrphan } from '../../src/utils/noOrphan';
+
+const detailEnter = new Keyframe({
+  0:   { opacity: 0, transform: [{ translateX: 40 }] },
+  60:  { opacity: 0.6, transform: [{ translateX: 16 }] },
+  100: { opacity: 1, transform: [{ translateX: 0 }] },
+}).duration(320);
+
+const detailExit = new Keyframe({
+  0:   { opacity: 1, transform: [{ translateX: 0 }] },
+  40:  { opacity: 0.6, transform: [{ translateX: 16 }] },
+  100: { opacity: 0, transform: [{ translateX: 40 }] },
+}).duration(260);
 
 export default function QMVoletScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,29 +42,27 @@ export default function QMVoletScreen() {
 
   const playable = volet.tracks.filter(t => !t.comingSoon);
   const soon = volet.tracks.filter(t => t.comingSoon);
-  const banner = volet.image ?? qmProgram.banner;
+  // Single-open accordion — see SM detail page for rationale.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return (
     <Background color={colors.bgTabAlt}>
       <Stack.Screen options={{ title: `QM · ${volet.title}` }} />
+      {/* Crossfade-while-sliding via custom Keyframe — see SM detail
+          page for details. */}
+      <Animated.View style={{ flex: 1 }} entering={detailEnter} exiting={detailExit}>
       <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center' }]}>
         <View style={[styles.column, { maxWidth: columnMax }]}>
-          {/* Same hero band as app/(tabs)/qm.tsx — banner image, tinted
-              overlay, teal eyebrow + title. Part pages now visually
-              belong to the QM tab. */}
-          <View style={styles.hero}>
-            <Image source={banner} style={styles.banner} resizeMode="cover" />
-            <View style={styles.bannerOverlay} />
-            <View style={styles.heroText}>
-              <Text style={styles.eyebrow}>
-                {qmProgram.eyebrow} · {volet.title.toUpperCase()}
-              </Text>
-              <Text style={styles.title}>{volet.subtitle}</Text>
-            </View>
-          </View>
-
-          {volet.tagline ? <Text style={styles.intro}>{volet.tagline}</Text> : null}
-          {volet.description ? <Text style={styles.intro}>{volet.description}</Text> : null}
+          <ProgramHeader
+            eyebrow={
+              volet.title
+                ? `${qmProgram.eyebrow} · ${volet.title}`
+                : qmProgram.eyebrow
+            }
+            title={volet.subtitle}
+            description={volet.description}
+            accent={colors.accentAlt}
+          />
 
           <View style={styles.listPad}>
             {playable.map((t) => (
@@ -59,7 +73,10 @@ export default function QMVoletScreen() {
                 duration={trackDuration(t)}
                 kind="audio"
                 accent={colors.accentAlt}
-                onPress={() => openPlayer(t, playable)}
+                description={t.description}
+                expanded={expandedId === t.id}
+                onToggle={() => setExpandedId(prev => prev === t.id ? null : t.id)}
+                onPlay={() => openPlayer(t, playable, { autoStart: true })}
               />
             ))}
 
@@ -87,13 +104,14 @@ export default function QMVoletScreen() {
               <Text style={[styles.siblingArrow, { color: colors.accent }]}>←</Text>
               <View style={{ flex: 1 }}>
                 <Text style={styles.siblingEyebrow}>Silent Mind program</Text>
-                <Text style={styles.siblingText}>Back to Silent Mind · {smTwin.title}</Text>
-                <Text style={styles.siblingHint}>The guided, untimed version of these practices.</Text>
+                <Text style={styles.siblingText}>{noOrphan(`Back to Silent Mind · ${smTwin.title}`)}</Text>
+                <Text style={styles.siblingHint}>{noOrphan('The guided, untimed version of these practices.')}</Text>
               </View>
             </Pressable>
           ) : null}
         </View>
       </ScrollView>
+      </Animated.View>
     </Background>
   );
 }
@@ -101,21 +119,9 @@ export default function QMVoletScreen() {
 const styles = StyleSheet.create({
   content: { paddingBottom: spacing.xxl },
   column: { width: '100%', alignSelf: 'center' },
-  hero: { height: 130, justifyContent: 'flex-end', overflow: 'hidden' },
-  banner: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,26,38,0.35)' },
-  heroText: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, alignItems: 'center' },
-  eyebrow: { ...type.overline, color: colors.accentAlt, marginBottom: spacing.xs, textAlign: 'center', fontSize: 10 },
+  // Header rendered by <ProgramHeader>. We keep `title` for the
+  // "Not found" error path only.
   title: { ...type.display, color: colors.text, fontSize: 22, textAlign: 'center', lineHeight: 28 },
-  intro: {
-    ...type.body,
-    color: colors.textMuted,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    textAlign: 'center',
-    fontSize: 12,
-    lineHeight: 18,
-  },
   listPad: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   sectionLabel: { ...type.sectionLabel, color: colors.textMuted, marginBottom: spacing.sm },
   siblingCta: {

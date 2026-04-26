@@ -1,12 +1,34 @@
-import { Text, View, Image, Pressable, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { Text, View, Pressable, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import Animated, { Keyframe } from 'react-native-reanimated';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { ContentCard } from '../../src/components/ContentCard';
+import { ProgramHeader } from '../../src/components/ProgramHeader';
 import { silentMindVolets, qmVolets, silentMindProgram, trackDuration } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { useLayout } from '../../src/hooks/useLayout';
 import { colors, spacing, type } from '../../src/theme';
+import { noOrphan } from '../../src/utils/noOrphan';
+
+// Entering: incoming page slides 40 px from the right while fading
+// from 0 → 1 — reads as a crossfade DURING the slide rather than a
+// hard slide-on-top.
+const detailEnter = new Keyframe({
+  0:   { opacity: 0, transform: [{ translateX: 40 }] },
+  60:  { opacity: 0.6, transform: [{ translateX: 16 }] },
+  100: { opacity: 1, transform: [{ translateX: 0 }] },
+}).duration(320);
+
+// Exiting: same trajectory in reverse — when the user dismisses the
+// detail page (header back, swipe-back gesture, OS back button) the
+// page slides back to the right and fades out, mirroring the entry.
+const detailExit = new Keyframe({
+  0:   { opacity: 1, transform: [{ translateX: 0 }] },
+  40:  { opacity: 0.6, transform: [{ translateX: 16 }] },
+  100: { opacity: 0, transform: [{ translateX: 40 }] },
+}).duration(260);
 
 export default function VoletScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -16,6 +38,9 @@ export default function VoletScreen() {
   const volet = silentMindVolets.find(v => v.id === id);
   // Mirror volet in the QM tab — same id suffix ('part1' / 'part2' / 'part3').
   const qmTwin = qmVolets.find(v => v.id === id);
+  // Single-open accordion — `expandedId` holds the currently-open card,
+  // so tapping a different card auto-closes the previous one.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (!volet) {
     return (
@@ -25,37 +50,38 @@ export default function VoletScreen() {
     );
   }
 
-  // Banner image: prefer the volet's own image, fall back to the program banner
-  // so every Part page has the same hero surface as the Silent Mind tab.
-  const banner = volet.image ?? silentMindProgram.banner;
-
   return (
     <Background color={colors.bgTab}>
       <Stack.Screen options={{ title: volet.title }} />
+      {/* Crossfade-while-sliding: a custom Keyframe combines a short
+          horizontal slide (40 px from the right) with an opacity
+          ramp 0 → 1, so the incoming page emerges through the
+          outgoing one rather than covering it with a hard edge. The
+          shared root gradient + EnergyColumn behind both pages keeps
+          the backdrop continuous, reinforcing the "same screen
+          morphing" feel. */}
+      <Animated.View style={{ flex: 1 }} entering={detailEnter} exiting={detailExit}>
       <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center' }]}>
         <View style={[styles.column, { maxWidth: columnMax }]}>
-          {/* Mirrors the Silent Mind tab hero — banner image, light overlay,
-              eyebrow + title stacked at the bottom. Makes the Part pages
-              feel like sub-sections of the same surface rather than a
-              different visual language. */}
-          <View style={styles.hero}>
-            <Image source={banner} style={styles.banner} resizeMode="cover" />
-            <View style={styles.bannerOverlay} />
-            <View style={styles.heroText}>
-              <Text style={styles.eyebrow}>
-                {silentMindProgram.eyebrow} · {volet.title.toUpperCase()}
-              </Text>
-              <Text style={styles.title}>{volet.subtitle}</Text>
-            </View>
-          </View>
-
-          {volet.tagline ? <Text style={styles.intro}>{volet.tagline}</Text> : null}
-          {volet.description ? <Text style={styles.intro}>{volet.description}</Text> : null}
+          <ProgramHeader
+            eyebrow={
+              volet.title
+                ? `${silentMindProgram.eyebrow} · ${volet.title}`
+                : silentMindProgram.eyebrow
+            }
+            title={volet.subtitle}
+            description={volet.description}
+            accent={colors.accent}
+          />
 
           <View style={styles.listPad}>
           {(() => {
             const playable = volet.tracks.filter(t => !t.comingSoon);
-            const showDividerAfter = volet.id === 'intro' ? 'intro-3' : null;
+            // Previously inserted "Our sections" divider after intro-3
+            // ("Prepare the space"). That track is now pulled, and the
+            // remaining 3 intros all live in the same flat list — no
+            // mid-list divider needed anymore.
+            const showDividerAfter: string | null = null;
             const cards: React.ReactNode[] = [];
             volet.tracks.forEach((t) => {
               cards.push(
@@ -73,7 +99,10 @@ export default function VoletScreen() {
                     title={t.title}
                     duration={trackDuration(t)}
                     kind="audio"
-                    onPress={() => openPlayer(t, playable)}
+                    description={t.description}
+                    expanded={expandedId === t.id}
+                    onToggle={() => setExpandedId(prev => prev === t.id ? null : t.id)}
+                    onPlay={() => openPlayer(t, playable, { autoStart: true })}
                   />
                 ),
               );
@@ -100,14 +129,15 @@ export default function VoletScreen() {
             >
               <View style={{ flex: 1 }}>
                 <Text style={styles.siblingEyebrow}>Quantified meditation</Text>
-                <Text style={styles.siblingText}>Go to QM Format · {volet.title}</Text>
-                <Text style={styles.siblingHint}>Short, timed rounds with pauses, for the same practices.</Text>
+                <Text style={styles.siblingText}>{noOrphan(`Go to QM Training · ${volet.title}`)}</Text>
+                <Text style={styles.siblingHint}>{noOrphan('Short, timed rounds with pauses, for the same practices.')}</Text>
               </View>
               <Text style={[styles.siblingArrow, { color: colors.accentAlt }]}>→</Text>
             </Pressable>
           ) : null}
         </View>
       </ScrollView>
+      </Animated.View>
     </Background>
   );
 }
@@ -115,23 +145,9 @@ export default function VoletScreen() {
 const styles = StyleSheet.create({
   content: { paddingBottom: spacing.xxl },
   column: { width: '100%', alignSelf: 'center' },
-  // Hero mirrors app/(tabs)/silent-mind.tsx — same 130 px band, same
-  // overlay tint, same eyebrow/title stack.
-  hero: { height: 130, justifyContent: 'flex-end', overflow: 'hidden' },
-  banner: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.35)' },
-  heroText: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, alignItems: 'center' },
-  eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.xs, textAlign: 'center', fontSize: 10 },
-  title: { ...type.display, color: colors.text, fontSize: 24, textAlign: 'center', lineHeight: 30 },
-  intro: {
-    ...type.body,
-    color: colors.textMuted,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    textAlign: 'center',
-    fontSize: 13,
-    lineHeight: 19,
-  },
+  // Header rendered by <ProgramHeader> — no inline header styles.
+  // We still keep `title` for the rare error case ("Not found").
+  title: { ...type.display, color: colors.text, fontSize: 22, textAlign: 'center', lineHeight: 28 },
   listPad: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   // Kept the "Our sections" divider (intro volet only) in the same
   // visual language as the Start 'or' divider.

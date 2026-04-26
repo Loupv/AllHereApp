@@ -41,7 +41,6 @@ export function VoletCard({
   const nextTrackId = useProgress(s => s.nextTrackId());
   const locked = volet.locked;
   const tracks = volet.tracks;
-  const playable = tracks.filter(t => !t.comingSoon);
   const containsNext = !!nextTrackId && tracks.some(t => t.id === nextTrackId);
 
   // Slow breathing outline when this volet owns the next unlistened track
@@ -81,8 +80,11 @@ export function VoletCard({
     router.push(`${basePath}/${volet.id}` as any);
   };
 
-  const countLabel = playable.length > 0
-    ? `${playable.length} audio${playable.length > 1 ? 's' : ''}`
+  // Always reflect the section's total audio count, including tracks
+  // that aren't released yet — so a "3 audios" promise stays stable as
+  // coming-soon items get unlocked over time.
+  const countLabel = tracks.length > 0
+    ? `${tracks.length} audio${tracks.length > 1 ? 's' : ''}`
     : 'Coming soon';
 
   return (
@@ -105,7 +107,9 @@ export function VoletCard({
           <View style={[styles.thumb, { backgroundColor: colors.bgSoft }]} />
         )}
         <View style={styles.body}>
-          <Text style={[styles.eyebrow, { color: accent }]}>{volet.title}</Text>
+          {volet.title ? (
+            <Text style={[styles.eyebrow, { color: accent }]}>{volet.title}</Text>
+          ) : null}
           {volet.subtitle ? (
             <Text style={styles.title} numberOfLines={1}>{volet.subtitle}</Text>
           ) : null}

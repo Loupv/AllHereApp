@@ -36,7 +36,7 @@ app/                          expo-router tree
   (tabs)/_layout.tsx          bottom tab bar
   (tabs)/index.tsx            Start (phase-based: A / B / C)
   (tabs)/silent-mind.tsx      SM program — list of Part 1/2/3
-  (tabs)/qm.tsx               QM Format program — list of Part 1/2/3
+  (tabs)/qm.tsx               QM Training program — list of Part 1/2/3
   (tabs)/video.tsx            Media tab
   (tabs)/about.tsx            About
   silent-mind/[id].tsx        SM Part detail (pushes from /silent-mind)
@@ -79,11 +79,11 @@ hides its header and owns the bottom bar.
   - `button` — primary CTA
 - **Accent discipline**: reserve `colors.accent` for active state
   (primary CTA, current cue, played waveform) and program identity
-  (`QM FORMAT ·` eyebrow on teal, `SILENT MIND ·` on magenta). Decorative
+  (`QM TRAINING ·` eyebrow on teal, `SILENT MIND ·` on magenta). Decorative
   icons / chevrons / meta text → `colors.textDim`.
 - **Program accents**:
   - Silent Mind → `colors.accent` (magenta `#9E3694`)
-  - QM Format → `colors.accentAlt` (teal `#36A09E`)
+  - QM Training → `colors.accentAlt` (teal `#36A09E`)
   - QM tab uses a distinct background `colors.bgTabAlt` (`#001A26`) so
     it's recognisable even without the tab bar visible.
 - **Hero banners** on SM / QM / Media / Part pages: 130 px band +

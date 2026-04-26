@@ -5,6 +5,7 @@ import { Background } from '../../src/components/Background';
 import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
 import { useLayout } from '../../src/hooks/useLayout';
 import { colors, spacing, type } from '../../src/theme';
+import { noOrphan } from '../../src/utils/noOrphan';
 
 const openExternal = (url: string) => {
   if (Platform.OS === 'web') window.open(url, '_blank', 'noopener,noreferrer');
@@ -48,25 +49,30 @@ export default function AboutTabScreen() {
           </View>
           <View style={styles.body}>
             <Text style={styles.eyebrow}>About All Here</Text>
-            <Text style={styles.title}>Where meditation meets{'\n'}science & technology</Text>
+            <Text style={styles.title}>{noOrphan('Where meditation meets\nscience & technology')}</Text>
             <Text style={styles.lead}>
-              Founded in Geneva, All Here is inspiring the world to meditate through immersive,
-              quantifiable services.
+              {noOrphan('Founded in Geneva, All Here is inspiring the world to meditate through immersive, quantifiable services.')}
             </Text>
 
             {/* Inline stats: no cards / borders — three quiet columns
                 of value + label, aligned to the text above. */}
             <View style={styles.stats}>
+              {/* `noOrphan` ties the last two words with a non-breaking
+                  space — fine on wide labels, but in these narrow stat
+                  columns the joined pair ('neuroscience research',
+                  'meditators analyzed') overflows and the text engine
+                  breaks mid-word. Plain strings let the labels wrap on
+                  ordinary spaces instead. */}
               <View style={styles.stat}>
                 <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>Decades</Text>
                 <Text style={styles.statLabel}>of advanced meditation practice</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>3 years</Text>
+                <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>4 years</Text>
                 <Text style={styles.statLabel}>of neuroscience research</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>+300</Text>
+                <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>+400</Text>
                 <Text style={styles.statLabel}>expert meditators analyzed</Text>
               </View>
             </View>
@@ -75,8 +81,8 @@ export default function AboutTabScreen() {
               <View key={p.title} style={styles.pillar}>
                 <Image source={p.icon} style={styles.pillarIcon} resizeMode="contain" />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.pillarTitle}>{p.title}</Text>
-                  <Text style={styles.pillarBody}>{p.body}</Text>
+                  <Text style={styles.pillarTitle}>{noOrphan(p.title)}</Text>
+                  <Text style={styles.pillarBody}>{noOrphan(p.body)}</Text>
                 </View>
               </View>
             ))}

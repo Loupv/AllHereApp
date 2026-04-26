@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, Pressable, TextInput, StyleSheet, Image } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useAuth, AuthProvider } from '../auth/authStore';
 import { AppleIcon, GoogleIcon, MailIcon } from './ProviderIcons';
 import { colors, radius, spacing, type } from '../theme';
@@ -19,7 +19,13 @@ export function LoginScreen() {
   };
 
   return (
-    <View style={styles.root}>
+    // Fade-out the whole login surface when the user signs in (or
+    // hits "Skip for now"), so the transition into the app reads as a
+    // gentle dissolve rather than a hard cut. Reanimated owns the
+    // exit animation — the surrounding `{!user ? <LoginScreen /> :
+    // null}` in `app/_layout.tsx` triggers unmount, which fires
+    // `exiting`.
+    <Animated.View exiting={FadeOut.duration(550)} style={styles.root}>
       {/* Brand block — mirrors IntroSplash so the logo/tagline don't jump */}
       <View style={styles.brand}>
         <Image source={LOGO} style={styles.logo} resizeMode="contain" />
@@ -74,7 +80,7 @@ export function LoginScreen() {
         {' '}and{' '}
         <Text style={styles.legalLink}>Privacy Policy</Text>.
       </Animated.Text>
-    </View>
+    </Animated.View>
   );
 }
 

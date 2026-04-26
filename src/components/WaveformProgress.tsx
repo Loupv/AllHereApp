@@ -3,7 +3,12 @@ import { View, StyleSheet } from 'react-native';
 import { colors } from '../theme';
 
 type Props = {
-  /** Normalized peaks 0..1. Length defines the bar count — typically 160. */
+  /**
+   * Normalized peaks 0..1. May be **dense** (e.g. 20 peaks / s of audio,
+   * thousands of values for a long track) — we downsample to BAR_COUNT
+   * for rendering. The dense source is what powers the play button's
+   * voice-reactive animation; here we just need a stable visual.
+   */
   peaks: number[];
   /** Playback progress 0..1. Bars to the left are tinted accent, right are dim. */
   progress: number;
@@ -14,6 +19,30 @@ type Props = {
   /** Minimum bar height so quiet passages still show a visible stub. */
   minBarHeight?: number;
 };
+
+// Visual bar count — pinned regardless of source density so the bar
+// keeps its familiar rhythm and we never try to render thousands of
+// `<View>` nodes.
+const BAR_COUNT = 160;
+
+/**
+ * Downsample (or pad) an arbitrary-length peaks array to exactly
+ * `BAR_COUNT` values by averaging the source peaks falling inside each
+ * output bucket. Cheap (single linear pass), branch-free.
+ */
+function resampleToBars(src: number[]): number[] {
+  if (src.length === 0) return new Array(BAR_COUNT).fill(0);
+  if (src.length === BAR_COUNT) return src;
+  const out = new Array(BAR_COUNT).fill(0);
+  for (let i = 0; i < BAR_COUNT; i++) {
+    const a = Math.floor((i * src.length) / BAR_COUNT);
+    const b = Math.max(a + 1, Math.floor(((i + 1) * src.length) / BAR_COUNT));
+    let sum = 0, n = 0;
+    for (let k = a; k < b && k < src.length; k++) { sum += src[k]; n++; }
+    out[i] = n > 0 ? sum / n : 0;
+  }
+  return out;
+}
 
 /**
  * Horizontal waveform bar — a precomputed peaks array rendered as vertical
@@ -32,17 +61,20 @@ export function WaveformProgress({
   minBarHeight = 2,
 }: Props) {
   const clamped = Math.max(0, Math.min(1, progress));
+  // Resample once when the source peaks change — render-time dependencies
+  // below operate on the fixed-length bar array.
+  const display = useMemo(() => resampleToBars(peaks), [peaks]);
   // Index of the first bar that sits in the "upcoming" zone. Bars with index
   // strictly below this are fully accent; the one exactly at the boundary
   // gets a partial accent treatment (rendered as a split bar below).
-  const boundary = clamped * peaks.length;
+  const boundary = clamped * display.length;
   const boundaryIdx = Math.floor(boundary);
   const partial = boundary - boundaryIdx;
 
-  const bars = useMemo(() => peaks.map((p, i) => {
+  const bars = useMemo(() => display.map((p, i) => {
     const h = Math.max(minBarHeight, Math.round(p * (height - 2)));
     return { h, played: i < boundaryIdx, boundary: i === boundaryIdx };
-  }), [peaks, height, boundaryIdx, minBarHeight]);
+  }), [display, height, boundaryIdx, minBarHeight]);
 
   return (
     <View style={[styles.row, { height }]} pointerEvents="none">

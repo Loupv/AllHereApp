@@ -15,6 +15,7 @@ import { KindIcon } from '../../src/components/KindIcon';
 import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
 import { useLayout, CONTENT_MAX_WIDTH as CONTENT_MAX_WIDTH_CONST } from '../../src/hooks/useLayout';
 import { colors, radius, spacing, type } from '../../src/theme';
+import { noOrphan } from '../../src/utils/noOrphan';
 
 const KIND_ICON: Record<MediaKind, string> = {
   video: '▶',
@@ -131,7 +132,7 @@ export default function VideoScreen() {
           <View style={styles.heroOverlay} />
           <View style={styles.heroText}>
             <Text style={styles.eyebrow}>MEDIA HUB</Text>
-            <Text style={styles.title}>Watch, listen & read</Text>
+            <Text style={styles.title}>{noOrphan('Watch, listen & read')}</Text>
           </View>
         </View>
         <View style={styles.columnWrap}>
@@ -211,8 +212,8 @@ export default function VideoScreen() {
                 ) : null}
               </View>
               <View style={styles.cardBody}>
-                <Text style={styles.cardTitle} numberOfLines={2}>{r.title}</Text>
-                {r.subtitle ? <Text style={styles.cardSubtitle} numberOfLines={2}>{r.subtitle}</Text> : null}
+                <Text style={styles.cardTitle} numberOfLines={2}>{noOrphan(r.title)}</Text>
+                {r.subtitle ? <Text style={styles.cardSubtitle} numberOfLines={2}>{noOrphan(r.subtitle)}</Text> : null}
               </View>
             </Pressable>
           );

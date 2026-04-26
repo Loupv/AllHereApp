@@ -1,1 +1,135 @@
-{"text": " DING DING DING DING DING DING Prepare for the next round. And we shall begin in 3, 2, 1.", "segments": [{"id": 0, "seek": 0, "start": 0.0, "end": 26.36, "text": " DING DING DING DING DING DING", "tokens": [50364, 413, 3017, 413, 3017, 413, 3017, 413, 3017, 413, 3017, 413, 3017, 50714], "temperature": 0.0, "avg_logprob": -0.9405541737874349, "compression_ratio": 1.8125, "no_speech_prob": 0.1935674101114273, "words": [{"word": " DING", "start": 0.0, "end": 1.08, "probability": 0.28835757076740265}, {"word": " DING", "start": 1.08, "end": 2.34, "probability": 0.4659435749053955}, {"word": " DING", "start": 2.34, "end": 5.1, "probability": 0.8674264252185822}, {"word": " DING", "start": 5.1, "end": 6.14, "probability": 0.8932438492774963}, {"word": " DING", "start": 6.14, "end": 7.0, "probability": 0.9268015921115875}, {"word": " DING", "start": 7.0, "end": 26.36, "probability": 0.9471461772918701}]}, {"id": 1, "seek": 3000, "start": 46.28, "end": 48.34, "text": " Prepare for the next round.", "tokens": [50364, 29689, 337, 264, 958, 3098, 13, 51576], "temperature": 0.2, "avg_logprob": -0.3751763582229614, "compression_ratio": 0.7714285714285715, "no_speech_prob": 0.22786584496498108, "words": [{"word": " Prepare", "start": 46.28, "end": 47.1, "probability": 0.7606014013290405}, {"word": " for", "start": 47.1, "end": 47.48, "probability": 0.9955480098724365}, {"word": " the", "start": 47.48, "end": 47.62, "probability": 0.995649516582489}, {"word": " next", "start": 47.62, "end": 47.9, "probability": 0.9992044568061829}, {"word": " round.", "start": 47.9, "end": 48.34, "probability": 0.9970448613166809}]}, {"id": 2, "seek": 4834, "start": 48.34, "end": 58.36, "text": " And we shall begin in 3, 2, 1.", "tokens": [50364, 400, 321, 4393, 1841, 294, 805, 11, 568, 11, 502, 13, 50872], "temperature": 0.0, "avg_logprob": -0.44895706857953754, "compression_ratio": 0.8333333333333334, "no_speech_prob": 0.06956765055656433, "words": [{"word": " And", "start": 48.34, "end": 48.5, "probability": 0.16056254506111145}, {"word": " we", "start": 48.5, "end": 54.26, "probability": 0.7533805966377258}, {"word": " shall", "start": 54.26, "end": 54.48, "probability": 0.966067910194397}, {"word": " begin", "start": 54.48, "end": 54.9, "probability": 0.9852058291435242}, {"word": " in", "start": 54.9, "end": 55.4, "probability": 0.980554461479187}, {"word": " 3,", "start": 55.4, "end": 55.86, "probability": 0.5847262740135193}, {"word": " 2,", "start": 56.02, "end": 57.06, "probability": 0.8997678756713867}, {"word": " 1.", "start": 57.6, "end": 58.36, "probability": 0.9845431447029114}]}], "language": "en"}
+{
+  "text": " Prepare for the next round. And we shall begin in 3, 2, 1.",
+  "segments": [
+    {
+      "id": 0,
+      "seek": 3000,
+      "start": 46.28,
+      "end": 48.34,
+      "text": " Prepare for the next round.",
+      "tokens": [
+        50364,
+        29689,
+        337,
+        264,
+        958,
+        3098,
+        13,
+        51576
+      ],
+      "temperature": 0.2,
+      "avg_logprob": -0.3751763582229614,
+      "compression_ratio": 0.7714285714285715,
+      "no_speech_prob": 0.22786584496498108,
+      "words": [
+        {
+          "word": " Prepare",
+          "start": 46.28,
+          "end": 47.1,
+          "probability": 0.7606014013290405
+        },
+        {
+          "word": " for",
+          "start": 47.1,
+          "end": 47.48,
+          "probability": 0.9955480098724365
+        },
+        {
+          "word": " the",
+          "start": 47.48,
+          "end": 47.62,
+          "probability": 0.995649516582489
+        },
+        {
+          "word": " next",
+          "start": 47.62,
+          "end": 47.9,
+          "probability": 0.9992044568061829
+        },
+        {
+          "word": " round.",
+          "start": 47.9,
+          "end": 48.34,
+          "probability": 0.9970448613166809
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "seek": 4834,
+      "start": 48.34,
+      "end": 58.36,
+      "text": " And we shall begin in 3, 2, 1.",
+      "tokens": [
+        50364,
+        400,
+        321,
+        4393,
+        1841,
+        294,
+        805,
+        11,
+        568,
+        11,
+        502,
+        13,
+        50872
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.44895706857953754,
+      "compression_ratio": 0.8333333333333334,
+      "no_speech_prob": 0.06956765055656433,
+      "words": [
+        {
+          "word": " And",
+          "start": 48.34,
+          "end": 48.5,
+          "probability": 0.16056254506111145
+        },
+        {
+          "word": " we",
+          "start": 48.5,
+          "end": 54.26,
+          "probability": 0.7533805966377258
+        },
+        {
+          "word": " shall",
+          "start": 54.26,
+          "end": 54.48,
+          "probability": 0.966067910194397
+        },
+        {
+          "word": " begin",
+          "start": 54.48,
+          "end": 54.9,
+          "probability": 0.9852058291435242
+        },
+        {
+          "word": " in",
+          "start": 54.9,
+          "end": 55.4,
+          "probability": 0.980554461479187
+        },
+        {
+          "word": " 3,",
+          "start": 55.4,
+          "end": 55.86,
+          "probability": 0.5847262740135193
+        },
+        {
+          "word": " 2,",
+          "start": 56.02,
+          "end": 57.06,
+          "probability": 0.8997678756713867
+        },
+        {
+          "word": " 1.",
+          "start": 57.6,
+          "end": 58.36,
+          "probability": 0.9845431447029114
+        }
+      ]
+    }
+  ],
+  "language": "en"
+}

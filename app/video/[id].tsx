@@ -10,6 +10,7 @@ import { useRemoteStore } from '../../src/content/remoteStore';
 import { useNotifications } from '../../src/player/notificationStore';
 import { useLayout } from '../../src/hooks/useLayout';
 import { colors, radius, spacing, type } from '../../src/theme';
+import { noOrphan } from '../../src/utils/noOrphan';
 
 const openExternal = (url: string) => {
   if (Platform.OS === 'web') window.open(url, '_blank', 'noopener,noreferrer');
@@ -51,8 +52,8 @@ export default function VideoArticleScreen() {
             : <Image source={video.poster} style={styles.hero} resizeMode="cover" />}
           <View style={styles.body}>
             {video.duration ? <Text style={styles.date}>{video.duration}</Text> : null}
-            <Text style={styles.title}>{video.title}</Text>
-            {video.subtitle ? <Text style={styles.subtitle}>{video.subtitle}</Text> : null}
+            <Text style={styles.title}>{noOrphan(video.title)}</Text>
+            {video.subtitle ? <Text style={styles.subtitle}>{noOrphan(video.subtitle)}</Text> : null}
             {video.contentHtml ? (
               <View style={styles.html}>
                 <HtmlViewer html={video.contentHtml} link={video.link} />

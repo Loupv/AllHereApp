@@ -10,6 +10,7 @@ import { useRemoteStore } from '../../src/content/remoteStore';
 import { useNotifications } from '../../src/player/notificationStore';
 import { useLayout } from '../../src/hooks/useLayout';
 import { colors, radius, spacing, type } from '../../src/theme';
+import { noOrphan } from '../../src/utils/noOrphan';
 
 const openExternal = (url: string) => {
   if (Platform.OS === 'web') window.open(url, '_blank', 'noopener,noreferrer');
@@ -54,19 +55,19 @@ export default function NewsArticleScreen() {
               <Text style={styles.eyebrow}>{article.eyebrow}</Text>
               <Text style={styles.date}>{article.date}</Text>
             </View>
-            <Text style={styles.title}>{article.title}</Text>
+            <Text style={styles.title}>{noOrphan(article.title)}</Text>
             {article.contentHtml ? (
               <View style={styles.html}>
                 <HtmlViewer html={article.contentHtml} link={article.link} />
               </View>
             ) : (
               article.body.map((p, i) => (
-                <Text key={i} style={styles.paragraph}>{p}</Text>
+                <Text key={i} style={styles.paragraph}>{noOrphan(p)}</Text>
               ))
             )}
             {article.link ? (
               <Pressable onPress={() => openExternal(article.link!)} hitSlop={8} style={styles.readMoreBtn}>
-                <Text style={styles.readMore}>Read the full article on allhere.org →</Text>
+                <Text style={styles.readMore}>{noOrphan('Read the full article on allhere.org →')}</Text>
               </Pressable>
             ) : null}
           </View>

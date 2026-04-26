@@ -1,7 +1,10 @@
 import { useEffect } from 'react';
 import { Pressable, Text, View, StyleSheet } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, Easing } from 'react-native-reanimated';
-import Svg, { Circle } from 'react-native-svg';
+import Animated, {
+  useSharedValue, useAnimatedStyle,
+  withRepeat, withSequence, withTiming, Easing,
+} from 'react-native-reanimated';
+import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { colors, type } from '../theme';
 
 type Mode = 'pre' | 'playing' | 'paused' | 'break';
@@ -14,125 +17,265 @@ type Props = {
   size?: number;
   /** Tint — defaults to the main magenta accent. Pass colors.accentAlt for QM */
   accent?: string;
+  /**
+   * Optional voice level 0..1 — typically the precomputed waveform peak
+   * sampled at the current playback time. Drives a gentle scale + glow
+   * boost on top of the muted breath when `mode === 'playing'`, so the
+   * button visibly responds to the audio. Updates are damped via
+   * `withTiming` so caller-side smoothing is not required.
+   */
+  voice?: number;
+  /**
+   * Optional content rendered inside the ring instead of the
+   * mode-driven glyph (▶ / pause bars / break timer). Used by the
+   * Start screen to fit eyebrow + title + duration text inside the
+   * same ring shell, so the button visually morphs into the Player's
+   * play/pause button at the same screen position.
+   */
+  customContent?: React.ReactNode;
 };
 
-export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, size = 112, accent = colors.accent }: Props) {
-  const scale = useSharedValue(1);
-  const haloScale = useSharedValue(1);
-  const haloOpacity = useSharedValue(0);
+/**
+ * Player play / pause button.
+ *
+ * Visual language mirrors the Start screen's `BigPlayButton`:
+ *   – thin outlined inner ring (no flat-colour disc anymore)
+ *   – soft inward radial-gradient glow tinted with the program accent
+ *     (magenta for SM, teal for QM)
+ *   – breath + glow-pulse + sway animations layered on slightly
+ *     different periods so the button reads as living, not metronomic
+ *
+ * Mode behaviour:
+ *   – `pre`     full breath / glow / sway intensity (waiting for tap)
+ *   – `playing` muted breath, no sway (the audio itself is the motion)
+ *   – `paused`  static, ring at full opacity
+ *   – `break`   dashed progress arc replaces the inner ring, glow off
+ */
+export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, size = 112, accent = colors.accent, voice = 0, customContent }: Props) {
+  // ---- shared animation values ---------------------------------------
+  const breath = useSharedValue(0);
+  const glowPulse = useSharedValue(0);
+  const sway = useSharedValue(0);
+
+  // Mode masks — fade animations in/out smoothly when the mode changes
+  // rather than snapping. `pre` runs full intensity, `playing` runs
+  // muted, anything else stops the motion entirely.
+  const breathActive = useSharedValue(0);
+  const glowActive   = useSharedValue(0);
+  const swayActive   = useSharedValue(0);
+
+  // Voice envelope — caller passes a raw peak (0..1), we damp toward it
+  // here so the button doesn't twitch on every status tick. Only applies
+  // while playing; clamped to 0 in other modes through `voiceActive`.
+  const voiceSV     = useSharedValue(0);
+  const voiceActive = useSharedValue(0);
 
   useEffect(() => {
-    if (mode === 'pre') {
-      scale.value = withRepeat(
-        withSequence(
-          withTiming(1.03, { duration: 2800, easing: Easing.inOut(Easing.sin) }),
-          withTiming(1, { duration: 2800, easing: Easing.inOut(Easing.sin) }),
-        ), -1, false,
-      );
-      haloScale.value = withRepeat(
-        withSequence(
-          withTiming(1.12, { duration: 2800, easing: Easing.inOut(Easing.sin) }),
-          withTiming(1, { duration: 2800, easing: Easing.inOut(Easing.sin) }),
-        ), -1, false,
-      );
-      haloOpacity.value = withRepeat(
-        withSequence(
-          withTiming(0.55, { duration: 2800, easing: Easing.inOut(Easing.sin) }),
-          withTiming(0.2, { duration: 2800, easing: Easing.inOut(Easing.sin) }),
-        ), -1, false,
-      );
-    } else {
-      scale.value = withTiming(1, { duration: 300 });
-      haloScale.value = withTiming(1, { duration: 300 });
-      haloOpacity.value = withTiming(0, { duration: 300 });
-    }
+    breath.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 3600, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 3600, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1, false,
+    );
+    glowPulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 2700, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 2700, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1, false,
+    );
+    sway.value = withRepeat(
+      withSequence(
+        withTiming(1,  { duration: 4500, easing: Easing.inOut(Easing.sin) }),
+        withTiming(-1, { duration: 4500, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1, false,
+    );
+  }, []);
+
+  useEffect(() => {
+    // 'pre' = full life, 'playing' = subtle, others = still.
+    const intensity =
+      mode === 'pre'     ? 1
+      : mode === 'playing' ? 0.45
+      : 0;
+    breathActive.value = withTiming(intensity, { duration: 500 });
+    glowActive.value   = withTiming(mode === 'break' ? 0 : intensity > 0 ? 1 : 0.6, { duration: 500 });
+    swayActive.value   = withTiming(mode === 'pre' ? 1 : 0, { duration: 500 });
+    voiceActive.value  = withTiming(mode === 'playing' ? 1 : 0, { duration: 500 });
   }, [mode]);
 
-  const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  const haloStyle = useAnimatedStyle(() => ({
-    opacity: haloOpacity.value,
-    transform: [{ scale: haloScale.value }],
-  }));
+  // Damp incoming voice samples lightly — peaks are now ~50 ms-resolved
+  // (see scripts/gen-waveforms.mjs at PEAKS_PER_SECOND = 20), so we only
+  // need a short blend window to keep transitions smooth without
+  // muddying the response. 90 ms feels alive without strobing.
+  useEffect(() => {
+    voiceSV.value = withTiming(Math.max(0, Math.min(1, voice)), { duration: 90 });
+  }, [voice]);
 
-  const stroke = 3;
-  const r = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * r;
+  // ---- geometry ------------------------------------------------------
+  const innerR = size * 0.46;
+  const stroke = Math.max(1.5, size * 0.018);
+  // Break-mode progress arc geometry — matches the inner ring's radius
+  // so the dashed arc draws on top of it.
+  const arcR = innerR;
+  const circumference = 2 * Math.PI * arcR;
   const dashOffset = circumference * (1 - Math.max(0, Math.min(1, breakProgress)));
 
+  // ---- animated styles ----------------------------------------------
+  const ringStyle = useAnimatedStyle(() => {
+    // Ring scales (±5%) and fades (1 → 0.55) with the breath, gated by
+    // the active mask so playback / pause states sit nearly still. While
+    // playing, the voice envelope adds up to +6% scale on top so the
+    // ring visibly swells with louder passages.
+    const breathOpacity = 0.55 + breath.value * 0.45;
+    const opacity = 1 - (1 - breathOpacity) * breathActive.value;
+    const voiceBoost = voiceSV.value * voiceActive.value;
+    return {
+      opacity,
+      transform: [{
+        scale: 1
+          + breath.value * 0.05 * breathActive.value
+          + voiceBoost * 0.06,
+      }],
+    };
+  });
+  const glowStyle = useAnimatedStyle(() => {
+    const pulse = 0.55 + glowPulse.value * 0.45;
+    const voiceBoost = voiceSV.value * voiceActive.value;
+    return {
+      // Voice lifts the glow opacity and widens the halo, so loud
+      // moments noticeably brighten the button.
+      opacity: (1 - (1 - pulse) * breathActive.value) * glowActive.value
+        + voiceBoost * 0.35 * voiceActive.value,
+      transform: [{
+        scale: 1
+          + glowPulse.value * 0.02 * breathActive.value
+          + voiceBoost * 0.10,
+      }],
+    };
+  });
+  const glyphStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        scale: 1
+          + breath.value * 0.03 * breathActive.value
+          + voiceSV.value * voiceActive.value * 0.04,
+      },
+      { rotate: `${sway.value * 1.4 * swayActive.value}deg` },
+    ],
+  }));
   const iconForMode = () => {
-    if (mode === 'break') return <Text style={styles.timer}>{breakLabel ?? ''}</Text>;
+    if (customContent) return customContent;
+    if (mode === 'break') return <Text style={[styles.timer, { color: colors.text }]}>{breakLabel ?? ''}</Text>;
     if (mode === 'playing') return <View style={styles.pauseBars}><View style={styles.pauseBar} /><View style={styles.pauseBar} /></View>;
     return <Text style={styles.play}>▶</Text>;
   };
 
+  // Unique gradient id per render scope so multiple instances on screen
+  // don't share defs (the Svg `<Defs>` ids must be unique within an
+  // SVG document; React Native renders each Svg as its own document so
+  // a stable id is fine).
+  const gradId = `cb-glow-${accent.replace('#', '')}`;
+
   const content = (
-    <Animated.View style={[{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }, pulseStyle]}>
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          {
-            position: 'absolute',
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            backgroundColor: accent,
-            // soft blur-like glow via shadow (RN-web translates this to box-shadow)
-            shadowColor: accent,
-            shadowOpacity: 1,
-            shadowRadius: size * 0.35,
-            shadowOffset: { width: 0, height: 0 },
-            // web-only: explicit filter for a softer falloff
-            ...(typeof document !== 'undefined' ? { filter: `blur(${Math.round(size * 0.12)}px)` as any } : null),
-          },
-          haloStyle,
-        ]}
-      />
-      <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke={mode === 'break' ? 'rgba(255,255,255,0.12)' : 'transparent'}
-          strokeWidth={stroke}
-          fill="transparent"
-        />
-        {mode === 'break' ? (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      {/* Inward radial-gradient glow — accent-tinted, fades to fully
+          transparent at centre. Sits underneath the ring so the ring
+          outlines the halo crisply. */}
+      <Animated.View style={[StyleSheet.absoluteFill, styles.center, glowStyle]} pointerEvents="none">
+        <Svg width={size} height={size}>
+          <Defs>
+            <RadialGradient id={gradId} cx="50%" cy="50%" rx="50%" ry="50%" fx="50%" fy="50%">
+              <Stop offset="0%"   stopColor={accent} stopOpacity={0} />
+              <Stop offset="55%"  stopColor={accent} stopOpacity={0.06} />
+              <Stop offset="92%"  stopColor={accent} stopOpacity={0.30} />
+              <Stop offset="100%" stopColor={accent} stopOpacity={0.45} />
+            </RadialGradient>
+          </Defs>
           <Circle
             cx={size / 2}
             cy={size / 2}
-            r={r}
-            stroke={accent}
-            strokeWidth={stroke}
-            strokeLinecap="round"
-            fill="transparent"
-            strokeDasharray={`${circumference},${circumference}`}
-            strokeDashoffset={dashOffset}
-            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            r={innerR - stroke * 0.75}
+            fill={`url(#${gradId})`}
           />
-        ) : null}
-      </Svg>
-      <View style={[styles.inner, { width: size - 18, height: size - 18, borderRadius: (size - 18) / 2, top: 9, left: 9, backgroundColor: mode === 'break' ? 'transparent' : colors.accent }]}>
+        </Svg>
+      </Animated.View>
+
+      {/* Inner ring — accent-tinted stroke. Hidden in break mode, where
+          it's replaced by the progress arc layer below. */}
+      {mode !== 'break' ? (
+        <Animated.View style={[StyleSheet.absoluteFill, styles.center, ringStyle]} pointerEvents="none">
+          <Svg width={size} height={size}>
+            <Circle
+              cx={size / 2}
+              cy={size / 2}
+              r={innerR}
+              stroke={accent}
+              strokeWidth={stroke * 1.4}
+              fill="transparent"
+              opacity={0.85}
+            />
+          </Svg>
+        </Animated.View>
+      ) : null}
+
+      {/* Break-mode progress arc — neutral track + accent fill that
+          sweeps clockwise from the top as `breakProgress` climbs to 1. */}
+      {mode === 'break' ? (
+        <View style={[StyleSheet.absoluteFill, styles.center]} pointerEvents="none">
+          <Svg width={size} height={size}>
+            <Circle
+              cx={size / 2}
+              cy={size / 2}
+              r={arcR}
+              stroke="rgba(255,255,255,0.12)"
+              strokeWidth={stroke * 1.4}
+              fill="transparent"
+            />
+            <Circle
+              cx={size / 2}
+              cy={size / 2}
+              r={arcR}
+              stroke={accent}
+              strokeWidth={stroke * 1.4}
+              strokeLinecap="round"
+              fill="transparent"
+              strokeDasharray={`${circumference},${circumference}`}
+              strokeDashoffset={dashOffset}
+              transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            />
+          </Svg>
+        </View>
+      ) : null}
+
+      {/* Play / pause / timer glyph — rides the breath + sway like the
+          Start button's inner glyph. */}
+      <Animated.View style={[styles.glyphWrap, glyphStyle]}>
         {iconForMode()}
-      </View>
-    </Animated.View>
+      </Animated.View>
+    </View>
   );
 
   if (!onPress) return content;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [pressed && { opacity: 0.85 }]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [pressed && { opacity: 0.8 }]}>
       {content}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  inner: {
-    position: 'absolute',
+  center: { alignItems: 'center', justifyContent: 'center' },
+  glyphWrap: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  play: { color: colors.text, fontSize: 34, marginLeft: 6 },
+  // Slight left-margin compensates the optical asymmetry of the play
+  // triangle so it reads as centred inside the ring.
+  play: { color: colors.text, fontSize: 32, marginLeft: 5, marginBottom: 1, opacity: 0.95 },
   pauseBars: { flexDirection: 'row', gap: 8 },
-  pauseBar: { width: 7, height: 32, backgroundColor: colors.text, borderRadius: 2 },
-  timer: { ...type.display, color: colors.text, fontSize: 28 },
+  pauseBar: { width: 6, height: 28, backgroundColor: colors.text, borderRadius: 2, opacity: 0.9 },
+  timer: { ...type.display, color: colors.text, fontSize: 26, letterSpacing: 1 },
 });

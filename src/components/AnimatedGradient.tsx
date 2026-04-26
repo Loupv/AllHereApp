@@ -46,7 +46,7 @@ export const GRADIENT_SM: GradientPalette = {
   ],
 };
 
-/** Teal halo for the QM Format player. */
+/** Teal halo for the QM Training player. */
 export const GRADIENT_QM: GradientPalette = {
   stops: [
     { offset: 0,   color: '#3EC0BE', opacity: 0.28 },

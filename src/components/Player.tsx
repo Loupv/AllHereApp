@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, Image, PanResponder, Platform } from 'react-native';
-import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import { View, Text, Pressable, StyleSheet, ScrollView, PanResponder, Platform, useWindowDimensions } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Asset } from 'expo-asset';
 import { useRouter } from 'expo-router';
@@ -12,8 +13,8 @@ import { findCueIndex, TranscriptCue } from '../content/transcript';
 import { trackProgram } from '../content/catalog';
 import { WAVEFORMS } from '../content/waveforms.generated';
 import { colors, radius, spacing, type } from '../theme';
+import { noOrphan } from '../utils/noOrphan';
 import { CircleButton } from './CircleButton';
-import { AnimatedGradient, GRADIENT_SM, GRADIENT_QM } from './AnimatedGradient';
 import { WaveformProgress } from './WaveformProgress';
 
 /**
@@ -69,7 +70,6 @@ function peaksForSource(source: any): number[] | undefined {
   }
 }
 
-const DEFAULT_ARTWORK = require('../../assets/images/lounge-2.jpg');
 const DEFAULT_DESCRIPTION = 'Take a moment to arrive. When you are ready, begin.';
 const QM_DESCRIPTION = 'A Quantified Meditation session: short rounds with brief breaks in between.';
 
@@ -88,8 +88,8 @@ export function Player() {
   if (!track || !isOpen) return null;
   return (
     <Animated.View
-      entering={SlideInDown.duration(280)}
-      exiting={SlideOutDown.duration(220)}
+      entering={FadeIn.duration(320)}
+      exiting={FadeOut.duration(260)}
       style={styles.overlay}
     >
       <PlayerInner />
@@ -97,9 +97,24 @@ export function Player() {
   );
 }
 
+// Transcript now reveals progressively: future words stay invisible
+// until shortly before they're spoken, then fade in. Already-spoken
+// words remain on screen at a muted opacity so the reader keeps
+// context, while the word being spoken briefly brightens to peak via
+// the existing sweep. The page therefore fills word-by-word as the
+// audio plays rather than pre-rendering the whole transcript dim.
+//
+//   SWEEP_WINDOW    — seconds around the word centre where the
+//                     "current" highlight peaks
+//   PAST_OPACITY    — resting opacity for words already said (context)
+//   PEAK_OPACITY    — opacity at the centre of the current word
+//   FADE_IN_LEAD    — seconds before a word's start when it begins to
+//                     appear (small, so the word feels like it shows up
+//                     just in time, not pre-lit)
 const SWEEP_WINDOW = 3;
-const GLOBAL_BASE_OPACITY = 0.15;
-const GLOBAL_PEAK_OPACITY = 1;
+const PAST_OPACITY = 0.55;
+const PEAK_OPACITY = 1;
+const FADE_IN_LEAD = 0.4;
 const easeCos = (x: number) => 0.5 * (1 + Math.cos(Math.PI * Math.min(1, Math.max(0, x))));
 
 function seekFromX(
@@ -171,8 +186,15 @@ function useSmoothTime(
 function PlayerInner() {
   const router = useRouter();
   const { isTablet } = useLayout();
-  // Bigger central play button on tablet — 160 instead of 108.
-  const circleSize = isTablet ? 160 : 108;
+  const { height: winH } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  // Match the Start screen's `playSize` formula exactly so the round
+  // CircleButton lands at the same pixel size when the user taps
+  // through. Any divergence here breaks the morph illusion.
+  const usableH = Math.max(360, winH - insets.top - insets.bottom);
+  const circleSize = isTablet
+    ? Math.max(180, Math.min(240, Math.round(usableH / 5.0)))
+    : Math.max(120, Math.min(160, Math.round(usableH / 5.5)));
   const { track, close, playlist, index, playNext, playPrev } = usePlayerStore();
   const hasNext = index >= 0 && index < playlist.length - 1;
   const hasPrev = index > 0;
@@ -180,8 +202,25 @@ function PlayerInner() {
 
   const [selectedRounds, setSelectedRounds] = useState(track?.rounds?.max ?? 1);
   const [includeIntro, setIncludeIntro] = useState(!!track?.rounds?.introSource);
-  const [currentRound, setCurrentRound] = useState(1);
-  const [hasStarted, setHasStarted] = useState(false);
+  // Lazy init mirrors the [track?.id] effect's branching so the very
+  // first render already lands on the right round source + transcript
+  // when the Player is opened with autoStart=true. Without this, the
+  // initial render briefly used currentRound=1 (or in earlier code,
+  // `rounds.max`) which fired off a stale transcript load that could
+  // win the race against the intro transcript — the user heard the
+  // intro voice but saw a round-1 / round-N transcript on screen.
+  const [currentRound, setCurrentRound] = useState<number>(() => {
+    if (!track) return 1;
+    const auto = usePlayerStore.getState().autoStart;
+    if (auto && track.rounds?.introSource) return 0;
+    return 1;
+  });
+  // Same idea for hasStarted: when autoStart is true at mount we want
+  // the playback chain to engage immediately, not flash the pre-play
+  // screen before flipping to true on next render.
+  const [hasStarted, setHasStarted] = useState<boolean>(() =>
+    usePlayerStore.getState().autoStart,
+  );
   const [inBreak, setInBreak] = useState(false);
   const [finished, setFinished] = useState(false);
   const endedHandled = useRef(false);
@@ -352,7 +391,14 @@ function PlayerInner() {
     const span = Math.max(0.01, (nextCue ? nextCue.start : cue.end) - cue.start);
     const frac = Math.max(0, Math.min(1, (t - cue.start) / span));
     const y = cur + (nextY - cur) * frac;
-    const targetY = Math.max(0, y - 140);
+    // Offset chosen to land the current line near the top third of the
+    // 130 px transcript window (≈ 50 px below the top of the visible
+    // band, just past the CSS mask fade). The previous 140 px offset
+    // was tuned for the old 180 px frame and pushed the current line
+    // off the bottom of the now-shorter window — the karaoke felt
+    // late vs the voice. Smaller offset = scroll triggers earlier =
+    // current word stays visible.
+    const targetY = Math.max(0, y - 50);
     expectedScrollY.current = targetY;
     const animated = nextScrollAnimated.current;
     nextScrollAnimated.current = false;
@@ -470,30 +516,24 @@ function PlayerInner() {
   if (!track) return null;
   const progress = duration > 0 ? t / duration : 0;
   const playing = status.playing;
+  // Mirror playing state into the store so the global RippleField (and
+  // any future ambient ui) can react without subscribing to expo-audio.
+  useEffect(() => {
+    usePlayerStore.getState().setPlaying(!!playing);
+    return () => { usePlayerStore.getState().setPlaying(false); };
+  }, [playing]);
   // The expo-audio status reports duration only once the asset is decoded.
   // On slower networks / iOS Safari that can take a moment; guard the UI so
   // the user sees a clear loading state instead of an apparently-broken
   // controls row.
   const isLoading = hasStarted && !finished && (!Number.isFinite(duration) || duration <= 0);
   const canSeek = duration > 0;
-  const artwork = track.artwork ?? DEFAULT_ARTWORK;
   const description = track.description ?? (track.rounds ? QM_DESCRIPTION : DEFAULT_DESCRIPTION);
   const rounds = track.rounds;
   // QM tracks (anything with a rounds config) carry the QM tab accent so the
   // player feels visually consistent with where the user opened it from.
   const accent = rounds ? colors.accentAlt : colors.accent;
   const accentBg = rounds ? colors.accentAltSoft : colors.accentSoft;
-
-  // Progress-driven background gradient: the bright spot starts near
-  // the bottom at 0s and climbs to the top as the audio plays. The
-  // gradient's internal withTiming (~800ms) absorbs scrubs so ±15s
-  // jumps ease rather than snap.
-  const progressRatio = canSeek && duration > 0
-    ? Math.max(0, Math.min(1, t / duration))
-    : 0;
-  const playerCenterY = 0.80 - progressRatio * 0.65;
-  // Palette follows the same SM / QM split as `accent`.
-  const gradientPalette = rounds ? GRADIENT_QM : GRADIENT_SM;
 
   // Precomputed waveform peaks for the currently-playing audio source.
   // QM rounds + inters have unique filenames (session-tag prefixed), so
@@ -505,12 +545,30 @@ function PlayerInner() {
     [roundSource],
   );
 
+  // Voice envelope at the current playback time. Peaks are dense
+  // (≈20 / s = 50 ms per bucket — see scripts/gen-waveforms.mjs), so a
+  // single index lookup already tracks the voice tightly. We average a
+  // tiny ±2-bucket window (~250 ms total) to take the edge off
+  // single-bucket transients without lagging the syllable.
+  const voiceLevel = useMemo(() => {
+    if (!peaks || peaks.length === 0) return 0;
+    if (!playing || !canSeek || duration <= 0) return 0;
+    const frac = Math.max(0, Math.min(1, t / duration));
+    const idx = Math.min(peaks.length - 1, Math.floor(frac * peaks.length));
+    const lo = Math.max(0, idx - 2);
+    const hi = Math.min(peaks.length - 1, idx + 2);
+    let sum = 0, n = 0;
+    for (let i = lo; i <= hi; i++) { sum += peaks[i] ?? 0; n++; }
+    return n > 0 ? sum / n : 0;
+  }, [peaks, t, duration, playing, canSeek]);
+
   return (
     <View style={styles.root}>
-      <AnimatedGradient
-        centerY={playerCenterY}
-        palette={gradientPalette}
-      />
+      {/* No internal gradient — the root layout already paints the
+          shared atmospheric gradient + EnergyColumn behind everything,
+          so the Player UI fades in OVER the same backdrop the Start
+          screen had. Reads as the same screen morphing rather than a
+          modal on top. */}
       <View style={styles.header}>
         {!finished ? (
           <Pressable
@@ -525,10 +583,8 @@ function PlayerInner() {
 
       <View style={styles.body}>
       <View style={styles.top}>
-        <View style={[styles.artwork, !hasStarted && styles.artworkLarge]}>
-          <Image source={artwork} style={styles.artworkImage} resizeMode="cover" />
-          <View style={styles.artworkOverlay} />
-        </View>
+        {/* Artwork removed for now — keeping the player chrome lighter.
+            We'll revisit later if/when we have hero artwork worth showing. */}
         <View style={styles.titleRow}>
           {/* Hide the track-switch chevrons on QM sessions — users kept reading
               them as 'next round' and were surprised when the whole audio
@@ -544,7 +600,7 @@ function PlayerInner() {
               <Text style={[styles.navBtnText, { color: accent }, !hasPrev && styles.navBtnTextDisabled]}>‹</Text>
             </Pressable>
           )}
-          <Text style={styles.title} numberOfLines={2}>{track.title}</Text>
+          <Text style={styles.title} numberOfLines={2}>{noOrphan(track.title)}</Text>
           {rounds ? null : (
             <Pressable
               onPress={playNext}
@@ -590,6 +646,62 @@ function PlayerInner() {
       </View>
 
       {/* Middle content area */}
+      {/* Flex spacer pushing the circle down so it lands at roughly
+          the same Y as the Start screen's round CTA — the morph
+          illusion only works if both buttons share the same screen
+          position. Below the circle, the transcript (also flex 1)
+          fills the remaining mid-section, with the timer + waveform
+          docked at the bottom. */}
+      <View style={styles.flexSpacer} />
+
+      {/* Circle row — moved UP between the top section and the
+          transcript so the play / pause button sits at the same
+          screen position as the Start screen's round CTA. The user
+          taps the Start button → it fades out; the Player fades in
+          with this same circle at the same Y, only the inner glyph
+          changing. */}
+      <View style={styles.circleRow}>
+        {hasStarted && !finished && canSeek ? (
+          <Pressable onPress={() => player.seekTo(Math.max(0, t - 15))} style={styles.sideBtn}>
+            <Text style={styles.sideBtnText}>-15s</Text>
+          </Pressable>
+        ) : <View style={styles.sideBtnPlaceholder} />}
+
+        {finished ? (
+          <View style={{ width: circleSize, height: circleSize }} />
+        ) : isLoading ? (
+          <View style={[styles.loadingCircle, { width: circleSize, height: circleSize, borderRadius: circleSize / 2 }]}>
+            <Text style={styles.loadingText}>Loading…</Text>
+          </View>
+        ) : !hasStarted ? (
+          <CircleButton
+            size={circleSize}
+            mode="pre"
+            accent={accent}
+            onPress={() => {
+              const startAtIntro = rounds?.introSource && includeIntro;
+              setHasStarted(true);
+              setCurrentRound(startAtIntro ? 0 : 1);
+              endedHandled.current = false;
+            }}
+          />
+        ) : (
+          <CircleButton
+            size={circleSize}
+            mode={playing ? 'playing' : 'paused'}
+            accent={accent}
+            voice={voiceLevel}
+            onPress={() => { playing ? player.pause() : player.play(); }}
+          />
+        )}
+
+        {hasStarted && !finished && canSeek ? (
+          <Pressable onPress={() => player.seekTo(Math.min(duration, t + 15))} style={styles.sideBtn}>
+            <Text style={styles.sideBtnText}>+15s</Text>
+          </Pressable>
+        ) : <View style={styles.sideBtnPlaceholder} />}
+      </View>
+
       <View style={styles.middle}>
         {!hasStarted ? (
           <>{/* preplay content below */}
@@ -609,7 +721,7 @@ function PlayerInner() {
                 ))}
               </View>
             ) : (
-              <Text style={styles.description}>{description}</Text>
+              <Text style={styles.description}>{noOrphan(description)}</Text>
             )}
             {rounds ? (
               <View style={styles.paramsCard}>
@@ -639,9 +751,9 @@ function PlayerInner() {
               if (!prog) return null;
               const href = prog === 'qm' ? '/qm' : '/silent-mind';
               // Labels reuse the tab names verbatim so nothing new has to be
-              // validated — users already see 'Silent Mind' / 'QM Format' in
+              // validated — users already see 'Silent Mind' / 'QM Training' in
               // the bottom tab bar.
-              const label = prog === 'qm' ? 'QM Format →' : 'Silent Mind →';
+              const label = prog === 'qm' ? 'QM Training →' : 'Silent Mind →';
               return (
                 <Pressable
                   // replace so returning from the tab (back button) pops up
@@ -663,7 +775,7 @@ function PlayerInner() {
             </Pressable>
           </View>
         ) : (
-          <View style={[styles.transcriptFrame, inBreak && styles.transcriptFrameBreak]}>
+          <View style={[styles.transcriptFrame, styles.transcriptMask, inBreak && styles.transcriptFrameBreak]}>
             {cues.length > 0 ? (
               <ScrollView
                 ref={scrollRef}
@@ -672,6 +784,7 @@ function PlayerInner() {
                 onScrollBeginDrag={handleScrollBegin}
                 onTouchStart={handleScrollBegin}
                 scrollEventThrottle={16}
+                showsVerticalScrollIndicator={false}
               >
                 {cues.map((cue, i) => (
                   <CueLine key={i} cue={cue} time={t} onLayout={(y) => { cueLayouts.current[i] = y; }} />
@@ -688,50 +801,18 @@ function PlayerInner() {
         )}
       </View>
 
-      {/* Bottom area — fixed structure so the CircleButton anchors at the same Y across states */}
+      {/* Bottom area — now hosts the time + waveform pair (with the
+          digits read ABOVE the waveform per the latest design) and
+          the contextual below-circle hint. The CircleButton itself
+          moved up earlier in the body. */}
       <View style={styles.bottomArea}>
-        <View style={styles.circleRow}>
-          {hasStarted && !finished && canSeek ? (
-            <Pressable onPress={() => player.seekTo(Math.max(0, t - 15))} style={styles.sideBtn}>
-              <Text style={styles.sideBtnText}>-15s</Text>
-            </Pressable>
-          ) : <View style={styles.sideBtnPlaceholder} />}
-
-          {finished ? (
-            <View style={{ width: circleSize, height: circleSize }} />
-          ) : isLoading ? (
-            <View style={[styles.loadingCircle, { width: circleSize, height: circleSize, borderRadius: circleSize / 2 }]}>
-              <Text style={styles.loadingText}>Loading…</Text>
-            </View>
-          ) : !hasStarted ? (
-            <CircleButton
-              size={circleSize}
-              mode="pre"
-              accent={accent}
-              onPress={() => {
-                const startAtIntro = rounds?.introSource && includeIntro;
-                setHasStarted(true);
-                setCurrentRound(startAtIntro ? 0 : 1);
-                endedHandled.current = false;
-                // Do NOT call player.play() here — the current `player` may still
-                // be loaded with the previous round's source. The source-change
-                // useEffect below owns playback start once the new source is live.
-              }}
-            />
-          ) : (
-            <CircleButton size={circleSize} mode={playing ? 'playing' : 'paused'} accent={accent} onPress={() => { playing ? player.pause() : player.play(); }} />
-          )}
-
-          {hasStarted && !finished && canSeek ? (
-            <Pressable onPress={() => player.seekTo(Math.min(duration, t + 15))} style={styles.sideBtn}>
-              <Text style={styles.sideBtnText}>+15s</Text>
-            </Pressable>
-          ) : <View style={styles.sideBtnPlaceholder} />}
-        </View>
-
         <View style={styles.aboveCircle}>
           {hasStarted && !finished ? (
             <View style={styles.progressWrap}>
+              <View style={styles.timesRow}>
+                <Text style={styles.time}>{fmt(t)}</Text>
+                <Text style={styles.time}>{fmt(duration)}</Text>
+              </View>
               <View
                 ref={progressEl}
                 style={styles.progressHit}
@@ -746,10 +827,6 @@ function PlayerInner() {
                     <View style={[styles.progressThumb, { left: `${Math.min(100, progress * 100)}%`, backgroundColor: accent }]} />
                   </View>
                 )}
-              </View>
-              <View style={styles.timesRow}>
-                <Text style={styles.time}>{fmt(t)}</Text>
-                <Text style={styles.time}>{fmt(duration)}</Text>
               </View>
             </View>
           ) : null}
@@ -853,10 +930,24 @@ function CueLine({ cue, time, onLayout }: { cue: TranscriptCue; time: number; on
     >
       {cue.words.map((w, i) => {
         const spaced = i === 0 ? w.text : ' ' + w.text;
+        // Reveal gate: 0 until `FADE_IN_LEAD` seconds before the word
+        // starts, ramping to 1 by the moment the word starts. Once a
+        // word has appeared it never disappears (past words stay
+        // visible as context).
+        const revealed = Math.max(
+          0,
+          Math.min(1, (time - (w.start - FADE_IN_LEAD)) / FADE_IN_LEAD),
+        );
+        // Emphasis sweep: peaks at the centre of the word currently
+        // being spoken, falls off to zero outside SWEEP_WINDOW seconds.
         const wCenter = (w.start + w.end) / 2;
         const dist = Math.abs(time - wCenter);
         const closeness = easeCos(dist / SWEEP_WINDOW);
-        const opacity = GLOBAL_BASE_OPACITY + (GLOBAL_PEAK_OPACITY - GLOBAL_BASE_OPACITY) * closeness;
+        // Rest state = PAST_OPACITY, lerped toward PEAK_OPACITY at the
+        // highlight centre, then gated by the reveal so future words
+        // remain invisible.
+        const opacity =
+          revealed * (PAST_OPACITY + (PEAK_OPACITY - PAST_OPACITY) * closeness);
         return <Text key={i} style={{ opacity }}>{spaced}</Text>;
       })}
     </Text>
@@ -864,7 +955,10 @@ function CueLine({ cue, time, onLayout }: { cue: TranscriptCue; time: number; on
 }
 
 const styles = StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.bg, zIndex: 80 },
+  // Overlay is fully transparent — the seamless transition relies on
+  // the root layout's gradient + EnergyColumn showing through. The
+  // Player only paints its own UI on top of that shared backdrop.
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent', zIndex: 80 },
   // Transparent so the absolutely-positioned AnimatedGradient (first
   // child) is visible. The outer `overlay` still carries `colors.bg` as
   // a fallback solid, and the gradient's own edge stops fade to near-
@@ -883,15 +977,6 @@ const styles = StyleSheet.create({
   close: { ...type.caption, color: colors.text },
   eyebrow: { ...type.overline, color: colors.textMuted, fontSize: 10 },
   top: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: 4 },
-  artwork: {
-    width: 56, height: 56, borderRadius: radius.md,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: spacing.xs, overflow: 'hidden',
-    borderColor: colors.border, borderWidth: 1,
-  },
-  artworkLarge: { width: 80, height: 80, borderRadius: radius.lg },
-  artworkImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  artworkOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.35)' },
   title: { ...type.h1, color: colors.text, textAlign: 'center', fontSize: 18, flexShrink: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md, width: '100%', paddingHorizontal: spacing.md },
   navBtn: {
@@ -1000,6 +1085,13 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   middle: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.lg, gap: spacing.sm + 2, minHeight: 0 },
+  // Flex spacer used between the top title block and the CircleButton.
+  // Calibrated empirically (≈0.78) so the button lands at the same
+  // Y as the Start screen's CTA once the eyebrow + title + meta
+  // block above it on Start are taken into account. The Y match is
+  // what makes the cross-fade morph read as a single button rather
+  // than two buttons jumping.
+  flexSpacer: { flex: 0.78 },
   bottomArea: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md, alignItems: 'center' },
   aboveCircle: { width: '100%', minHeight: 42, justifyContent: 'center', marginTop: spacing.sm },
   circleRow: {
@@ -1020,30 +1112,58 @@ const styles = StyleSheet.create({
   dotCurrent: { backgroundColor: colors.accent, width: 20 },
   dotDone: { backgroundColor: colors.text, opacity: 0.7 },
 
+  // Transcript area — no framed card anymore. The bordered surface
+  // panel created a heavy empty box during the first seconds of
+  // playback (words reveal progressively, so very few are visible at
+  // t≈0) and visually competed with the gradient. We now let the
+  // transcript text float directly on the player's gradient like a
+  // continuation of the title block. The container still flexes to
+  // the parent's content width so the column doesn't reflow between
+  // tracks, but it has no background, no border, no fixed height —
+  // the surrounding spacing carries the rhythm.
   transcriptFrame: {
-    height: 220,
-    // Stretch to the parent's content width rather than shrinking to
-    // the text inside. The `middle` column uses `alignItems: center`
-    // which would otherwise collapse this frame whenever cues are
-    // short, making the panel width jump around between tracks.
+    // ~5 lines of cue text at fontSize 15 / lineHeight 24 + the
+    // top/bottom mask fade (18% / 18%) — caps the transcript so it
+    // takes minimal vertical real estate and the play button + the
+    // waveform breathe around it.
+    maxHeight: 130,
     alignSelf: 'stretch',
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
     overflow: 'hidden',
   },
+  // Break interludes get a barely-there hairline divider top + bottom
+  // instead of a dashed bordered card, so the break still reads as a
+  // distinct beat without dropping a heavy frame on top of the gradient.
   transcriptFrameBreak: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderStyle: 'dashed',
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
-  transcriptContent: { paddingHorizontal: spacing.md, paddingVertical: spacing.md },
-  cue: { ...type.body, fontSize: 16, lineHeight: 26, marginBottom: spacing.sm },
-  noTranscript: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
-  noTranscriptText: { ...type.caption, color: colors.textDim, textAlign: 'center' },
+  transcriptContent: { paddingHorizontal: spacing.sm, paddingVertical: spacing.sm, alignItems: 'center' },
+  // Top + bottom fade. We use a CSS `mask-image` on web so the text
+  // dissolves directly into whatever the Player's gradient happens to
+  // be at that vertical position — no painted overlay rectangle that
+  // doesn't match the moving background. Native ignores these
+  // properties (no-op until we add a MaskedView fallback if it ever
+  // ships on iOS / Android).
+  transcriptMask: Platform.OS === 'web'
+    ? ({
+        WebkitMaskImage:
+          'linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%)',
+        maskImage:
+          'linear-gradient(to bottom, transparent 0%, black 18%, black 82%, transparent 100%)',
+      } as any)
+    : {},
+  // Slightly smaller and centred — text reads as floating prose, not a
+  // left-aligned reading column. Tighter line-height keeps the reveal
+  // sweep coherent now that the panel is shorter.
+  cue: { ...type.body, fontSize: 15, lineHeight: 24, marginBottom: spacing.xs, textAlign: 'center' },
+  // No padding/flex — a single quiet line near the top of the area
+  // rather than a big centered empty view. The transcript is meant to
+  // fill in word-by-word as the audio progresses; on the first seconds
+  // it's normal to see almost nothing, so we don't dramatize it.
+  noTranscript: { alignItems: 'center', paddingTop: spacing.md },
+  noTranscriptText: { ...type.caption, color: colors.textDim, textAlign: 'center', fontSize: 12 },
 
   controls: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, paddingTop: spacing.xs },
   // Larger vertical hit zone + explicit cursor/touch hint so the bar
@@ -1057,7 +1177,11 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   progressHit: {
-    paddingVertical: spacing.md,
+    // Smaller top padding so the waveform sits right under the
+    // timestamps; bottom padding kept generous so the touch target
+    // remains comfortable for scrubbing.
+    paddingTop: 4,
+    paddingBottom: spacing.md,
     justifyContent: 'center',
     ...(typeof document !== 'undefined' ? ({ touchAction: 'none', cursor: 'pointer' } as any) : null),
   },
@@ -1068,7 +1192,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent, marginLeft: -7,
     borderColor: colors.text, borderWidth: 1,
   },
-  timesRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.xs },
+  // Times row sits ABOVE the waveform — tight `marginBottom: 0` so
+  // the digits hug the bar (the user wanted the waveform pulled up
+  // closer to the temporal info). Justified to the bar's edges so
+  // the timestamps frame the bar.
+  timesRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 0 },
   time: { ...type.caption, color: colors.textDim },
 
   playControls: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.md, marginTop: spacing.sm },

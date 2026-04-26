@@ -105,13 +105,9 @@ export const introAudios: AudioTrack[] = [
     durationHint: '2:30',
     description: "Welcome to the Silent Mind program, All Here's journey into a quiet and attentive way of being. A vertical progression toward advanced meditation practice.",
   },
-  {
-    id: 'intro-3', title: 'Prepare the space',
-    source: require('../../assets/audio/Part0/3. Prepare the space.mp3'),
-    transcript: require('../../assets/audio/Part0/Words/3. Prepare the space.wjson'),
-    durationHint: '3:01',
-    description: 'Simple practical guidance for preparing your meditation space. Creating supportive conditions helps the mind settle more easily and encourages a steady practice.',
-  },
+  // 'Prepare the space' (intro-3) is intentionally pulled for now —
+  // tracking the change here so it's easy to restore: the asset files
+  // still exist under assets/audio/Part0/, just unreferenced.
   {
     id: 'intro-2', title: 'Silent Mind',
     source: require('../../assets/audio/Part0/2. Silent Mind.mp3'),
@@ -120,7 +116,7 @@ export const introAudios: AudioTrack[] = [
     description: "At the heart of our practice is the development of the Silent Mind — a practical method to reduce fluctuations of consciousness and cultivate a profound inner presence.",
   },
   {
-    id: 'intro-4', title: 'QM Format',
+    id: 'intro-4', title: 'QM Training',
     source: require('../../assets/audio/Part0/4. QM Format.mp3'),
     transcript: require('../../assets/audio/Part0/Words/4. QM Format.wjson'),
     durationHint: '1:13',
@@ -134,10 +130,23 @@ export const introAudios: AudioTrack[] = [
 ];
 
 export const silentMindVolets: Volet[] = [
+  // Intro volet — wraps the introAudios array so the prologue lives
+  // inside the Silent Mind program tree (same data shape as parts).
+  // The Start page's big play button walks this volet first, then
+  // Part 1 → 2 → 3, mirroring the user's journey.
+  {
+    id: 'intro',
+    title: '',
+    subtitle: 'Introduction',
+    tagline: 'A short prologue before the program',
+    description:
+      'Three short audios to get oriented: who we are, what the Silent Mind is, and how QM Training complements it.',
+    tracks: introAudios,
+  },
   {
     id: 'part1',
     title: 'Part 1',
-    subtitle: 'From Noise to Focal Mind',
+    subtitle: 'Mind-Body Connection',
     tagline: 'The Earth',
     description:
       'Enhance attention and self-awareness through mind-body connection and reduction of the mental noise.',
@@ -247,7 +256,7 @@ export const silentMindVolets: Volet[] = [
   {
     id: 'part2',
     title: 'Part 2',
-    subtitle: 'From Focal to Stable Mind',
+    subtitle: 'Stability & Equanimity',
     tagline: 'The Sky',
     description:
       'Deepen practice with breath observation and gravity center focus. Develop sustained attention and mental stability through real-time visual feedback.',
@@ -361,7 +370,7 @@ export const silentMindVolets: Volet[] = [
   {
     id: 'part3',
     title: 'Part 3',
-    subtitle: 'From Stable to Silent Mind',
+    subtitle: 'Towards Silence',
     tagline: 'The Space',
     description:
       'Cultivate deep contemplative states and autonomous practice. Access profound silence and inner peace with minimal guidance and subtle tracking.',
@@ -411,7 +420,7 @@ const qm3RoundsHome: AudioTrack = {
     max: 3,
     roundLengthMinutes: 3,
     breakSeconds: 60,
-    // The gateway QM session leads with the short "QM Format" audio
+    // The gateway QM session leads with the short "QM Training" audio
     // so a first-time listener gets the framing before the rounds
     // begin — same file served in the home intro list.
     introSource: require('../../assets/audio/Part0/4. QM Format.mp3'),
@@ -467,7 +476,6 @@ export const qmProgram = {
   eyebrow: 'Quantified Meditation',
   title: 'High Intensity Training',
   intro:
-    'High intensity training\n' +
     'Multiple rounds, short breaks\n' +
     'Reproduce the same meditative state on demand',
   banner: require('../../assets/images/hero/space.jpg'),
@@ -501,7 +509,7 @@ export const qmVolets: Volet[] = [
     title: 'Part 3',
     subtitle: voletById('part3').subtitle,
     tagline: voletById('part3').tagline,
-    description: 'QM format for the deeper contemplative practices of Part 3 is on its way.',
+    description: 'QM training for the deeper contemplative practices of Part 3 is on its way.',
     image: require('../../assets/images/hero/space.jpg'),
     // All three rounds are still in production — `locked: true` greys out
     // the whole card in QM and removes the chevron so users don't tap
