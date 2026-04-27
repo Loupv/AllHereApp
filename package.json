@@ -1,6 +1,6 @@
 {
   "name": "allhereapp",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
@@ -13,6 +13,8 @@
   "dependencies": {
     "@expo-google-fonts/montserrat": "^0.4.2",
     "@expo/metro-runtime": "~6.1.2",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-masked-view/masked-view": "0.3.2",
     "expo": "~54.0.33",
     "expo-asset": "~12.0.12",
     "expo-audio": "~1.1.1",

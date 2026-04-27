@@ -36,13 +36,13 @@ type Props = {
 export function ProgramHeader({ eyebrow, title, description, accent }: Props) {
   return (
     <View style={styles.root}>
-      <View style={styles.banner}>
-        <View style={[styles.bannerLine, { backgroundColor: accent }]} />
-        <Text style={[styles.bannerText, { color: accent }]} numberOfLines={2}>
-          {eyebrow}
-        </Text>
-        <View style={[styles.bannerLine, { backgroundColor: accent }]} />
-      </View>
+      {/* Eyebrow text only — the flanking accent hairlines were
+          removed: the uppercased + spaced + tinted text is enough of
+          a "you are in this program" cue without the heavier ruled
+          line on either side. */}
+      <Text style={[styles.bannerText, { color: accent }]} numberOfLines={2}>
+        {eyebrow}
+      </Text>
 
       <Text style={styles.title}>{noOrphan(title)}</Text>
 
@@ -60,21 +60,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     alignItems: 'center',
     gap: spacing.md,
-  },
-  // Banner — uppercase accent label flanked by two short hairlines.
-  // Reads as a typographic "you are in" tag without dropping a heavy
-  // coloured strip across the page.
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    maxWidth: '100%',
-  },
-  bannerLine: {
-    height: StyleSheet.hairlineWidth * 2,
-    width: 28,
-    opacity: 0.55,
-    borderRadius: 1,
   },
   bannerText: {
     ...type.overline,

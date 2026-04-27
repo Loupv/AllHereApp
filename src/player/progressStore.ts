@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { silentMindVolets, qmVolets } from '../content/catalog';
+import { kv } from '../content/kv';
 
 type State = {
   listened: Record<string, true>;
@@ -29,13 +30,31 @@ const orderedTrackIds = (): string[] => {
   return [...sm, ...qm];
 };
 
+const STORAGE_KEY = 'ah_progress_v1';
+
+// Hand-rolled persistence — zustand's `persist` middleware was breaking
+// the web bundle's mount in this project (no error, just an empty root).
+// Sync localStorage on web (and best-effort AsyncStorage cache on native
+// via `kv`) is plenty for a tiny `Record<string, true>` payload.
+const initialListened: Record<string, true> =
+  kv.get<Record<string, true>>(STORAGE_KEY) ?? {};
+
 export const useProgress = create<State>((set, get) => ({
-  listened: {},
-  markListened: (id) => set(s => (s.listened[id] ? s : { listened: { ...s.listened, [id]: true } })),
+  listened: initialListened,
+  markListened: (id) => {
+    const cur = get().listened;
+    if (cur[id]) return;
+    const next = { ...cur, [id]: true as const };
+    set({ listened: next });
+    kv.set(STORAGE_KEY, next);
+  },
   isListened: (id) => !!get().listened[id],
   nextTrackId: () => {
     const listened = get().listened;
     return orderedTrackIds().find(id => !listened[id]);
   },
-  resetProgress: () => set({ listened: {} }),
+  resetProgress: () => {
+    set({ listened: {} });
+    kv.set(STORAGE_KEY, {});
+  },
 }));

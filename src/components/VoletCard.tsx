@@ -80,12 +80,11 @@ export function VoletCard({
     router.push(`${basePath}/${volet.id}` as any);
   };
 
-  // Always reflect the section's total audio count, including tracks
-  // that aren't released yet — so a "3 audios" promise stays stable as
-  // coming-soon items get unlocked over time.
-  const countLabel = tracks.length > 0
-    ? `${tracks.length} audio${tracks.length > 1 ? 's' : ''}`
-    : 'Coming soon';
+  // Audio count was removed from the card body — the title + tagline
+  // already do the work; "X audios" was redundant clutter. We still
+  // surface "Coming soon" when the section has nothing playable, so a
+  // locked / unreleased part doesn't read as a normal entry point.
+  const comingSoonLabel = tracks.length === 0 ? 'Coming soon' : null;
 
   return (
     <Animated.View
@@ -113,7 +112,14 @@ export function VoletCard({
           {volet.subtitle ? (
             <Text style={styles.title} numberOfLines={1}>{volet.subtitle}</Text>
           ) : null}
-          <Text style={styles.meta}>{countLabel}</Text>
+          {/* Poetic per-part tagline — "The Earth", "The Sky",
+              "The Space". Sits under the part name so the visual
+              rhythm reads "Part 1 → Mind-Body Connection → The Earth"
+              without competing with the primary title. */}
+          {volet.tagline ? (
+            <Text style={styles.tagline} numberOfLines={1}>{volet.tagline}</Text>
+          ) : null}
+          {comingSoonLabel ? <Text style={styles.meta}>{comingSoonLabel}</Text> : null}
         </View>
         <Text style={[styles.chevron, { color: accent }]}>{locked ? '' : '→'}</Text>
       </Pressable>
@@ -167,6 +173,7 @@ const styles = StyleSheet.create({
   body: { flex: 1, gap: 2 },
   eyebrow: { ...type.overline, fontSize: 10 },
   title: { ...type.h2, color: colors.text, fontSize: 15 },
+  tagline: { ...type.body, color: colors.textDim, fontSize: 12, fontStyle: 'italic' },
   meta: { ...type.overline, color: colors.textDim, fontSize: 9, marginTop: 2 },
   chevron: { ...type.display, fontSize: 16, marginLeft: 4 },
 });

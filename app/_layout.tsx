@@ -19,6 +19,7 @@ import {
 } from '@expo-google-fonts/montserrat';
 import { IntroSplash } from '../src/components/IntroSplash';
 import { LoginScreen } from '../src/components/LoginScreen';
+import { setAudioModeAsync } from 'expo-audio';
 import { Player } from '../src/components/Player';
 import { VideoPlayerModal } from '../src/components/VideoPlayerModal';
 import { AnimatedGradient } from '../src/components/AnimatedGradient';
@@ -42,6 +43,23 @@ const TransparentNavTheme = {
 export default function RootLayout() {
   const [introDone, setIntroDone] = useState(false);
   const user = useAuth(s => s.user);
+
+  // Configure expo-audio's session once at startup so the Player keeps
+  // playing when the user locks the screen, and the session takes a
+  // sensible interruption stance against other apps (Spotify, calls,
+  // Siri). Pairs with the iOS `UIBackgroundModes: ["audio"]` declaration
+  // and the Android `FOREGROUND_SERVICE_MEDIA_PLAYBACK` permission in
+  // app.json — those grant the *capability*; this call activates it.
+  useEffect(() => {
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+      allowsRecording: false,
+      interruptionMode: 'mixWithOthers',
+      shouldRouteThroughEarpiece: false,
+    }).catch(() => { /* no-op on web — expo-audio's web build is a stub */ });
+  }, []);
+
   // Global ambient ripple-field — lines visible everywhere, drift
   // animation only runs while audio is actually playing.
   const audioPlaying = usePlayerStore(s => s.playing);

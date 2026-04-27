@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, PanResponder, Platform, useWindowDimensions } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import MaskedView from '@react-native-masked-view/masked-view';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Asset } from 'expo-asset';
 import { useRouter } from 'expo-router';
@@ -10,7 +12,7 @@ import { usePlayerStore } from '../player/store';
 import { useProgress } from '../player/progressStore';
 import { loadTranscript } from '../content/loadTranscript';
 import { findCueIndex, TranscriptCue } from '../content/transcript';
-import { trackProgram } from '../content/catalog';
+import { trackProgram, trackLocation } from '../content/catalog';
 import { WAVEFORMS } from '../content/waveforms.generated';
 import { colors, radius, spacing, type } from '../theme';
 import { noOrphan } from '../utils/noOrphan';
@@ -235,6 +237,25 @@ function PlayerInner() {
     return track.source;
   })();
 
+  /**
+   * Source we'll need NEXT — used to prefetch ahead so the gap between
+   * rounds (decode + fetch when the player switches source) is shrunk.
+   * Mirrors `roundSource` above:
+   *   intro (round 0)  → next is round 1
+   *   round N          → next is inter N (if any) else round N+1
+   *   inter N          → next is round N+1
+   */
+  const nextRoundSource = (() => {
+    if (!track?.rounds) return undefined;
+    const r = track.rounds;
+    if (inBreak) return r.roundSources?.[currentRound] ?? undefined;
+    if (currentRound === 0) return r.roundSources?.[0];
+    const interN = r.roundInters?.[currentRound - 1];
+    if (interN) return interN;
+    if (currentRound < selectedRounds) return r.roundSources?.[currentRound];
+    return undefined;
+  })();
+
   const player = useAudioPlayer(roundSource);
   const status = useAudioPlayerStatus(player);
 
@@ -308,6 +329,28 @@ function PlayerInner() {
     if (!track || duration <= 0) return;
     if (t >= duration * 0.8) markListened(track.id);
   }, [t, duration, track?.id]);
+
+  // Pre-fetch the upcoming round / inter when the current segment is
+  // past 70% of its duration — shrinks the audible gap when expo-audio
+  // swaps `roundSource` (decode + fetch are paid in advance). On native
+  // most assets are local so the gain is small, but on web (and any
+  // future CDN-served setup) this materially smooths the transition.
+  // `Asset.downloadAsync()` is a no-op once cached, so calling it
+  // repeatedly is safe; the ref guards against re-firing on every tick.
+  const preloadFiredFor = useRef<unknown>(undefined);
+  useEffect(() => {
+    if (!nextRoundSource || !duration || duration <= 0) return;
+    if (t < duration * 0.7) return;
+    if (preloadFiredFor.current === nextRoundSource) return;
+    preloadFiredFor.current = nextRoundSource;
+    try {
+      Asset.fromModule(nextRoundSource).downloadAsync().catch(() => {});
+    } catch { /* require() handle invalid for non-asset modules */ }
+  }, [t, duration, nextRoundSource]);
+  // Reset the prefetched sentinel whenever the playing source changes
+  // so the next round prefetches its OWN successor (instead of staying
+  // pinned to the previously-prefetched one).
+  useEffect(() => { preloadFiredFor.current = undefined; }, [roundSource]);
 
   useEffect(() => {
     if (!hasStarted || finished) return;
@@ -583,35 +626,11 @@ function PlayerInner() {
 
       <View style={styles.body}>
       <View style={styles.top}>
-        {/* Artwork removed for now — keeping the player chrome lighter.
-            We'll revisit later if/when we have hero artwork worth showing. */}
-        <View style={styles.titleRow}>
-          {/* Hide the track-switch chevrons on QM sessions — users kept reading
-              them as 'next round' and were surprised when the whole audio
-              skipped. QM rounds are already navigated from inside the player
-              via 'End this round →' / 'Skip to round N+1 →'. */}
-          {rounds ? null : (
-            <Pressable
-              onPress={playPrev}
-              disabled={!hasPrev}
-              hitSlop={10}
-              style={[styles.navBtn, !hasPrev && styles.navBtnDisabled]}
-            >
-              <Text style={[styles.navBtnText, { color: accent }, !hasPrev && styles.navBtnTextDisabled]}>‹</Text>
-            </Pressable>
-          )}
-          <Text style={styles.title} numberOfLines={2}>{noOrphan(track.title)}</Text>
-          {rounds ? null : (
-            <Pressable
-              onPress={playNext}
-              disabled={!hasNext}
-              hitSlop={10}
-              style={[styles.navBtn, !hasNext && styles.navBtnDisabled]}
-            >
-              <Text style={[styles.navBtnText, { color: accent }, !hasNext && styles.navBtnTextDisabled]}>›</Text>
-            </Pressable>
-          )}
-        </View>
+        {/* Track title used to live up here at the top of the window;
+            it now sits right above the play circle (mirroring the
+            Start screen's stack) so the screen-to-screen morph feels
+            continuous. We keep just the round bar at the top — purely
+            a "where am I in this session" status row. */}
         {rounds ? (
           <View style={styles.roundBar}>
             {hasStarted ? (
@@ -654,12 +673,52 @@ function PlayerInner() {
           docked at the bottom. */}
       <View style={styles.flexSpacer} />
 
-      {/* Circle row — moved UP between the top section and the
-          transcript so the play / pause button sits at the same
-          screen position as the Start screen's round CTA. The user
-          taps the Start button → it fades out; the Player fades in
-          with this same circle at the same Y, only the inner glyph
-          changing. */}
+      {/* Pre-circle stack — mirrors the Start screen's text block
+          ("INTRODUCTION · 1 / 3" eyebrow + track title + chevrons)
+          so when Start fades into Player the eye doesn't have to
+          re-find the title. The eyebrow used to be on Start and is
+          now here only; the title used to be at the very top of the
+          Player window and now sits at this Start-matching Y. */}
+      {(() => {
+        const loc = trackLocation(track.id);
+        return (
+          <View style={styles.preCircle}>
+            {loc ? (
+              <Text style={styles.preCircleEyebrow} numberOfLines={1}>
+                {loc.label.toUpperCase()} · {loc.position} / {loc.total}
+              </Text>
+            ) : null}
+            <View style={styles.titleRow}>
+              {/* Track-switch chevrons: hidden on QM sessions — users
+                  kept reading them as 'next round' and were surprised
+                  when the whole audio skipped. QM rounds are navigated
+                  from inside the player via 'End this round →'. */}
+              {rounds ? null : (
+                <Pressable
+                  onPress={playPrev}
+                  disabled={!hasPrev}
+                  hitSlop={10}
+                  style={[styles.navBtn, !hasPrev && styles.navBtnDisabled]}
+                >
+                  <Text style={[styles.navBtnText, { color: accent }, !hasPrev && styles.navBtnTextDisabled]}>‹</Text>
+                </Pressable>
+              )}
+              <Text style={styles.title} numberOfLines={2}>{noOrphan(track.title)}</Text>
+              {rounds ? null : (
+                <Pressable
+                  onPress={playNext}
+                  disabled={!hasNext}
+                  hitSlop={10}
+                  style={[styles.navBtn, !hasNext && styles.navBtnDisabled]}
+                >
+                  <Text style={[styles.navBtnText, { color: accent }, !hasNext && styles.navBtnTextDisabled]}>›</Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        );
+      })()}
+
       <View style={styles.circleRow}>
         {hasStarted && !finished && canSeek ? (
           <Pressable onPress={() => player.seekTo(Math.max(0, t - 15))} style={styles.sideBtn}>
@@ -776,27 +835,48 @@ function PlayerInner() {
           </View>
         ) : (
           <View style={[styles.transcriptFrame, styles.transcriptMask, inBreak && styles.transcriptFrameBreak]}>
-            {cues.length > 0 ? (
-              <ScrollView
-                ref={scrollRef}
-                contentContainerStyle={styles.transcriptContent}
-                onScroll={handleUserScroll}
-                onScrollBeginDrag={handleScrollBegin}
-                onTouchStart={handleScrollBegin}
-                scrollEventThrottle={16}
-                showsVerticalScrollIndicator={false}
-              >
-                {cues.map((cue, i) => (
-                  <CueLine key={i} cue={cue} time={t} onLayout={(y) => { cueLayouts.current[i] = y; }} />
-                ))}
-              </ScrollView>
-            ) : (
-              <View style={styles.noTranscript}>
-                <Text style={styles.noTranscriptText}>
-                  {track.transcript ? 'Loading transcript…' : (inBreak ? 'Interlude…' : 'No transcript for this audio.')}
-                </Text>
-              </View>
-            )}
+            {(() => {
+              const inner = cues.length > 0 ? (
+                <ScrollView
+                  ref={scrollRef}
+                  contentContainerStyle={styles.transcriptContent}
+                  onScroll={handleUserScroll}
+                  onScrollBeginDrag={handleScrollBegin}
+                  onTouchStart={handleScrollBegin}
+                  scrollEventThrottle={16}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {cues.map((cue, i) => (
+                    <CueLine key={i} cue={cue} time={t} onLayout={(y) => { cueLayouts.current[i] = y; }} />
+                  ))}
+                </ScrollView>
+              ) : (
+                <View style={styles.noTranscript}>
+                  <Text style={styles.noTranscriptText}>
+                    {track.transcript ? 'Loading transcript…' : (inBreak ? 'Interlude…' : 'No transcript for this audio.')}
+                  </Text>
+                </View>
+              );
+              // Native parity for the CSS `maskImage` fade applied via
+              // styles.transcriptMask: wrap in <MaskedView> on iOS /
+              // Android so cues fade in at the top and out at the bottom
+              // of the frame instead of clipping on a hard edge.
+              if (Platform.OS === 'web') return inner;
+              return (
+                <MaskedView
+                  style={{ flex: 1 }}
+                  maskElement={
+                    <LinearGradient
+                      colors={['transparent', 'black', 'black', 'transparent']}
+                      locations={[0, 0.18, 0.82, 1]}
+                      style={{ flex: 1 }}
+                    />
+                  }
+                >
+                  {inner}
+                </MaskedView>
+              );
+            })()}
           </View>
         )}
       </View>
@@ -977,6 +1057,17 @@ const styles = StyleSheet.create({
   close: { ...type.caption, color: colors.text },
   eyebrow: { ...type.overline, color: colors.textMuted, fontSize: 10 },
   top: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: 4 },
+  // Pre-circle stack — eyebrow + title + chevrons sit just above the
+  // round CTA, mirroring the Start screen's layout so the morph is
+  // continuous. Tight bottom padding so the title hugs the circle.
+  preCircle: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: 4 },
+  preCircleEyebrow: {
+    ...type.overline,
+    color: colors.textDim,
+    fontSize: 10,
+    letterSpacing: 1.6,
+    textAlign: 'center',
+  },
   title: { ...type.h1, color: colors.text, textAlign: 'center', fontSize: 18, flexShrink: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md, width: '100%', paddingHorizontal: spacing.md },
   navBtn: {

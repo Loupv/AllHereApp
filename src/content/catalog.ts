@@ -53,6 +53,40 @@ export function trackProgram(id: string): 'silent-mind' | 'qm' | null {
 }
 
 /**
+ * Locate where a track sits in the journey for the discreet
+ * "INTRODUCTION · 1 / 3" style eyebrow shown above the round CTA in
+ * the Player. Walks Silent Mind volets first (intro → part1 → part2 →
+ * part3, including each part's QM tail tracks) then QM volets — same
+ * order as the Start screen's `journeyTracks`.
+ */
+export function trackLocation(
+  id: string,
+): { label: string; position: number; total: number } | undefined {
+  type Section = { label: string; tracks: AudioTrack[] };
+  const sections: Section[] = [
+    ...silentMindVolets.map(v => ({
+      // Fall back to subtitle when title is empty — the intro volet
+      // has `title: ''` (we removed the redundant "Introduction"
+      // eyebrow) but we still want a meaningful label here, e.g.
+      // "INTRODUCTION · 1 / 3" instead of " · 1 / 3".
+      label: v.title || v.subtitle || '',
+      tracks: [...v.tracks, ...(v.qmTracks ?? [])].filter(t => !t.comingSoon),
+    })),
+    ...qmVolets.map(v => ({
+      label: `QM · ${v.title || v.subtitle || ''}`,
+      tracks: v.tracks.filter(t => !t.comingSoon),
+    })),
+  ];
+  for (const s of sections) {
+    const idx = s.tracks.findIndex(t => t.id === id);
+    if (idx >= 0 && s.tracks.length > 0) {
+      return { label: s.label, position: idx + 1, total: s.tracks.length };
+    }
+  }
+  return undefined;
+}
+
+/**
  * Display duration for a track:
  * - explicit durationHint wins (e.g. "20:54" or "11 min")
  * - otherwise derive from a QM rounds config: rounds × round length + breaks
@@ -85,8 +119,7 @@ export const silentMindProgram = {
   eyebrow: 'Silent Mind Program',
   title: 'The Three-Part Journey',
   intro:
-    'Our program is divided into three parts,\n' +
-    'focused on training Meditative Attention,\n' +
+    'Our program trains Meditative Attention,\n' +
     'leading to Stability and Silence of Mind.',
   banner: require('../../assets/images/hero/space.jpg'),
 };
@@ -138,7 +171,9 @@ export const silentMindVolets: Volet[] = [
     id: 'intro',
     title: '',
     subtitle: 'Introduction',
-    tagline: 'A short prologue before the program',
+    // No tagline on the intro card — the three numbered parts each
+    // carry a poetic tagline (The Earth / Sky / Space), but the intro
+    // is meant to read as a quiet single-line entry, just "Introduction".
     description:
       'Three short audios to get oriented: who we are, what the Silent Mind is, and how QM Training complements it.',
     tracks: introAudios,
@@ -146,7 +181,7 @@ export const silentMindVolets: Volet[] = [
   {
     id: 'part1',
     title: 'Part 1',
-    subtitle: 'Mind-Body Connection',
+    subtitle: 'Mind-Body',
     tagline: 'The Earth',
     description:
       'Enhance attention and self-awareness through mind-body connection and reduction of the mental noise.',

@@ -26,18 +26,24 @@ export default function SilentMindScreen() {
         />
 
         {/* Intro volet is back in the program stream: it's a natural
-            prologue to Part 1. Previously surfaced on the Start page,
-            now discoverable here where new users land after tapping
-            "New here? Start with the intro →". */}
-        {silentMindVolets.map((v) => (
-          <VoletCard
-            key={v.id}
-            volet={v}
-            basePath="/silent-mind"
-            accent={colors.accent}
-            accentRgb="158,54,148"
-          />
-        ))}
+            prologue to Part 1. We render the intro first, then a
+            visible spacer + hairline divider, then the three numbered
+            parts — so the prologue doesn't blur into the program proper
+            and the eye registers the journey as "warm-up → three parts". */}
+        {silentMindVolets.map((v, i) => {
+          const isFirstPart = v.id !== 'intro' && silentMindVolets[i - 1]?.id === 'intro';
+          return (
+            <View key={v.id}>
+              {isFirstPart ? <View style={styles.introDivider} /> : null}
+              <VoletCard
+                volet={v}
+                basePath="/silent-mind"
+                accent={colors.accent}
+                accentRgb="158,54,148"
+              />
+            </View>
+          );
+        })}
 
         <AboutFooter />
         </View>
@@ -50,4 +56,13 @@ export default function SilentMindScreen() {
 const styles = StyleSheet.create({
   content: { alignItems: 'center' },
   column: { width: '100%', alignSelf: 'center' },
+  // Soft breathing room between the intro volet and Part 1, plus a
+  // faint hairline so the prologue reads as its own beat before the
+  // three-part journey starts.
+  introDivider: {
+    height: 1,
+    marginVertical: spacing.lg,
+    marginHorizontal: spacing.lg * 2,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
 });

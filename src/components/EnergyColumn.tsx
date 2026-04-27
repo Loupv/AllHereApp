@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
-import Svg, { Path, Circle as SvgCircle } from 'react-native-svg';
+import Svg, { Path, Circle as SvgCircle, Defs, Filter, FeGaussianBlur, G } from 'react-native-svg';
+import MaskedView from '@react-native-masked-view/masked-view';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useSharedValue, useAnimatedProps, withRepeat, withTiming, Easing,
   cancelAnimation, type SharedValue,
@@ -311,14 +313,21 @@ export function EnergyColumn({
     return () => cancelAnimation(t);
   }, [active]);
 
-  return (
-    <>
-      {/* Diffuse fog layer — heavy CSS blur turns the wide low-opacity
-          strokes into a luminous haze (the body of the Milky Way). */}
-      <View style={[StyleSheet.absoluteFill, { opacity }, fadeMask, glowFilter]} pointerEvents="none">
-        <Svg width={width} height={height}>
-          {/* No viewBox — paths use real screen-pixel coordinates so
-              the column doesn't stretch on wider viewports. */}
+  // Fog layer — heavy blur turns the wide low-opacity strokes into a
+  // luminous haze. On web we apply CSS `filter: blur()`; on native we
+  // wrap the strokes in an SVG `<G filter="url(#ec-blur)">` referencing
+  // an `<FeGaussianBlur>` filter so iOS / Android render the same haze.
+  const fogSvg = (
+    <Svg width={width} height={height}>
+      {Platform.OS !== 'web' && (
+        <Defs>
+          <Filter id="ec-blur" x="-10%" y="-10%" width="120%" height="120%">
+            <FeGaussianBlur stdDeviation="5" />
+          </Filter>
+        </Defs>
+      )}
+      {Platform.OS !== 'web' ? (
+        <G filter="url(#ec-blur)">
           {LINES.map((cfg, i) => (
             <WaveLine
               key={`fog-${i}`}
@@ -329,63 +338,109 @@ export function EnergyColumn({
               screenHeight={height}
             />
           ))}
-        </Svg>
+        </G>
+      ) : (
+        LINES.map((cfg, i) => (
+          <WaveLine
+            key={`fog-${i}`}
+            cfg={cfg}
+            t={t}
+            accent={accent}
+            screenWidth={width}
+            screenHeight={height}
+          />
+        ))
+      )}
+    </Svg>
+  );
+  const sharpSvg = (
+    <Svg width={width} height={height}>
+      {SHARP_LINES.map((cfg, i) => (
+        <WaveLine
+          key={`sharp-${i}`}
+          cfg={cfg}
+          t={t}
+          accent={crispAccent}
+          screenWidth={width}
+          screenHeight={height}
+        />
+      ))}
+    </Svg>
+  );
+  const starsSvg = (
+    <Svg width={width} height={height}>
+      {STARS.map((cfg, i) => (
+        <Star
+          key={`star-${i}`}
+          cfg={cfg}
+          t={t}
+          accent={crispAccent}
+          screenWidth={width}
+          screenHeight={height}
+        />
+      ))}
+    </Svg>
+  );
+
+  return (
+    <>
+      {/* Diffuse fog layer — see fogSvg comment above. */}
+      <View style={[StyleSheet.absoluteFill, { opacity }, fadeMask, glowFilter]} pointerEvents="none">
+        {withFadeMaskNative(fogSvg)}
       </View>
       {/* Sharp filament layer — same animated clock, no blur, thin
-          strokes in the crisp accent (white) so threads read against
-          the lavender fog. Lower opacity multiplier so they don't
-          dominate. */}
+          strokes in the crisp accent (white). */}
       <View style={[StyleSheet.absoluteFill, { opacity: opacity * 0.55 }, fadeMask]} pointerEvents="none">
-        <Svg width={width} height={height}>
-          {SHARP_LINES.map((cfg, i) => (
-            <WaveLine
-              key={`sharp-${i}`}
-              cfg={cfg}
-              t={t}
-              accent={crispAccent}
-              screenWidth={width}
-              screenHeight={height}
-            />
-          ))}
-        </Svg>
+        {withFadeMaskNative(sharpSvg)}
       </View>
       {/* Stars / dust layer — small bright pinpoints at fixed
-          positions, each twinkling on its own period so the layer
-          shimmers without ever flashing in unison. Crisp white so
-          they read as stellar pinpoints. */}
+          positions, each twinkling on its own period. */}
       <View style={[StyleSheet.absoluteFill, { opacity: opacity * 0.85 }, fadeMask]} pointerEvents="none">
-        <Svg width={width} height={height}>
-          {STARS.map((cfg, i) => (
-            <Star
-              key={`star-${i}`}
-              cfg={cfg}
-              t={t}
-              accent={crispAccent}
-              screenWidth={width}
-              screenHeight={height}
-            />
-          ))}
-        </Svg>
+        {withFadeMaskNative(starsSvg)}
       </View>
     </>
   );
 }
 
+/**
+ * On native, wrap a layer in a `<MaskedView>` with a vertical
+ * `<LinearGradient>` so the column dissolves under the header and
+ * above the tab bar — same fade as the web `maskImage` CSS. On web
+ * this is a no-op (the wrapping `<View>` already carries `fadeMask`).
+ */
+function withFadeMaskNative(child: React.ReactNode) {
+  if (Platform.OS === 'web') return child;
+  return (
+    <MaskedView
+      style={StyleSheet.absoluteFill}
+      pointerEvents="none"
+      maskElement={
+        <LinearGradient
+          colors={['transparent', 'black', 'black', 'transparent']}
+          locations={[0, 0.12, 0.84, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+      }
+    >
+      {child}
+    </MaskedView>
+  );
+}
+
 // Heavier CSS blur — turns the strokes into a soft luminous fog
-// that reads as a "Milky Way" haze rather than discrete bands /
-// lightning filaments. Web only; native currently has no equivalent
-// (we'd need SVG <FeGaussianBlur> for parity if iOS / Android starts
-// to matter).
+// that reads as a "Milky Way" haze rather than discrete bands.
+// Web uses CSS `filter: blur()`; native applies an SVG
+// `<FeGaussianBlur>` filter inside the fog `<Svg>` instead so the
+// haze renders identically on iOS / Android.
 const glowFilter =
   Platform.OS === 'web'
     ? ({ filter: 'blur(5px)' } as any)
     : {};
 
-// CSS mask that fades the wave column out near the top (under the
-// header) and the bottom (behind the tab bar / safe area). Applied
-// only on web — native ignores `maskImage`. With this the lines no
-// longer "leak" past the page chrome, which the user explicitly
-// asked for ("on doit pas non plus les voir derrière la tabbar").
+// Mask that fades the wave column out near the top (under the header)
+// and the bottom (behind the tab bar / safe area). Web uses CSS
+// `maskImage`; native uses `<MaskedView>` + `<LinearGradient>` (see
+// `withFadeMask` below) so iOS / Android get the same effect.
 const fadeMask =
   Platform.OS === 'web'
     ? ({

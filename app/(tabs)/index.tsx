@@ -137,36 +137,6 @@ export default function StartScreen() {
   // kind-agnostic helper keeps us ready for video tracks later.
   const nextDuration = nextTrack ? trackDuration(nextTrack) : undefined;
 
-  // Locate the next track inside the program structure so we can print a
-  // discreet "where am I" caption (e.g. INTRODUCTION · 2 / 3, PART 1 · 1 / 5).
-  // Walk SM volets first (intro → part1 → part2 → part3, including their
-  // QM tail tracks) then QM volets, mirroring `journeyTracks` above.
-  const nextLocation = useMemo(() => {
-    if (!nextTrack) return undefined;
-    type Section = { label: string; tracks: AudioTrack[] };
-    // Fall back to subtitle when title is empty — the intro volet
-    // has `title: ''` (since we removed the redundant "Introduction"
-    // eyebrow) but we still want a meaningful label here, e.g.
-    // "INTRODUCTION · 1 / 3" instead of " · 1 / 3".
-    const sections: Section[] = [
-      ...silentMindVolets.map(v => ({
-        label: v.title || v.subtitle,
-        tracks: [...v.tracks, ...(v.qmTracks ?? [])].filter(t => !t.comingSoon),
-      })),
-      ...qmVolets.map(v => ({
-        label: `QM · ${v.title || v.subtitle}`,
-        tracks: v.tracks.filter(t => !t.comingSoon),
-      })),
-    ];
-    for (const s of sections) {
-      const idx = s.tracks.findIndex(t => t.id === nextTrack.id);
-      if (idx >= 0 && s.tracks.length > 0) {
-        return { label: s.label, position: idx + 1, total: s.tracks.length };
-      }
-    }
-    return undefined;
-  }, [nextTrack]);
-
   const onPlayNext = () => {
     if (!nextTrack) return;
     openPlayer(nextTrack, journeyTracks, { autoStart: true });
@@ -252,11 +222,10 @@ export default function StartScreen() {
                 style={styles.journeyBlock}
                 entering={reveal ? FadeInDown.delay(220).duration(550) : undefined}
               >
-                {nextLocation ? (
-                  <Text style={styles.locationLabel} numberOfLines={1}>
-                    {nextLocation.label.toUpperCase()} · {nextLocation.position} / {nextLocation.total}
-                  </Text>
-                ) : null}
+                {/* "INTRODUCTION · 1 / 3" style eyebrow now lives in
+                    the Player above its play circle (same vertical
+                    position as the next-track title block here) — we
+                    don't print it twice on the Start screen. */}
                 {nextTrack ? (
                   <Text style={styles.nextTitle} numberOfLines={2}>
                     {noOrphan(nextTrack.title)}
@@ -375,15 +344,6 @@ const styles = StyleSheet.create({
   // descriptor of what's about to play (audio + duration). Headphones
   // icon flips to a play glyph when the track is a video. Tight gap
   // so it reads as a single chip.
-  // Discreet "where am I" eyebrow above the next-track title.
-  locationLabel: {
-    ...type.overline,
-    color: colors.textDim,
-    fontSize: 10,
-    letterSpacing: 1.6,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
-  },
   nextTitle: {
     ...type.h2,
     color: colors.text,
