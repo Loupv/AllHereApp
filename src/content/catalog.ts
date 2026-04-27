@@ -320,48 +320,13 @@ export const silentMindVolets: Volet[] = [
       },
     ],
     qmTracks: [
+      // 'Cosmic Sky' (qm2-2) is intentionally pulled for now — the
+      // SM Part 2 sequence currently has no matching guidance for it,
+      // so it would unlock as an orphan QM with no SM counterpart.
+      // Asset files still exist under assets/audio/QMPart2/, just
+      // unreferenced; flip back when an SM "Cosmic Sky" lands.
       {
-        id: 'qm2-2', title: 'Cosmic Sky',
-        transcript: require('../../assets/audio/QMPart2/Words/QM3_6rounds_ErkinGuidance_Cosmic Sky.wjson'),
-        description: 'Six rounds of three minutes each, with one-minute pauses to consolidate presence and stability.',
-        rounds: {
-          max: 6, roundLengthMinutes: 3, breakSeconds: 60,
-          introSource: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_intro.mp3'),
-          introTranscript: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_intro.wjson'),
-          roundSources: [
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round01.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round02.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round03.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round04.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round05.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round06.mp3'),
-          ],
-          roundTranscripts: [
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round01.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round02.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round03.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round04.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round05.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round06.wjson'),
-          ],
-          roundInters: [
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round01_inter.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round02_inter.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round03_inter.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round04_inter.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round05_inter.mp3'),
-          ],
-          roundInterTranscripts: [
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round01_inter.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round02_inter.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round03_inter.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round04_inter.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuidance_Cosmic Sky/sky6_round05_inter.wjson'),
-          ],
-        },
-      },
-      {
-        id: 'qm2-3', title: 'Unfollow and Witness',
+        id: 'qm2-3', title: 'Unfollow and Witness the Air',
         transcript: require('../../assets/audio/QMPart2/Words/QM3_6rounds_ErkinGuided_UnfollowAndWitness.wjson'),
         description: "QM3 training by All Here — designed to train the ability to quickly mobilize presence. Six rounds of three minutes each with one-minute breaks in between.",
         rounds: {

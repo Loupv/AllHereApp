@@ -9,11 +9,18 @@ import Animated, {
   Easing,
   runOnJS,
 } from 'react-native-reanimated';
-import Constants from 'expo-constants';
+import pkg from '../../package.json';
 import { colors, type } from '../theme';
 
-// Minor (0.1 ← 0.1.0); drop the patch digit — app.json stays the source of truth.
-const VERSION = `V${(Constants.expoConfig?.version ?? '0.1.0').split('.').slice(0, 2).join('.')}`;
+// Minor (1.1 ← 1.1.1); drop the patch digit. Reads straight from the
+// bundled package.json — previously we went through expo-constants
+// (`Constants.expoConfig?.version`) but on the web build that path
+// either returns undefined or a stale default, which surfaced as a
+// rogue "V0.1" on the splash even after we'd shipped real releases.
+// package.json is the source of truth and stays in sync with app.json
+// (we bump both together at release time).
+const RAW_VERSION = (pkg as { version?: string }).version ?? '0.0.0';
+const VERSION = `V${RAW_VERSION.split('.').slice(0, 2).join('.')}`;
 
 const LOGO = require('../../assets/images/allhere-logo.png');
 

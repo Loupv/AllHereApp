@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
-import { AboutFooter } from '../../src/components/AboutFooter';
 import { SeeMoreLink } from '../../src/components/SeeMoreLink';
 import { videoItems, type VideoItem, type MediaKind } from '../../src/content/catalog';
 import { useVideoFeed, useNewsFeed } from '../../src/content/remote';
@@ -220,7 +219,6 @@ export default function VideoScreen() {
         })}
         </View>
         <SeeMoreLink label="Media" url="https://allhere.org/media-hub/" />
-        <AboutFooter />
         </View>
       </ScrollView>
       </SwipeTabs>

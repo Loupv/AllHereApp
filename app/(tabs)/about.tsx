@@ -12,6 +12,18 @@ const openExternal = (url: string) => {
   else Linking.openURL(url).catch(() => {});
 };
 
+// Hero asset — kept as a single source of truth for native (<Image>)
+// and web (CSS `background-image`). On web, Metro's asset registry
+// returns an object whose `.uri` is a `/assets/...` URL we can drop
+// straight into a CSS `url(...)`. On native the require() resolves
+// to an opaque module id consumed by <Image> — `HERO_URI` stays
+// empty there since native doesn't take the web branch.
+const HERO_SOURCE = require('../../assets/images/lounge-1.jpg');
+const HERO_URI: string =
+  Platform.OS === 'web' && HERO_SOURCE && typeof HERO_SOURCE === 'object' && 'uri' in HERO_SOURCE
+    ? (HERO_SOURCE as { uri: string }).uri
+    : '';
+
 const pillars = [
   {
     icon: require('../../assets/images/icon-science.png'),
@@ -41,11 +53,25 @@ export default function AboutTabScreen() {
       <SwipeTabs current="about">
         <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabPad, alignItems: 'center' }]}>
           <View style={[styles.column, { maxWidth: columnMax }]}>
-          {/* Clip the hero to a shorter frame and push the image up so the
-              bottom of the picture stays visible (default cover-centre
-              was hiding the lower portion). */}
-          <View style={styles.heroWrap}>
-            <Image source={require('../../assets/images/lounge-1.jpg')} style={styles.hero} resizeMode="cover" />
+          {/* Hero frame is sized so the bottom third of the source
+              picture is what shows through, regardless of viewport
+              width. On web we render the picture as a `background-
+              image` on a plain View (so we can pin `background-
+              position` to the bottom edge — react-native-web's Image
+              hard-codes that to centre). On native we keep an actual
+              <Image> and use the bottom-anchor trick: full width,
+              source aspect ratio, absolute bottom: 0 inside an
+              overflow:hidden wrapper. */}
+          <View style={[styles.heroWrap, Platform.OS === 'web' && {
+            // @ts-expect-error — web-only CSS props, no RN typings.
+            backgroundImage: `url(${HERO_URI})`,
+            backgroundSize: 'cover',
+            backgroundPosition: '50% 100%',
+            backgroundRepeat: 'no-repeat',
+          }]}>
+            {Platform.OS !== 'web' ? (
+              <Image source={HERO_SOURCE} style={styles.hero} resizeMode="cover" />
+            ) : null}
           </View>
           <View style={styles.body}>
             <Text style={styles.eyebrow}>About All Here</Text>
@@ -119,8 +145,42 @@ const styles = StyleSheet.create({
   // lower half of the picture (the part we actually want to show) lands
   // on screen. Don't change these numbers in a pass where you're only
   // tightening typography — the crop is tuned visually.
-  heroWrap: { width: '100%', height: 160, overflow: 'hidden', position: 'relative' },
-  hero: { position: 'absolute', bottom: 0, left: 0, right: 0, width: '100%', height: 320 },
+  // Source image is 674 × 702 (≈ 1:1.04). The wrapper fills the column
+  // width and adopts an aspect ratio of sourceW / (sourceH / 3) ≈ 2.88
+  // — that's the slice of the source we want to expose, capped between
+  // 140 and 280 px tall so very narrow phones still get a usable band
+  // and very wide tablets don't blow up the hero.
+  heroWrap: {
+    width: '100%',
+    aspectRatio: 674 / (702 / 3),
+    minHeight: 140,
+    maxHeight: 280,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  // The Image fills the wrapper and crops to cover. On web,
+  // react-native-web renders the actual image as a CSS background on
+  // an inner div (the IMG element is just an a11y fallback) — so we
+  // override `backgroundPosition` via the style prop to bias the crop
+  // to the bottom edge. On native we keep the bottom-anchor trick:
+  // Image gets the source aspect ratio at full width and is absolute-
+  // positioned at bottom: 0, top overflows + clips.
+  hero: Platform.OS === 'web'
+    ? ({
+        width: '100%',
+        height: '100%',
+        // @ts-expect-error — backgroundPosition is a CSS prop honoured
+        // by react-native-web's Image but absent from the RN typings.
+        backgroundPosition: '50% 100%',
+      } as any)
+    : {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        width: '100%',
+        aspectRatio: 674 / 702,
+      },
   body: { padding: spacing.lg },
   // Sentence-case section label — brand/positioning cue without the
   // uppercase/accent weight.

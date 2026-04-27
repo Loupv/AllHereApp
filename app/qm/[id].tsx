@@ -8,6 +8,7 @@ import { ContentCard } from '../../src/components/ContentCard';
 import { ProgramHeader } from '../../src/components/ProgramHeader';
 import { qmVolets, qmProgram, silentMindVolets, trackDuration } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
+import { useProgress, isTrackUnlocked } from '../../src/player/progressStore';
 import { useLayout } from '../../src/hooks/useLayout';
 import { colors, spacing, type } from '../../src/theme';
 import { noOrphan } from '../../src/utils/noOrphan';
@@ -28,6 +29,7 @@ export default function QMVoletScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const openPlayer = usePlayerStore(s => s.open);
+  const listened = useProgress(s => s.listened);
   const { columnMax } = useLayout();
   const volet = qmVolets.find(v => v.id === id);
   const smTwin = silentMindVolets.find(v => v.id === id);
@@ -65,20 +67,41 @@ export default function QMVoletScreen() {
           />
 
           <View style={styles.listPad}>
-            {playable.map((t) => (
-              <ContentCard
-                key={t.id}
-                title={t.title}
-                meta={t.rounds ? `${t.rounds.max} × ${t.rounds.roundLengthMinutes} min` : undefined}
-                duration={trackDuration(t)}
-                kind="audio"
-                accent={colors.accentAlt}
-                description={t.description}
-                expanded={expandedId === t.id}
-                onToggle={() => setExpandedId(prev => prev === t.id ? null : t.id)}
-                onPlay={() => openPlayer(t, playable, { autoStart: true })}
-              />
-            ))}
+            {(() => {
+              // Sequential unlock — a QM track unlocks alongside its
+              // matching SM track in the same Part. See `isTrackUnlocked`
+              // in progressStore for the full walk.
+              return playable.map((t) => {
+                const locked = !isTrackUnlocked(t.id, listened);
+                if (locked) {
+                  return (
+                    <ContentCard
+                      key={t.id}
+                      title={t.title}
+                      subtitle="Listen to the previous audio first"
+                      duration="LOCKED"
+                      kind="audio"
+                      accent={colors.accentAlt}
+                      disabled
+                    />
+                  );
+                }
+                return (
+                  <ContentCard
+                    key={t.id}
+                    title={t.title}
+                    meta={t.rounds ? `${t.rounds.max} × ${t.rounds.roundLengthMinutes} min` : undefined}
+                    duration={trackDuration(t)}
+                    kind="audio"
+                    accent={colors.accentAlt}
+                    description={t.description}
+                    expanded={expandedId === t.id}
+                    onToggle={() => setExpandedId(prev => prev === t.id ? null : t.id)}
+                    onPlay={() => openPlayer(t, playable, { autoStart: true })}
+                  />
+                );
+              });
+            })()}
 
             {soon.length > 0 ? (
               <>

@@ -8,6 +8,7 @@ import { ContentCard } from '../../src/components/ContentCard';
 import { ProgramHeader } from '../../src/components/ProgramHeader';
 import { silentMindVolets, qmVolets, silentMindProgram, trackDuration } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
+import { useProgress, isTrackUnlocked } from '../../src/player/progressStore';
 import { useLayout } from '../../src/hooks/useLayout';
 import { colors, spacing, type } from '../../src/theme';
 import { noOrphan } from '../../src/utils/noOrphan';
@@ -34,6 +35,7 @@ export default function VoletScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const openPlayer = usePlayerStore(s => s.open);
+  const listened = useProgress(s => s.listened);
   const { columnMax } = useLayout();
   const volet = silentMindVolets.find(v => v.id === id);
   // Mirror volet in the QM tab — same id suffix ('part1' / 'part2' / 'part3').
@@ -77,6 +79,10 @@ export default function VoletScreen() {
           <View style={styles.listPad}>
           {(() => {
             const playable = volet.tracks.filter(t => !t.comingSoon);
+            // Sequential unlock: see `isTrackUnlocked` in progressStore
+            // for the full walk. Intro is fully open; Part 1/2/3 SM
+            // chains gate per-track, and matching QM tracks unlock on
+            // the same beat as their SM counterpart (by title match).
             // Previously inserted "Our sections" divider after intro-3
             // ("Prepare the space"). That track is now pulled, and the
             // remaining 3 intros all live in the same flat list — no
@@ -84,12 +90,25 @@ export default function VoletScreen() {
             const showDividerAfter: string | null = null;
             const cards: React.ReactNode[] = [];
             volet.tracks.forEach((t) => {
+              const locked = !t.comingSoon && !isTrackUnlocked(t.id, listened);
               cards.push(
                 t.comingSoon ? (
                   <ContentCard
                     key={t.id}
                     title={t.title}
                     duration="SOON"
+                    kind="audio"
+                    disabled
+                  />
+                ) : locked ? (
+                  // Locked = same dimmed treatment as coming-soon, but
+                  // labelled "LOCKED" + a tooltip-y subtitle so the
+                  // user understands why and what to do about it.
+                  <ContentCard
+                    key={t.id}
+                    title={t.title}
+                    subtitle="Listen to the previous audio first"
+                    duration="LOCKED"
                     kind="audio"
                     disabled
                   />

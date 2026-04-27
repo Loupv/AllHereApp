@@ -3,7 +3,6 @@ import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrol
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
 import { VoletCard } from '../../src/components/VoletCard';
-import { AboutFooter } from '../../src/components/AboutFooter';
 import { ProgramHeader } from '../../src/components/ProgramHeader';
 import { silentMindVolets, silentMindProgram } from '../../src/content/catalog';
 import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
@@ -45,7 +44,6 @@ export default function SilentMindScreen() {
           );
         })}
 
-        <AboutFooter />
         </View>
       </ScrollView>
       </SwipeTabs>
