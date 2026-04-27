@@ -89,17 +89,39 @@ export function WebSwipeBack() {
     };
     const onCancel = () => { tracking = false; };
 
+    // Touchmove claims the gesture as a horizontal back-swipe as soon
+    // as it's clearly more lateral than vertical. Without this, the
+    // browser locks the gesture as a vertical scroll the moment the
+    // user's finger drifts even slightly off horizontal — and our
+    // pointerup never fires (the gesture became a scroll). With
+    // passive: false we can preventDefault on touchmove, which stops
+    // the page from scrolling and keeps the gesture ours.
+    const onMove = (e: TouchEvent) => {
+      if (!tracking) return;
+      const p = pointFromEvent(e);
+      if (!p) return;
+      const dx = p.x - startX;
+      const dy = Math.abs(p.y - startY);
+      if (dx > 10 && dx > dy * 1.2) {
+        // Claim it: prevent page scroll for the rest of this gesture.
+        e.preventDefault();
+      }
+    };
+
     // Listen to **both** Pointer and legacy Mouse/Touch events. Some
     // Chrome desktop scenarios (notably trackpad mouse-emulation in
     // certain configs and synthetic events) deliver mouse events but
     // not pointer events to window, so the dual-listener belt-and-
-    // braces guarantees we catch the gesture.
+    // braces guarantees we catch the gesture. `touchmove` is
+    // **non-passive** so we can preventDefault when the gesture is
+    // horizontal and "ours".
     window.addEventListener('pointerdown', onDown, { passive: true });
     window.addEventListener('pointerup', onUp, { passive: true });
     window.addEventListener('pointercancel', onCancel, { passive: true });
     window.addEventListener('mousedown', onDown, { passive: true });
     window.addEventListener('mouseup', onUp, { passive: true });
     window.addEventListener('touchstart', onDown, { passive: true });
+    window.addEventListener('touchmove', onMove, { passive: false });
     window.addEventListener('touchend', onUp, { passive: true });
     window.addEventListener('touchcancel', onCancel, { passive: true });
     return () => {
@@ -109,6 +131,7 @@ export function WebSwipeBack() {
       window.removeEventListener('mousedown', onDown as any);
       window.removeEventListener('mouseup', onUp as any);
       window.removeEventListener('touchstart', onDown as any);
+      window.removeEventListener('touchmove', onMove as any);
       window.removeEventListener('touchend', onUp as any);
       window.removeEventListener('touchcancel', onCancel);
     };
