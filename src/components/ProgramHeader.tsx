@@ -38,7 +38,7 @@ export function ProgramHeader({ eyebrow, title, description, accent }: Props) {
     <View style={styles.root}>
       <View style={styles.banner}>
         <View style={[styles.bannerLine, { backgroundColor: accent }]} />
-        <Text style={[styles.bannerText, { color: accent }]} numberOfLines={1}>
+        <Text style={[styles.bannerText, { color: accent }]} numberOfLines={2}>
           {eyebrow}
         </Text>
         <View style={[styles.bannerLine, { backgroundColor: accent }]} />

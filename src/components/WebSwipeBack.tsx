@@ -73,17 +73,17 @@ export function WebSwipeBack() {
       const dx = p.x - startX;
       const dy = Math.abs(p.y - startY);
       if (dx >= THRESHOLD_X && dy <= MAX_DRIFT_Y) {
-        // Pop the navigator stack if possible. When the user landed
-        // here via deep link / hard refresh there's nothing to pop —
-        // fall back to the parent tab so the gesture always lands
-        // somewhere meaningful.
+        // Always pop to the parent tab (`/silent-mind/<id>` →
+        // `/silent-mind`), regardless of how the user reached this
+        // detail page. Using `router.back()` would follow the actual
+        // navigation history — if the user crossed over from a QM
+        // detail via "Back to Silent Mind", history.back would
+        // (counterintuitively) bring them back to the QM detail.
+        // The user expectation: once on an SM detail, swipe-back
+        // lands on the SM root — and same for QM.
         try {
-          if (router.canGoBack && router.canGoBack()) {
-            router.back();
-          } else {
-            const parent = pathname.replace(/\/[^/]+$/, '');
-            if (parent) router.replace(parent as any);
-          }
+          const parent = pathname.replace(/\/[^/]+$/, '');
+          if (parent) router.replace(parent as any);
         } catch {}
       }
     };
@@ -112,7 +112,7 @@ export function WebSwipeBack() {
       window.removeEventListener('touchend', onUp as any);
       window.removeEventListener('touchcancel', onCancel);
     };
-  }, [isDetail, router]);
+  }, [isDetail, router, pathname]);
 
   return null;
 }

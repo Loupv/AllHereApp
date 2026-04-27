@@ -420,11 +420,11 @@ const qm3RoundsHome: AudioTrack = {
     max: 3,
     roundLengthMinutes: 3,
     breakSeconds: 60,
-    // The gateway QM session leads with the short "QM Training" audio
-    // so a first-time listener gets the framing before the rounds
-    // begin — same file served in the home intro list.
-    introSource: require('../../assets/audio/Part0/4. QM Format.mp3'),
-    introTranscript: require('../../assets/audio/Part0/Words/4. QM Format.wjson'),
+    // No intro on the Start screen "3min × 3" quick CTA — tapping
+    // that pill should drop the user straight into round 1, since
+    // they explicitly chose the short-format meditation. The "QM
+    // Training" intro audio is still surfaced in the Home intro list
+    // (the volet) for users who want the framing.
     roundSources: [
       require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01.mp3'),
       require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02.mp3'),

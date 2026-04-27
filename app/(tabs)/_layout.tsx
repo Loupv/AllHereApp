@@ -8,14 +8,42 @@ import { newsArticles } from '../../src/content/news';
 import { videoItems } from '../../src/content/catalog';
 
 // Fixed height that fits: 4 px top padding + 26 px icon + React
-// Navigation's internal icon→label margin + ~14 px label line-box
-// (fontSize 9 at lineHeight 14) + 10 px bottom padding. Bumped from 58
-// → 66 because Android was still clipping the label descenders.
-export const TAB_BAR_BASE = 66;
+// Navigation's internal icon→label margin + up to 2 lines of label
+// (fontSize 9 at lineHeight 13 = max 26 px) + 8 px bottom padding.
+// Two-line tolerance is what stops "SILENT MIND" / "QM TRAINING" from
+// truncating to "SILENT MI…" on phone widths.
+export const TAB_BAR_BASE = 80;
 // Max width of the tab-items row on wide viewports.
 const TAB_BAR_ITEMS_MAX_WIDTH = 900;
 
 const LOGO = require('../../assets/images/allhere-logo.png');
+
+/**
+ * Custom tab label that wraps to up to 2 lines instead of getting
+ * truncated to "SILENT MI…". The default react-navigation label
+ * forces `numberOfLines={1}`; we override by providing our own
+ * Text component.
+ */
+function makeWrapLabel(text: string) {
+  return ({ color }: { color: string }) => (
+    <Text
+      numberOfLines={2}
+      style={{
+        color,
+        fontFamily: fonts.bodySemibold,
+        fontSize: 9,
+        lineHeight: 12,
+        letterSpacing: 0.6,
+        textTransform: 'uppercase',
+        textAlign: 'center',
+        includeFontPadding: false,
+        marginTop: 2,
+      }}
+    >
+      {text}
+    </Text>
+  );
+}
 
 function TabIcon({ label, focused, badge }: { label: string; focused: boolean; badge?: number }) {
   return (
@@ -98,22 +126,26 @@ export default function TabsLayout() {
         },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textDim,
-        // Uppercase labels on a single line. We can't reuse `type.overline`
-        // here (its 2.5 letter-spacing pushed 'QM TRAINING' past the item
-        // edge on phone widths) — tight 0.6 tracking keeps the caps
-        // discipline while fitting the label on one line.
+        // Uppercase labels — up to 2 lines if the label doesn't fit.
+        // tight 0.6 tracking keeps caps discipline while staying narrow
+        // enough that 'SILENT MIND' / 'QM TRAINING' fit on most phones
+        // without wrap; on narrower phones they wrap to 2 lines instead
+        // of being truncated to 'SILENT MI…'.
         tabBarLabelStyle: {
           fontFamily: fonts.bodySemibold,
           fontSize: 9,
-          // Explicit lineHeight + no top/bottom margin — Android was
-          // giving the label an under-sized line-box and clipping the
-          // descenders. 14 px line-height guarantees a clean baseline.
-          lineHeight: 14,
+          lineHeight: 13,
           letterSpacing: 0.6,
           textTransform: 'uppercase',
+          textAlign: 'center',
           marginTop: 0,
           marginBottom: 0,
           includeFontPadding: false,
+        },
+        // Allow the label box to use 2 lines instead of clipping a
+        // single line to '…'.
+        tabBarItemStyle: {
+          paddingHorizontal: 2,
         },
         sceneStyle: { backgroundColor: 'transparent' },
       }}
@@ -123,6 +155,7 @@ export default function TabsLayout() {
         options={{
           title: 'Start',
           tabBarIcon: ({ focused }) => <TabIcon label="◐" focused={focused} />,
+          tabBarLabel: makeWrapLabel('Start'),
         }}
       />
       <Tabs.Screen
@@ -130,6 +163,7 @@ export default function TabsLayout() {
         options={{
           title: 'Silent Mind',
           tabBarIcon: ({ focused }) => <TabIcon label="◉" focused={focused} />,
+          tabBarLabel: makeWrapLabel('Silent Mind'),
         }}
       />
       <Tabs.Screen
@@ -137,6 +171,7 @@ export default function TabsLayout() {
         options={{
           title: 'QM Training',
           tabBarIcon: ({ focused }) => <TabIcon label="◎" focused={focused} />,
+          tabBarLabel: makeWrapLabel('QM Training'),
         }}
       />
       <Tabs.Screen
@@ -144,6 +179,7 @@ export default function TabsLayout() {
         options={{
           title: 'Media',
           tabBarIcon: ({ focused }) => <TabIcon label="▷" focused={focused} badge={videoUnread} />,
+          tabBarLabel: makeWrapLabel('Media'),
         }}
       />
       <Tabs.Screen
@@ -151,6 +187,7 @@ export default function TabsLayout() {
         options={{
           title: 'About',
           tabBarIcon: ({ focused }) => <TabIcon label="◆" focused={focused} />,
+          tabBarLabel: makeWrapLabel('About'),
         }}
       />
     </Tabs>
