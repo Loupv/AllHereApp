@@ -29,7 +29,7 @@ const pillars = [
     icon: require('../../assets/images/icon-practice.png'),
     title: 'Meditation Practice',
     body:
-      'We teach methods that reduce mind-wandering and enhance focal attention in order to achieve a profound state of presence — the Silent Mind.',
+      'We train methods to reduce random mind-wandering and enhance meditative attention in order to achieve a profound state of Stability and Silence of Mind.',
   },
 ];
 
@@ -51,7 +51,7 @@ export default function AboutTabScreen() {
             <Text style={styles.eyebrow}>About All Here</Text>
             <Text style={styles.title}>{noOrphan('Where meditation meets\nscience & technology')}</Text>
             <Text style={styles.lead}>
-              {noOrphan('Founded in Geneva, All Here is inspiring the world to meditate through immersive, quantifiable services.')}
+              {noOrphan('Founded in Geneva, All Here is inspiring the world to meditate through immersive, quantifiable technologies.')}
             </Text>
 
             {/* Inline stats: no cards / borders — three quiet columns

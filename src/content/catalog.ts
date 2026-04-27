@@ -86,8 +86,8 @@ export const silentMindProgram = {
   title: 'The Three-Part Journey',
   intro:
     'Our program is divided into three parts,\n' +
-    'focused on training meditative attention,\n' +
-    'leading to stability and Silence of Mind.',
+    'focused on training Meditative Attention,\n' +
+    'leading to Stability and Silence of Mind.',
   banner: require('../../assets/images/hero/space.jpg'),
 };
 
@@ -476,6 +476,7 @@ export const qmProgram = {
   eyebrow: 'Quantified Meditation',
   title: 'High Intensity Training',
   intro:
+    'A new way to meditate\n' +
     'Multiple rounds, short breaks\n' +
     'Reproduce the same meditative state on demand',
   banner: require('../../assets/images/hero/space.jpg'),
@@ -491,7 +492,7 @@ export const qmVolets: Volet[] = [
     title: 'Part 1',
     subtitle: voletById('part1').subtitle,
     tagline: voletById('part1').tagline,
-    description: 'Quantified training for the foundational practices of Part 1 — short, timed rounds with pauses between them.',
+    description: 'Multiple 3 to 5 min rounds with one-minute breaks',
     image: require('../../assets/images/hero/earth.jpg'),
     tracks: voletById('part1').qmTracks ?? [],
   },
@@ -500,7 +501,7 @@ export const qmVolets: Volet[] = [
     title: 'Part 2',
     subtitle: voletById('part2').subtitle,
     tagline: voletById('part2').tagline,
-    description: 'Quantified training for Part 2 — stabilize the mind through short, timed rounds.',
+    description: 'Multiple 3 to 5 min rounds with one-minute breaks',
     image: require('../../assets/images/hero/sky.jpg'),
     tracks: voletById('part2').qmTracks ?? [],
   },
@@ -509,7 +510,7 @@ export const qmVolets: Volet[] = [
     title: 'Part 3',
     subtitle: voletById('part3').subtitle,
     tagline: voletById('part3').tagline,
-    description: 'QM training for the deeper contemplative practices of Part 3 is on its way.',
+    description: 'Multiple 3 to 5 min rounds with one-minute breaks',
     image: require('../../assets/images/hero/space.jpg'),
     // All three rounds are still in production — `locked: true` greys out
     // the whole card in QM and removes the chevron so users don't tap
