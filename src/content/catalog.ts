@@ -475,10 +475,14 @@ export const startJourneySteps = [
 export const qmProgram = {
   eyebrow: 'Quantified Meditation',
   title: 'High Intensity Training',
+  // Brand-promise byline that sits *inside* the title block, just
+  // below the main title — see `ProgramHeader`'s `subtitle` prop. It
+  // used to live as line 1 of the description, but visually it
+  // belonged with the title, not buried in the body copy below.
+  byline: 'A new way to meditate',
   intro:
-    'A new way to meditate\n' +
-    'Multiple rounds, short breaks\n' +
-    'Reproduce the same meditative state on demand',
+    'Multiple rounds, short breaks,\n' +
+    'reproduce the same meditative state on demand.',
   banner: require('../../assets/images/hero/space.jpg'),
 };
 

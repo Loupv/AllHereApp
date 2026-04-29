@@ -100,21 +100,49 @@ type StarCfg = {
   phase: number;
 };
 
+// Twice the position count (28 vs 14) with the visibility-dance trick:
+// `baseOpacity == variation` so opacity oscillates symmetrically about
+// 0 — the Star worklet clamps with `max(0, …)`, which means each star
+// is INVISIBLE for half its twinkle cycle. With 28 stars on staggered
+// phases, ~14 are above zero at any moment, so the on-screen count
+// stays the same as before — only the *positional variety* doubles.
+// Peak brightness (base + variation = 2 × variation) stays in roughly
+// the same range as the previous baseOpacity numbers (0.3 → 0.6).
 const STARS: StarCfg[] = [
-  { offsetXPx: -38, yFrac: 0.12, r: 0.8, baseOpacity: 0.45, variation: 0.30, period:  6, phase: 0.0 },
-  { offsetXPx:  22, yFrac: 0.18, r: 1.2, baseOpacity: 0.55, variation: 0.35, period:  9, phase: 1.4 },
-  { offsetXPx: -14, yFrac: 0.24, r: 0.6, baseOpacity: 0.40, variation: 0.30, period:  7, phase: 2.7 },
-  { offsetXPx:  46, yFrac: 0.30, r: 0.7, baseOpacity: 0.35, variation: 0.25, period: 11, phase: 0.6 },
-  { offsetXPx:  -6, yFrac: 0.36, r: 1.4, baseOpacity: 0.60, variation: 0.30, period: 13, phase: 3.1 },
-  { offsetXPx:  30, yFrac: 0.42, r: 0.5, baseOpacity: 0.30, variation: 0.20, period:  5, phase: 1.9 },
-  { offsetXPx: -28, yFrac: 0.48, r: 0.9, baseOpacity: 0.50, variation: 0.30, period:  8, phase: 4.2 },
-  { offsetXPx:  10, yFrac: 0.55, r: 1.1, baseOpacity: 0.55, variation: 0.35, period: 10, phase: 0.3 },
-  { offsetXPx: -42, yFrac: 0.62, r: 0.6, baseOpacity: 0.35, variation: 0.25, period:  9, phase: 5.0 },
-  { offsetXPx:  38, yFrac: 0.68, r: 1.0, baseOpacity: 0.50, variation: 0.30, period:  7, phase: 2.2 },
-  { offsetXPx: -18, yFrac: 0.74, r: 1.3, baseOpacity: 0.55, variation: 0.30, period: 12, phase: 1.0 },
-  { offsetXPx:  14, yFrac: 0.80, r: 0.7, baseOpacity: 0.40, variation: 0.25, period:  6, phase: 3.7 },
-  { offsetXPx: -34, yFrac: 0.86, r: 0.9, baseOpacity: 0.45, variation: 0.30, period:  8, phase: 0.9 },
-  { offsetXPx:  26, yFrac: 0.92, r: 0.6, baseOpacity: 0.35, variation: 0.20, period:  4, phase: 4.5 },
+  // Original 14 — same x/y positions, opacity dance applied so they
+  // also fade to 0 between twinkles instead of staying always-visible.
+  { offsetXPx: -38, yFrac: 0.12, r: 0.8, baseOpacity: 0.30, variation: 0.30, period:  6, phase: 0.0 },
+  { offsetXPx:  22, yFrac: 0.18, r: 1.2, baseOpacity: 0.35, variation: 0.35, period:  9, phase: 1.4 },
+  { offsetXPx: -14, yFrac: 0.24, r: 0.6, baseOpacity: 0.30, variation: 0.30, period:  7, phase: 2.7 },
+  { offsetXPx:  46, yFrac: 0.30, r: 0.7, baseOpacity: 0.25, variation: 0.25, period: 11, phase: 0.6 },
+  { offsetXPx:  -6, yFrac: 0.36, r: 1.4, baseOpacity: 0.30, variation: 0.30, period: 13, phase: 3.1 },
+  { offsetXPx:  30, yFrac: 0.42, r: 0.5, baseOpacity: 0.20, variation: 0.20, period:  5, phase: 1.9 },
+  { offsetXPx: -28, yFrac: 0.48, r: 0.9, baseOpacity: 0.30, variation: 0.30, period:  8, phase: 4.2 },
+  { offsetXPx:  10, yFrac: 0.55, r: 1.1, baseOpacity: 0.35, variation: 0.35, period: 10, phase: 0.3 },
+  { offsetXPx: -42, yFrac: 0.62, r: 0.6, baseOpacity: 0.25, variation: 0.25, period:  9, phase: 5.0 },
+  { offsetXPx:  38, yFrac: 0.68, r: 1.0, baseOpacity: 0.30, variation: 0.30, period:  7, phase: 2.2 },
+  { offsetXPx: -18, yFrac: 0.74, r: 1.3, baseOpacity: 0.30, variation: 0.30, period: 12, phase: 1.0 },
+  { offsetXPx:  14, yFrac: 0.80, r: 0.7, baseOpacity: 0.25, variation: 0.25, period:  6, phase: 3.7 },
+  { offsetXPx: -34, yFrac: 0.86, r: 0.9, baseOpacity: 0.30, variation: 0.30, period:  8, phase: 0.9 },
+  { offsetXPx:  26, yFrac: 0.92, r: 0.6, baseOpacity: 0.20, variation: 0.20, period:  4, phase: 4.5 },
+  // Added 14 — interleaved positions (different x offsets, different
+  // y bands, half-cycle phase shifts) so when one of the originals
+  // fades out a fresh one fades in nearby. Periods + phases chosen so
+  // no two neighbours synchronise.
+  { offsetXPx:  44, yFrac: 0.08, r: 0.7, baseOpacity: 0.25, variation: 0.25, period:  8, phase: 2.3 },
+  { offsetXPx: -22, yFrac: 0.16, r: 0.5, baseOpacity: 0.20, variation: 0.20, period: 12, phase: 5.6 },
+  { offsetXPx:  18, yFrac: 0.22, r: 1.0, baseOpacity: 0.30, variation: 0.30, period:  5, phase: 0.8 },
+  { offsetXPx: -46, yFrac: 0.28, r: 0.8, baseOpacity: 0.30, variation: 0.30, period: 10, phase: 4.1 },
+  { offsetXPx:   2, yFrac: 0.34, r: 0.6, baseOpacity: 0.25, variation: 0.25, period:  7, phase: 1.7 },
+  { offsetXPx: -32, yFrac: 0.40, r: 1.2, baseOpacity: 0.35, variation: 0.35, period:  9, phase: 3.5 },
+  { offsetXPx:  34, yFrac: 0.46, r: 0.7, baseOpacity: 0.25, variation: 0.25, period: 14, phase: 0.4 },
+  { offsetXPx:  -8, yFrac: 0.52, r: 0.5, baseOpacity: 0.20, variation: 0.20, period:  6, phase: 5.3 },
+  { offsetXPx:  20, yFrac: 0.58, r: 0.9, baseOpacity: 0.30, variation: 0.30, period: 11, phase: 2.8 },
+  { offsetXPx: -10, yFrac: 0.66, r: 1.1, baseOpacity: 0.35, variation: 0.35, period:  8, phase: 4.6 },
+  { offsetXPx:  42, yFrac: 0.72, r: 0.5, baseOpacity: 0.20, variation: 0.20, period:  7, phase: 1.2 },
+  { offsetXPx: -24, yFrac: 0.78, r: 0.8, baseOpacity: 0.25, variation: 0.25, period: 10, phase: 3.9 },
+  { offsetXPx:  -2, yFrac: 0.84, r: 1.3, baseOpacity: 0.35, variation: 0.35, period: 13, phase: 0.7 },
+  { offsetXPx:  32, yFrac: 0.90, r: 0.6, baseOpacity: 0.25, variation: 0.25, period:  9, phase: 2.6 },
 ];
 
 // Sharp filaments — a separate small set of thin lines rendered
@@ -197,10 +225,14 @@ function WaveLine({
 }) {
   const animatedProps = useAnimatedProps(() => {
     'worklet';
-    // 80 segments produces a smooth curve at any viewport height
-    // without overloading the SVG renderer. Path is sampled in real
-    // screen pixels — no viewBox abstraction.
-    const POINTS = 80;
+    // Segment count is the hot loop here — every line rebuilds a path
+    // string from `POINTS + 1` samples on every UI-thread frame. Web
+    // GPUs eat that easily, but on a phone CPU a couple dozen lines at
+    // 80 segments × 60 Hz starts to hurt and shows up as lag during
+    // screen transitions. 40 segments still reads as a smooth wavy
+    // line at viewport heights up to ~1100 px (samples sit ~25 px
+    // apart) and roughly halves the per-frame string + sin work.
+    const POINTS = Platform.OS === 'web' ? 80 : 28;
     const cx = screenWidth / 2;
     // Phase of the global twist envelope — same value applied to every
     // line, so the column bends as a single rope rather than each
@@ -265,6 +297,14 @@ type Props = {
    * pin animation to "audio is playing".
    */
   active?: boolean;
+  /**
+   * When true, no time-driven animation runs at all — the wave shape
+   * is rendered once at t=0 and stays. Same visual structure (fog,
+   * sharp filaments, stars), just frozen. Used on native by default
+   * to eliminate the per-frame UI-thread cost that was making screen
+   * transitions feel sticky.
+   */
+  staticMode?: boolean;
 };
 
 /**
@@ -287,12 +327,20 @@ export function EnergyColumn({
   crispAccent = '#FFFFFF',
   opacity = 0.85,
   active = true,
+  staticMode = false,
 }: Props) {
   const { width, height } = useWindowDimensions();
   // Master clock in seconds. Bounded loop (600 → 0) keeps phase math
-  // safe; one second of wall time advances the value by 1.
+  // safe; one second of wall time advances the value by 1. In
+  // `staticMode` we leave it pinned at 0 so every WaveLine renders a
+  // single fixed path with no per-frame UI-thread work.
   const t = useSharedValue(0);
   useEffect(() => {
+    if (staticMode) {
+      cancelAnimation(t);
+      t.value = 0;
+      return;
+    }
     // The column ALWAYS animates so the Start screen is never visually
     // frozen — it drifts at a moderately slower rate when no audio is
     // playing (×0.5 of the active speed). When audio plays we shift
@@ -311,12 +359,19 @@ export function EnergyColumn({
       -1, false,
     );
     return () => cancelAnimation(t);
-  }, [active]);
+  }, [active, staticMode]);
 
   // Fog layer — heavy blur turns the wide low-opacity strokes into a
   // luminous haze. On web we apply CSS `filter: blur()`; on native we
   // wrap the strokes in an SVG `<G filter="url(#ec-blur)">` referencing
   // an `<FeGaussianBlur>` filter so iOS / Android render the same haze.
+  // Native budget: skip the outermost wide-amplitude halo lines + half
+  // of the sharp filaments. Each WaveLine is a `useAnimatedProps` that
+  // rebuilds its path string on every UI-thread frame, so cutting the
+  // count is a near-linear win on phones. On web we keep the full set
+  // because the GPU draws SVG paths nearly for free.
+  const fogLines = Platform.OS === 'web' ? LINES : LINES.slice(0, 7);
+  const sharpLines = Platform.OS === 'web' ? SHARP_LINES : SHARP_LINES.slice(0, 2);
   const fogSvg = (
     <Svg width={width} height={height}>
       {Platform.OS !== 'web' && (
@@ -328,7 +383,7 @@ export function EnergyColumn({
       )}
       {Platform.OS !== 'web' ? (
         <G filter="url(#ec-blur)">
-          {LINES.map((cfg, i) => (
+          {fogLines.map((cfg, i) => (
             <WaveLine
               key={`fog-${i}`}
               cfg={cfg}
@@ -340,7 +395,7 @@ export function EnergyColumn({
           ))}
         </G>
       ) : (
-        LINES.map((cfg, i) => (
+        fogLines.map((cfg, i) => (
           <WaveLine
             key={`fog-${i}`}
             cfg={cfg}
@@ -355,7 +410,7 @@ export function EnergyColumn({
   );
   const sharpSvg = (
     <Svg width={width} height={height}>
-      {SHARP_LINES.map((cfg, i) => (
+      {sharpLines.map((cfg, i) => (
         <WaveLine
           key={`sharp-${i}`}
           cfg={cfg}

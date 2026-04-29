@@ -133,19 +133,27 @@ const htmlToParagraphs = (html: string): string[] => {
 };
 
 /**
- * Pick the smallest featured-media size that still looks crisp on a phone
- * (typically `medium_large` ~768px wide, falling back to `large`, then to
- * the original). Saves a lot of bandwidth vs. always fetching the 2400px
- * master asset.
+ * Pick the smallest featured-media size that still looks crisp at the
+ * sizes we actually display the image:
+ *   - Media tab cards render ~180-360 px wide on phone (1 or 2 col grid).
+ *   - News list cards render ~360 px wide.
+ *   - Detail page heroes render up to ~600 px wide.
+ *
+ * `medium` (~300 px wide on most WP sites) is ample for cards and even
+ * detail heroes once the device pixel ratio kicks in. Previously we
+ * defaulted to `medium_large` (~768 px) which looked great on 4K
+ * monitors but hammered phone bandwidth and stalled the Media grid for
+ * seconds. Order: `medium` → `medium_large` → `large` → original, so we
+ * always get *something* even on posts that don't define every size.
  */
 const featuredUrl = (p: any): string | undefined => {
   const fm = p?._embedded?.['wp:featuredmedia']?.[0];
   if (!fm) return undefined;
   const sizes = fm.media_details?.sizes ?? {};
   return (
+    sizes.medium?.source_url ??
     sizes.medium_large?.source_url ??
     sizes.large?.source_url ??
-    sizes.medium?.source_url ??
     fm.source_url
   );
 };

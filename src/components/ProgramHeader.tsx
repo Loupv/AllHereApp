@@ -12,6 +12,12 @@ type Props = {
    *  screen so SM tab / QM tab / detail pages / About all share the
    *  same hierarchy. */
   title: string;
+  /** Optional smaller line that sits **inside the title block**, just
+   *  under the main title, before any running description. Use for a
+   *  brand-promise byline like "A new way to meditate" sitting under
+   *  "High Intensity Training" — same typographic group, secondary
+   *  weight. Renders nothing if not provided. */
+  subtitle?: string;
   /** Optional running paragraph below the title. Multi-line strings
    *  are preserved (each `\n` becomes a paragraph break). */
   description?: string;
@@ -33,7 +39,7 @@ type Props = {
  * surface rather than three independent pages with slightly
  * different typographic stacks.
  */
-export function ProgramHeader({ eyebrow, title, description, accent }: Props) {
+export function ProgramHeader({ eyebrow, title, subtitle, description, accent }: Props) {
   return (
     <View style={styles.root}>
       {/* Eyebrow text only — the flanking accent hairlines were
@@ -44,7 +50,16 @@ export function ProgramHeader({ eyebrow, title, description, accent }: Props) {
         {eyebrow}
       </Text>
 
-      <Text style={styles.title}>{noOrphan(title)}</Text>
+      {/* Title group: main title + (optional) byline. They live in
+          the same wrapper so they read as a single typographic unit;
+          the `gap` from `styles.root` doesn't apply between them
+          because they're inside one View. */}
+      <View style={styles.titleGroup}>
+        <Text style={styles.title}>{noOrphan(title)}</Text>
+        {subtitle ? (
+          <Text style={styles.titleByline}>{noOrphan(subtitle)}</Text>
+        ) : null}
+      </View>
 
       {description ? (
         <Text style={styles.description}>{noOrphan(description)}</Text>
@@ -57,9 +72,15 @@ const styles = StyleSheet.create({
   root: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    // Generous bottom padding so the section title is clearly its own
+    // beat before the audio-list panel / volet cards below it.
+    paddingBottom: spacing.xxl,
     alignItems: 'center',
-    gap: spacing.md,
+    // gap between eyebrow → title → description bumped (md → lg) so
+    // the three lines breathe instead of stacking tight. Combined with
+    // the looser bottom padding, the upper section now reads as a
+    // proper header rather than a header-shaped block of text.
+    gap: spacing.lg,
   },
   bannerText: {
     ...type.overline,
@@ -67,12 +88,30 @@ const styles = StyleSheet.create({
     letterSpacing: 1.8,
     textAlign: 'center',
   },
+  // Wraps the main title + the optional byline so they sit as one
+  // tight group, separate from the running description below.
+  titleGroup: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   title: {
     ...type.display,
     color: colors.text,
     fontSize: 22,
     lineHeight: 28,
     textAlign: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  // Secondary title line — smaller than `title`, italic, dim, but
+  // still part of the title group (sits inside `titleGroup`). Reads
+  // as a brand-promise byline rather than body copy.
+  titleByline: {
+    ...type.body,
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    fontStyle: 'italic',
     paddingHorizontal: spacing.sm,
   },
   description: {

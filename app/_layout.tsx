@@ -1,12 +1,23 @@
 import { useEffect, useState } from 'react';
 import { kv } from '../src/content/kv';
 import { useNotifications } from '../src/player/notificationStore';
-import { View, Image, StyleSheet } from 'react-native';
+import { Platform, View, Image, StyleSheet } from 'react-native';
+
+// BG visual config:
+//   - Web: full animated treatment — gradient breathes, energy column
+//     drifts. Browser GPUs handle it for free.
+//   - Native (iOS/Android): same gradient + energy column rendered, but
+//     with all live worklets disabled (`staticMode`). The visual
+//     identity is preserved, only the perpetual per-frame work is gone
+//     — that's what was making screen transitions feel sticky on iPhone.
+const BG_FX_ENABLED = true;
+const BG_STATIC_MODE = Platform.OS !== 'web';
 import Animated, {
   useAnimatedStyle, useSharedValue, withTiming, Easing,
 } from 'react-native-reanimated';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const LOGO = require('../assets/images/allhere-logo.png');
 import {
@@ -97,31 +108,50 @@ export default function RootLayout() {
   if (!fontsLoaded) return <View style={styles.root} />;
 
   return (
+    // GestureHandlerRootView wraps everything so any descendant
+    // <GestureDetector> (e.g. SwipeTabs' Pan gesture) has the
+    // gesture-handler runtime available. expo-router used to add this
+    // automatically but stopped doing so in some recent native builds —
+    // without the explicit wrap, screens that mount a GestureDetector
+    // throw "GestureDetector must be used as a descendant of
+    // GestureHandlerRootView" at render time.
+    <GestureHandlerRootView style={styles.root}>
     <View style={styles.root}>
       <StatusBar style="light" />
-      {/* Shared atmospheric gradient — sits at the root so every
-          screen (tabs + detail pages like silent-mind/[id], qm/[id],
-          news/[id]) renders against the same backdrop. The Stack's
-          contentStyle is transparent so this is what shows through.
-          Per-part palettes (Earth / Sky / Space) used to be a backlog
-          idea, but we deliberately keep one shared gradient app-wide
-          for consistency. */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <AnimatedGradient centerY={0.55} animateCenter={false} />
-      </View>
-      {/* Global energy column — a soft vertical shaft of luminous
-          waves running floor → ceiling. Sits **behind** UI (no
-          zIndex, so it stacks under the Stack screens, the Player
-          overlay, and the tab bar) — the user explicitly wants it
-          to feel like a backdrop, not an overlay. `pointerEvents="none"`
-          so taps continue to land on underlying UI. Frozen while
-          nothing is playing; ondulates while audio plays. */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        {/* Default accent ('#9D8AE8') gives the fog a saturated lavender
-            that survives the heavy blur. Sharp filaments + stars stay
-            white via `crispAccent`. */}
-        <EnergyColumn opacity={0.75} active={audioPlaying} />
-      </View>
+      {/* DEV TOGGLE — flip BG_FX_ENABLED to bring the animated
+          background back. Disabled on native right now while we
+          investigate whether the EnergyColumn + AnimatedGradient pair
+          is what's making screen / overlay transitions feel sticky on
+          iPhone. Both layers run reanimated worklets at 60 Hz across
+          the whole viewport, which adds up alongside the new
+          PagerView. With them off you'll get a flat `colors.bg` fill
+          behind everything — same colour, no motion — so any change
+          in transition fluidity points right back at these. */}
+      {BG_FX_ENABLED ? (
+        <>
+          {/* Shared atmospheric gradient — sits at the root so every
+              screen renders against the same backdrop. `staticMode`
+              skips the breath + centre-Y chase on native so the SVG
+              renders once and stays. */}
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <AnimatedGradient
+              centerY={0.55}
+              animateCenter={false}
+              staticMode={BG_STATIC_MODE}
+            />
+          </View>
+          {/* Global energy column. `staticMode` pins the time clock so
+              every WaveLine renders a single fixed path, no per-frame
+              UI-thread work. Web keeps the live drift. */}
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <EnergyColumn
+              opacity={0.75}
+              active={audioPlaying}
+              staticMode={BG_STATIC_MODE}
+            />
+          </View>
+        </>
+      ) : null}
       <Animated.View style={[{ flex: 1 }, stackFadeStyle]} pointerEvents={playerOpen ? 'none' : 'auto'}>
       <ThemeProvider value={TransparentNavTheme}>
       <Stack
@@ -136,6 +166,12 @@ export default function RootLayout() {
           // tab-layout logo stays in charge there.
           headerTitle: () => <Image source={LOGO} style={styles.headerLogo} resizeMode="contain" />,
           headerTitleAlign: 'center',
+          // Hide the iOS back-button label that defaults to the
+          // previous screen's name — for tab → detail pushes that
+          // would print "(tabs)" verbatim, since the (tabs) layout
+          // has no title. Just the chevron is enough.
+          headerBackTitle: '',
+          headerBackButtonDisplayMode: 'minimal',
           // Horizontal slide when pushing a detail page from a tab — the
           // "opening a sub-folder" cue. Applies to every non-(tabs) child
           // (silent-mind/[id], qm/[id], news/[id], video/[id]). Tab
@@ -152,6 +188,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'none' }} />
         <Stack.Screen name="silent-mind/[id]" options={{ title: '' }} />
         <Stack.Screen name="qm/[id]" options={{ title: '' }} />
+        <Stack.Screen name="qm-training" options={{ title: '' }} />
         <Stack.Screen name="news/[id]" options={{ title: '' }} />
         <Stack.Screen name="video/[id]" options={{ title: '' }} />
       </Stack>
@@ -163,6 +200,7 @@ export default function RootLayout() {
       {!user ? <LoginScreen /> : null}
       {!introDone && <IntroSplash onDone={() => setIntroDone(true)} />}
     </View>
+    </GestureHandlerRootView>
   );
 }
 

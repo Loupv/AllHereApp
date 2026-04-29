@@ -1,11 +1,40 @@
-import { Tabs } from 'expo-router';
-import { Text, View, Image, StyleSheet, useWindowDimensions } from 'react-native';
+import { withLayoutContext } from 'expo-router';
+import {
+  createMaterialTopTabNavigator,
+  MaterialTopTabNavigationOptions,
+  MaterialTopTabNavigationEventMap,
+} from '@react-navigation/material-top-tabs';
+import {
+  ParamListBase,
+  TabNavigationState,
+} from '@react-navigation/native';
+import { Pressable, Text, View, Image, StyleSheet, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '../../src/theme';
 import { useNotifications } from '../../src/player/notificationStore';
 import { useRemoteStore } from '../../src/content/remoteStore';
 import { newsArticles } from '../../src/content/news';
 import { videoItems } from '../../src/content/catalog';
+
+// Material-top-tabs ships with PagerView under the hood, which gives
+// us the swipe-between-tabs gesture for free with proper iOS / Android
+// touch arbitration (the tab swipe wins over child Pressables natively
+// without us having to fight the RN cancellation handshake). We ask
+// for a BOTTOM tab bar — the only visible difference from the default
+// material-top look — and replace the bar itself with our own custom
+// renderer so the bottom row keeps the icon-glyph + 2-line label
+// styling the app already had.
+const { Navigator } = createMaterialTopTabNavigator();
+
+// Wrap with expo-router's withLayoutContext so file-system routing
+// keeps working: each /(tabs)/* file is still its own screen, the URL
+// still updates on navigation, and deep links still resolve.
+const Tabs = withLayoutContext<
+  MaterialTopTabNavigationOptions,
+  typeof Navigator,
+  TabNavigationState<ParamListBase>,
+  MaterialTopTabNavigationEventMap
+>(Navigator);
 
 // Fixed height that fits: 4 px top padding + 26 px icon + React
 // Navigation's internal icon→label margin + up to 2 lines of label
@@ -18,42 +47,89 @@ const TAB_BAR_ITEMS_MAX_WIDTH = 900;
 
 const LOGO = require('../../assets/images/allhere-logo.png');
 
-/**
- * Custom tab label that wraps to up to 2 lines instead of getting
- * truncated to "SILENT MI…". The default react-navigation label
- * forces `numberOfLines={1}`; we override by providing our own
- * Text component.
- */
-function makeWrapLabel(text: string) {
-  return ({ color }: { color: string }) => (
-    <Text
-      numberOfLines={2}
-      style={{
-        color,
-        fontFamily: fonts.bodySemibold,
-        fontSize: 9,
-        lineHeight: 12,
-        letterSpacing: 0.6,
-        textTransform: 'uppercase',
-        textAlign: 'center',
-        includeFontPadding: false,
-        marginTop: 2,
-      }}
-    >
-      {text}
-    </Text>
+// Per-tab metadata in the order it appears in the bar (and in the
+// pager). Drives the custom bottom bar below — keeps the file-system
+// route names + display labels + glyphs in one table instead of
+// scattered across <Tabs.Screen> entries.
+type TabMeta = {
+  /** route name as it appears in app/(tabs)/<name>(.tsx) */
+  route: string;
+  /** rendered label (uppercased to 2 lines as needed) */
+  label: string;
+  /** monochrome glyph drawn above the label */
+  icon: string;
+  /** notification badge value source (read at render time) */
+  badge?: number;
+};
+
+function TabBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <View style={styles.badge}>
+      <Text style={styles.badgeText}>{count > 9 ? '9+' : count}</Text>
+    </View>
   );
 }
 
-function TabIcon({ label, focused, badge }: { label: string; focused: boolean; badge?: number }) {
+/**
+ * Custom bottom tab bar. Material-top-tabs' default bar is built for
+ * the top of the screen with an indicator strip — the visual we want
+ * is the same icon+label pair we had under expo-router's bottom Tabs,
+ * placed at the bottom of the screen with no indicator.
+ *
+ * Receives the navigator's `state` (current index, routes) +
+ * `navigation` (jumpTo) so taps switch tabs in-place. Swipes between
+ * tabs are handled by PagerView itself and don't go through here.
+ */
+function CustomBottomBar({ state, navigation, tabs, sidePad }: {
+  state: TabNavigationState<ParamListBase>;
+  navigation: any;
+  tabs: TabMeta[];
+  sidePad: number;
+}) {
   return (
-    <View style={styles.iconWrap}>
-      <Text style={[styles.iconGlyph, { color: focused ? colors.accent : colors.textDim }]}>{label}</Text>
-      {badge && badge > 0 ? (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{badge > 9 ? '9+' : badge}</Text>
-        </View>
-      ) : null}
+    <View
+      style={[
+        styles.bar,
+        { paddingLeft: sidePad, paddingRight: sidePad },
+      ]}
+    >
+      {state.routes.map((route, index) => {
+        const meta = tabs.find(t => t.route === route.name);
+        if (!meta) return null;
+        const focused = state.index === index;
+        const tint = focused ? colors.accent : colors.textDim;
+        return (
+          <Pressable
+            key={route.key}
+            onPress={() => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
+              if (!focused && !event.defaultPrevented) {
+                navigation.jumpTo(route.name);
+              }
+            }}
+            style={({ pressed }) => [styles.tabItem, pressed && { opacity: 0.7 }]}
+          >
+            <View style={styles.iconWrap}>
+              <Text style={[styles.iconGlyph, { color: tint }]}>{meta.icon}</Text>
+              <TabBadge count={meta.badge ?? 0} />
+            </View>
+            <Text
+              numberOfLines={2}
+              style={[
+                styles.label,
+                { color: tint },
+              ]}
+            >
+              {meta.label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -64,132 +140,64 @@ export default function TabsLayout() {
   // Side padding that keeps the flex-distributed tab items centred in
   // the bar, with a capped spread of TAB_BAR_ITEMS_MAX_WIDTH.
   const sidePad = Math.max(0, (width - TAB_BAR_ITEMS_MAX_WIDTH) / 2);
-  // Badge count on the Media tab now covers news + media together (the
+  // Badge count on the Media tab covers news + media together (the
   // two feeds were merged — News tab was removed in favour of About).
   const seenMedia = useNotifications(s => s.seenMedia);
   const remoteNews = useRemoteStore(s => s.news);
   const remoteMedia = useRemoteStore(s => s.videos);
-
   const newsList = remoteNews.length > 0 ? remoteNews : newsArticles;
   const mediaList = remoteMedia.length > 0 ? remoteMedia : videoItems;
-  // Dedupe in case a remote id happens to appear in both streams.
   const mergedIds = Array.from(new Set([...newsList.map(a => a.id), ...mediaList.map(v => v.id)]));
   const videoUnread = mergedIds.filter(id => !seenMedia[id]).length;
 
+  const tabs: TabMeta[] = [
+    { route: 'index',       label: 'Start',       icon: '◐' },
+    { route: 'silent-mind', label: 'Silent Mind', icon: '◉' },
+    { route: 'qm',          label: 'QM Training', icon: '◎' },
+    { route: 'video',       label: 'Media',       icon: '▷', badge: videoUnread },
+    { route: 'about',       label: 'About',       icon: '◆' },
+  ];
+
   return (
-    <View style={styles.root}>
-      {/* The shared atmospheric gradient now lives at the root layout
-          (app/_layout.tsx) so detail pages (silent-mind/[id], etc.)
-          render against the same backdrop. This wrapper is purely
-          structural — transparent scene + transparent tab bar let the
-          root gradient show through. */}
+    // Top safe-area inset added at the layout level — material-top-tabs
+    // doesn't ship a header (we removed expo-router's bottom Tabs which
+    // used to take care of this), so without this padding the tab
+    // content's first line of text would tuck under the iPhone's notch
+    // / Dynamic Island. The "SILENT MIND PROGRAM" eyebrow on SM and the
+    // teal "QUANTIFIED MEDITATION" eyebrow on QM were the most visible
+    // victims — they're tinted accent colours that get lost in the
+    // dead-pixel area at the top of OLED iPhones.
+    <View style={[styles.root, { paddingTop: insets.top }]}>
     <Tabs
+      // Bar lives at the bottom; the navigator itself still uses
+      // PagerView for content + swipe gestures.
+      tabBarPosition="bottom"
+      // Custom bar component — see CustomBottomBar above. We pass the
+      // tabs metadata + sidePad through `tabBar` so the bar stays
+      // pure-presentational and re-renders cheaply.
+      tabBar={(props) => (
+        <CustomBottomBar {...props} tabs={tabs} sidePad={sidePad} />
+      )}
       screenOptions={{
-        // Headers transparent too, so the gradient continues all the
-        // way to the top edge. Border kept hairline so a faint
-        // separation remains between the logo bar and content.
-        headerStyle: { backgroundColor: 'transparent', borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth },
-        headerTintColor: colors.text,
-        headerTitle: () => <Image source={LOGO} style={styles.headerLogo} resizeMode="contain" />,
-        headerTitleAlign: 'center',
-        // Horizontal shift between tabs so the new screen comes in
-        // from the side instead of cross-fading in place. Mirrors the
-        // SwipeTabs gesture direction.
-        animation: 'shift',
-        // Responsive tab bar height: base 72 + OS bottom safe area.
-        // Height/padding are generous enough that two-line labels
-        // ('QM Training' etc.) don't get clipped.
-        tabBarStyle: {
-          // Transparent so the shared gradient continues behind the
-          // labels — the dark edge of the gradient is opaque enough
-          // there to keep them legible without a flat panel.
-          backgroundColor: 'transparent',
-          // No hairline separator — the bar reads as part of the page.
-          borderTopWidth: 0,
-          borderTopColor: 'transparent',
-          elevation: 0,
-          shadowOpacity: 0,
-          // Height hugs the content — we deliberately do NOT add
-          // `insets.bottom` to the bar height. On Android edge-to-edge
-          // devices the bar was rendering 24–48 px of `colors.bg`
-          // below the labels, which read as "dead blue space" above
-          // the system gesture bar. With the height clamped to
-          // TAB_BAR_BASE the labels sit right against the system nav.
-          height: TAB_BAR_BASE,
-          paddingTop: 4,
-          paddingBottom: 10,
-          // Symmetric side padding keeps the full-width bar (bg +
-          // top border) while horizontally centring the flex-
-          // distributed tab items inside TAB_BAR_ITEMS_MAX_WIDTH.
-          paddingLeft: sidePad,
-          paddingRight: sidePad,
-        },
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.textDim,
-        // Uppercase labels — up to 2 lines if the label doesn't fit.
-        // tight 0.6 tracking keeps caps discipline while staying narrow
-        // enough that 'SILENT MIND' / 'QM TRAINING' fit on most phones
-        // without wrap; on narrower phones they wrap to 2 lines instead
-        // of being truncated to 'SILENT MI…'.
-        tabBarLabelStyle: {
-          fontFamily: fonts.bodySemibold,
-          fontSize: 9,
-          lineHeight: 13,
-          letterSpacing: 0.6,
-          textTransform: 'uppercase',
-          textAlign: 'center',
-          marginTop: 0,
-          marginBottom: 0,
-          includeFontPadding: false,
-        },
-        // Allow the label box to use 2 lines instead of clipping a
-        // single line to '…'.
-        tabBarItemStyle: {
-          paddingHorizontal: 2,
-        },
+        // Transparent scene + lazy:false so all five tabs live in the
+        // pager from the start. PagerView then transitions instantly
+        // between mounted children — no first-mount flash.
+        lazy: false,
+        // Non-Material defaults that keep the visual aligned with the
+        // rest of the app.
         sceneStyle: { backgroundColor: 'transparent' },
+        swipeEnabled: true,
+        // We render our own bar; suppress all built-ins so material's
+        // top-bar geometry doesn't show through.
+        tabBarShowIcon: false,
+        tabBarShowLabel: false,
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Start',
-          tabBarIcon: ({ focused }) => <TabIcon label="◐" focused={focused} />,
-          tabBarLabel: makeWrapLabel('Start'),
-        }}
-      />
-      <Tabs.Screen
-        name="silent-mind"
-        options={{
-          title: 'Silent Mind',
-          tabBarIcon: ({ focused }) => <TabIcon label="◉" focused={focused} />,
-          tabBarLabel: makeWrapLabel('Silent Mind'),
-        }}
-      />
-      <Tabs.Screen
-        name="qm"
-        options={{
-          title: 'QM Training',
-          tabBarIcon: ({ focused }) => <TabIcon label="◎" focused={focused} />,
-          tabBarLabel: makeWrapLabel('QM Training'),
-        }}
-      />
-      <Tabs.Screen
-        name="video"
-        options={{
-          title: 'Media',
-          tabBarIcon: ({ focused }) => <TabIcon label="▷" focused={focused} badge={videoUnread} />,
-          tabBarLabel: makeWrapLabel('Media'),
-        }}
-      />
-      <Tabs.Screen
-        name="about"
-        options={{
-          title: 'About',
-          tabBarIcon: ({ focused }) => <TabIcon label="◆" focused={focused} />,
-          tabBarLabel: makeWrapLabel('About'),
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Start' }} />
+      <Tabs.Screen name="silent-mind" options={{ title: 'Silent Mind' }} />
+      <Tabs.Screen name="qm" options={{ title: 'QM Training' }} />
+      <Tabs.Screen name="video" options={{ title: 'Media' }} />
+      <Tabs.Screen name="about" options={{ title: 'About' }} />
     </Tabs>
     </View>
   );
@@ -197,8 +205,39 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: 'transparent' },
+  // Custom bottom bar styling — mirrors the previous expo-router Tabs
+  // look: transparent background (the shared root gradient shows
+  // through), no top hairline, fixed TAB_BAR_BASE height, generous
+  // horizontal padding so the icon column reads as breathing.
+  bar: {
+    flexDirection: 'row',
+    backgroundColor: 'transparent',
+    height: TAB_BAR_BASE,
+    paddingTop: 4,
+    paddingBottom: 10,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 2,
+    paddingTop: 4,
+    gap: 2,
+  },
   iconWrap: { width: 32, height: 26, alignItems: 'center', justifyContent: 'center' },
   iconGlyph: { fontSize: 20 },
+  label: {
+    fontFamily: fonts.bodySemibold,
+    fontSize: 9,
+    lineHeight: 12,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    includeFontPadding: false,
+    marginTop: 2,
+  },
   headerLogo: { width: 100, height: 32 },
   badge: {
     position: 'absolute',

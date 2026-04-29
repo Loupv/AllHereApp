@@ -167,7 +167,27 @@ const styles = StyleSheet.create({
   // Header rendered by <ProgramHeader> — no inline header styles.
   // We still keep `title` for the rare error case ("Not found").
   title: { ...type.display, color: colors.text, fontSize: 22, textAlign: 'center', lineHeight: 28 },
-  listPad: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  // Audio-list panel — soft semi-transparent surface that visually
+  // groups the per-Part audios into a single block, distinct from the
+  // "Go to QM Training" / "Back to Silent Mind" sibling CTA below. The
+  // panel sits on top of the shared atmospheric gradient + EnergyColumn,
+  // so we deliberately keep both the fill and the border very low-
+  // opacity — the goal is "card-shaped breathing space", not a heavy
+  // surface that crowds out the backdrop. Generous top + bottom margins
+  // around the block (and inside the panel) so the section header,
+  // the audio rows, and the sibling CTA each get their own beat.
+  listPad: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
   // Kept the "Our sections" divider (intro volet only) in the same
   // visual language as the Start 'or' divider.
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.md },

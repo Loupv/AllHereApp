@@ -80,6 +80,14 @@ type Props = {
    * screens pass GRADIENT_SM / GRADIENT_QM.
    */
   palette?: GradientPalette;
+  /**
+   * When true, all live animations are disabled — no breath scale,
+   * no centre-Y chase. The SVG renders once and stays. We use this on
+   * native so the radial backdrop doesn't run a perpetual reanimated
+   * worklet (which made screen / overlay transitions feel sticky on
+   * iPhone). Web keeps the breath because it's free there.
+   */
+  staticMode?: boolean;
   children?: React.ReactNode;
 };
 
@@ -97,11 +105,14 @@ export function AnimatedGradient({
   centerY = 0.5,
   animateCenter = true,
   palette = GRADIENT_START,
+  staticMode = false,
   children,
 }: Props) {
   // Breath — slow 10s sine on the scale of the whole SVG layer.
+  // Skipped entirely when `staticMode` is on (native default).
   const breath = useSharedValue(0);
   useEffect(() => {
+    if (staticMode) return;
     breath.value = withRepeat(
       withSequence(
         withTiming(1, { duration: 5000, easing: Easing.inOut(Easing.sin) }),
@@ -109,7 +120,7 @@ export function AnimatedGradient({
       ),
       -1, false,
     );
-  }, []);
+  }, [staticMode]);
 
   // Breath amplitude dialed back from 6% to 3% — still alive, but no
   // longer a visible pulse that competes with content.
@@ -119,10 +130,10 @@ export function AnimatedGradient({
 
   // Smoothly-animated vertical centre. New target values are chased
   // over a short timing animation, so rapid scrubs / phase transitions
-  // look like motion instead of snaps.
+  // look like motion instead of snaps. In static mode we just snap.
   const cyShared = useSharedValue(centerY);
   useEffect(() => {
-    if (!animateCenter) {
+    if (staticMode || !animateCenter) {
       cyShared.value = centerY;
       return;
     }
@@ -130,7 +141,7 @@ export function AnimatedGradient({
       duration: 800,
       easing: Easing.inOut(Easing.cubic),
     });
-  }, [centerY, animateCenter]);
+  }, [centerY, animateCenter, staticMode]);
 
   // Animated props set `cy` as a percentage string — react-native-svg
   // reliably handles `"NN%"` for RadialGradient coordinates across
@@ -140,6 +151,40 @@ export function AnimatedGradient({
   }));
 
   const cxPct = `${Math.max(0, Math.min(1, centerX)) * 100}%`;
+
+  // Static fast-path: render plain (non-animated) RadialGradient + Rect
+  // so there are zero reanimated worklets attached to this view tree.
+  if (staticMode) {
+    const cyPct = `${centerY * 100}%`;
+    return (
+      <View style={styles.root} pointerEvents="box-none">
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Svg width="100%" height="100%">
+            <Defs>
+              <RadialGradient
+                id="ah-start-radial"
+                cx={cxPct}
+                cy={cyPct}
+                r="90%"
+                gradientUnits="objectBoundingBox"
+              >
+                {palette.stops.map((s, i) => (
+                  <Stop
+                    key={i}
+                    offset={`${s.offset}%`}
+                    stopColor={s.color}
+                    stopOpacity={s.opacity}
+                  />
+                ))}
+              </RadialGradient>
+            </Defs>
+            <Rect width="100%" height="100%" fill="url(#ah-start-radial)" />
+          </Svg>
+        </View>
+        {children}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root} pointerEvents="box-none">

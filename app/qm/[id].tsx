@@ -145,7 +145,23 @@ const styles = StyleSheet.create({
   // Header rendered by <ProgramHeader>. We keep `title` for the
   // "Not found" error path only.
   title: { ...type.display, color: colors.text, fontSize: 22, textAlign: 'center', lineHeight: 28 },
-  listPad: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
+  // Same audio-list panel as the SM detail page — semi-transparent
+  // surface that groups the QM tracks into one block, distinct from
+  // the "Back to Silent Mind" sibling CTA below. Generous outer
+  // margins so the section header, the audio rows, and the sibling
+  // CTA each have their own breath.
+  listPad: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
   sectionLabel: { ...type.sectionLabel, color: colors.textMuted, marginBottom: spacing.sm },
   siblingCta: {
     flexDirection: 'row',

@@ -22,6 +22,12 @@ type Props = {
    * low-contrast backdrop (e.g. the radial gradient on the Start page).
    */
   elevated?: boolean;
+  /**
+   * Optional explicit route. When provided, replaces the default
+   * `${basePath}/${volet.id}` target — used by the QM "Free Training"
+   * entry which lives at `/qm-training`, not under `/qm/<id>`.
+   */
+  routeOverride?: string;
 };
 
 /**
@@ -36,6 +42,7 @@ export function VoletCard({
   accentRgb = '158,54,148',
   secondary = false,
   elevated = false,
+  routeOverride,
 }: Props) {
   const router = useRouter();
   const nextTrackId = useProgress(s => s.nextTrackId());
@@ -77,14 +84,16 @@ export function VoletCard({
   // the transition. Fading the card out first would leave nothing to slide.
   const onPress = () => {
     if (locked) return;
-    router.push(`${basePath}/${volet.id}` as any);
+    router.push((routeOverride ?? `${basePath}/${volet.id}`) as any);
   };
 
   // Audio count was removed from the card body — the title + tagline
   // already do the work; "X audios" was redundant clutter. We still
   // surface "Coming soon" when the section has nothing playable, so a
   // locked / unreleased part doesn't read as a normal entry point.
-  const comingSoonLabel = tracks.length === 0 ? 'Coming soon' : null;
+  // `routeOverride` cards are special synthetic entries (e.g. the QM
+  // Free Training card) — empty tracks is intentional, not "soon".
+  const comingSoonLabel = tracks.length === 0 && !routeOverride ? 'Coming soon' : null;
 
   return (
     <Animated.View

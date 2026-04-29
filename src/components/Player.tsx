@@ -201,6 +201,12 @@ function PlayerInner() {
   const hasNext = index >= 0 && index < playlist.length - 1;
   const hasPrev = index > 0;
   const markListened = useProgress(s => s.markListened);
+  // Subscribe to the listened map directly (not the `isListened` getter
+  // — Zustand re-runs selectors on every store change, but a function
+  // reference doesn't trigger React re-renders) so the "Already
+  // listened" pill flips off the moment a fresh track is opened and
+  // back on once the current track crosses the 80 % mark.
+  const listened = useProgress(s => s.listened);
 
   const [selectedRounds, setSelectedRounds] = useState(track?.rounds?.max ?? 1);
   const [includeIntro, setIncludeIntro] = useState(!!track?.rounds?.introSource);
@@ -261,6 +267,12 @@ function PlayerInner() {
 
   const [cues, setCues] = useState<TranscriptCue[]>([]);
   const [scrubbing, setScrubbing] = useState(false);
+  // While the player is catching up after a seek, `pendingSeekTo` holds
+  // the target position so the timeline keeps showing it instead of
+  // snapping back to the stale `status.currentTime`. Cleared by an
+  // effect once status.currentTime lands within ~0.4 s of the target,
+  // OR after a 600 ms safety timeout in case the seek failed silently.
+  const [pendingSeekTo, setPendingSeekTo] = useState<number | null>(null);
   const scrubValue = useRef(0);
   const barWidth = useRef(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -272,7 +284,18 @@ function PlayerInner() {
   // Reset smooth time whenever the audio source identity changes (new track, round, or break)
   const sourceKey = `${track?.id ?? 'none'}|${inBreak ? 'b' : 'r'}|${currentRound}`;
   const liveT = useSmoothTime(status.currentTime, status.playing, sourceKey);
-  const t = scrubbing ? scrubValue.current : liveT;
+  // Pin `t` to the user's drag while scrubbing, then to the seek
+  // target while expo-audio catches up — *only* fall back to the live
+  // current-time once the catch-up has converged. This kills the
+  // "frame-jumps-back-then-forward" ghost on release: previously the
+  // moment we cleared `scrubbing` the UI snapped to whatever
+  // `status.currentTime` still reported (the OLD position), then a
+  // tick later jumped to the seek target as the player updated.
+  const t = scrubbing
+    ? scrubValue.current
+    : pendingSeekTo != null
+      ? pendingSeekTo
+      : liveT;
   const duration = status.duration ?? 0;
   const durationRef = useRef(0);
   useEffect(() => { durationRef.current = duration; }, [duration]);
@@ -332,13 +355,15 @@ function PlayerInner() {
 
   // Pre-fetch the upcoming round / inter when the current segment is
   // past 70% of its duration — shrinks the audible gap when expo-audio
-  // swaps `roundSource` (decode + fetch are paid in advance). On native
-  // most assets are local so the gain is small, but on web (and any
-  // future CDN-served setup) this materially smooths the transition.
-  // `Asset.downloadAsync()` is a no-op once cached, so calling it
-  // repeatedly is safe; the ref guards against re-firing on every tick.
+  // swaps `roundSource` (decode + fetch are paid in advance). Web-only:
+  // on native every asset is bundled at build time so `downloadAsync`
+  // is a no-op AND, on Metro dev builds, it triggers an asset HTTP
+  // request that Metro currently mis-decodes ("ENOENT .%2Fassets%2F…").
+  // On the web side the source is genuinely fetched at use time, so
+  // prefetching there is a real round-trip win.
   const preloadFiredFor = useRef<unknown>(undefined);
   useEffect(() => {
+    if (Platform.OS !== 'web') return;
     if (!nextRoundSource || !duration || duration <= 0) return;
     if (t < duration * 0.7) return;
     if (preloadFiredFor.current === nextRoundSource) return;
@@ -469,9 +494,28 @@ function PlayerInner() {
     const target = scrubValue.current;
     if (Number.isFinite(target) && target >= 0) {
       try { Promise.resolve(player.seekTo(target)).catch(() => {}); } catch {}
+      // Hold the visual at the target until status.currentTime catches
+      // up — see the `t` selector above for the rationale. The clear
+      // happens in the convergence effect below.
+      setPendingSeekTo(target);
     }
     setScrubbing(false);
   };
+
+  // Clear the post-seek hold once the player's reported time lands
+  // close to the target (within 0.4 s — generous because expo-audio
+  // emits status updates at ~10 Hz). Safety timeout after 600 ms in
+  // case the seek silently fails (network audio over a slow link, a
+  // session interrupt, etc.) so the timeline never freezes.
+  useEffect(() => {
+    if (pendingSeekTo == null) return;
+    if (Math.abs(status.currentTime - pendingSeekTo) < 0.4) {
+      setPendingSeekTo(null);
+      return;
+    }
+    const id = setTimeout(() => setPendingSeekTo(null), 600);
+    return () => clearTimeout(id);
+  }, [pendingSeekTo, status.currentTime]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -681,11 +725,23 @@ function PlayerInner() {
           Player window and now sits at this Start-matching Y. */}
       {(() => {
         const loc = trackLocation(track.id);
+        const alreadyListened = !!listened[track.id];
         return (
           <View style={styles.preCircle}>
             {loc ? (
               <Text style={styles.preCircleEyebrow} numberOfLines={1}>
                 {loc.label.toUpperCase()} · {loc.position} / {loc.total}
+              </Text>
+            ) : null}
+            {/* Tiny "you've heard this one" tag, rendered between the
+                location eyebrow and the title. Surfaces the per-track
+                progress mark (set once playback crosses 80 %) so the
+                user knows whether they're revisiting or hearing it for
+                the first time. Hidden once they hit play and the track
+                advances — at that point the play state is its own cue. */}
+            {alreadyListened && !hasStarted ? (
+              <Text style={styles.preCircleListenedTag} numberOfLines={1}>
+                ✓ Already listened
               </Text>
             ) : null}
             <View style={styles.titleRow}>
@@ -749,7 +805,10 @@ function PlayerInner() {
             size={circleSize}
             mode={playing ? 'playing' : 'paused'}
             accent={accent}
-            voice={voiceLevel}
+            // `voice` deliberately omitted — the audio-reactive scale +
+            // glow boost on the play button felt twitchy on long form
+            // meditation tracks. The mode-driven breath alone is plenty
+            // of "the button is alive" cue without chasing every peak.
             onPress={() => { playing ? player.pause() : player.play(); }}
           />
         )}
@@ -862,9 +921,17 @@ function PlayerInner() {
               // Android so cues fade in at the top and out at the bottom
               // of the frame instead of clipping on a hard edge.
               if (Platform.OS === 'web') return inner;
+              // Native parity: wrap in MaskedView for the same
+              // top/bottom fade. Crucially the MaskedView gets an
+              // explicit `height: 130` here (matching the parent's
+              // `maxHeight`) — `flex: 1` collapses to 0 on iOS / Android
+              // because `transcriptFrame` only declares `maxHeight`,
+              // not `height`. Without this the transcript was
+              // invisible on the phone (zero-height container, content
+              // clipped by overflow:hidden).
               return (
                 <MaskedView
-                  style={{ flex: 1 }}
+                  style={{ height: 130, alignSelf: 'stretch' }}
                   maskElement={
                     <LinearGradient
                       colors={['transparent', 'black', 'black', 'transparent']}
@@ -1043,7 +1110,9 @@ const styles = StyleSheet.create({
   // child) is visible. The outer `overlay` still carries `colors.bg` as
   // a fallback solid, and the gradient's own edge stops fade to near-
   // black opacity 1 so there's no "see-through" effect.
-  root: { flex: 1, backgroundColor: 'transparent', paddingTop: 56 },
+  // paddingTop bumped 56 → 72 so the Close button sits visually below
+  // the iPhone's notch / Dynamic Island area, not flush against it.
+  root: { flex: 1, backgroundColor: 'transparent', paddingTop: 72 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1067,6 +1136,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.6,
     textAlign: 'center',
+  },
+  // Quiet "checked off" pill. Same caps + tracking grammar as the
+  // location eyebrow above so the two stack as a single typographic
+  // beat, but tinted with the brand accent so the cue catches the eye
+  // without shouting.
+  preCircleListenedTag: {
+    ...type.overline,
+    color: colors.accent,
+    fontSize: 9,
+    letterSpacing: 1.4,
+    textAlign: 'center',
+    opacity: 0.75,
   },
   title: { ...type.h1, color: colors.text, textAlign: 'center', fontSize: 18, flexShrink: 1 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md, width: '100%', paddingHorizontal: spacing.md },
@@ -1195,7 +1276,11 @@ const styles = StyleSheet.create({
     minHeight: DEFAULT_CIRCLE_SIZE + 8,
   },
   sideBtnPlaceholder: { width: 0, height: 0 },
-  belowCircle: { minHeight: 40, alignItems: 'center', justifyContent: 'center', marginTop: spacing.xs },
+  // marginTop pulled negative so the duration hint sits closer to the
+  // play circle (was floating ~10 px below — felt detached). minHeight
+  // kept so the slot doesn't collapse + jump when the hint flips to
+  // the round-end button mid-session.
+  belowCircle: { minHeight: 40, alignItems: 'center', justifyContent: 'center', marginTop: -spacing.sm },
   roundHeader: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: 6 },
   roundText: { ...type.overline, color: colors.accent, fontSize: 11 },
   dotsRow: { flexDirection: 'row', gap: 6 },
