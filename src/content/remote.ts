@@ -14,7 +14,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Platform } from 'react-native';
 import type { NewsArticle } from './news';
-import type { VideoItem } from './catalog';
+import { videoItems as BUNDLED_VIDEOS, type VideoItem } from './catalog';
 import { kv } from './kv';
 import { useRemoteStore } from './remoteStore';
 
@@ -266,11 +266,19 @@ export async function fetchVideos(): Promise<VideoItem[]> {
   // updates `kind` from 'article' → 'video' when a scrape succeeds so the
   // Media tab filters treat them correctly.
   const enriched = await Promise.all(filtered.map(enrichWithScrapedEmbed));
-  return enriched.map((it) =>
+  const wpItems = enriched.map((it) =>
     it.embedUrl && it.kind !== 'video'
       ? { ...it, kind: 'video' as const }
       : it,
   );
+  // Always include the bundled curated videos (e.g. the 3 YouTube
+  // explainers). They aren't on the WP feed but should sit alongside
+  // headlines/podcasts in the Media tab.
+  const bundledIds = new Set(BUNDLED_VIDEOS.map((v) => v.id));
+  return [
+    ...BUNDLED_VIDEOS,
+    ...wpItems.filter((it) => !bundledIds.has(it.id)),
+  ];
 }
 
 // Exposed for callers that want to know if an item is a true video (vs. a

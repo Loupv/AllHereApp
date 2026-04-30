@@ -36,8 +36,10 @@ type PlayerState = {
 };
 
 // Only playable tracks are useful for prev/next navigation.
+// Remote tracks now resolve via track.id through audioRegistry, so we no
+// longer require a literal `source` field — `!comingSoon` is sufficient.
 const playable = (ts: AudioTrack[] | undefined) =>
-  (ts ?? []).filter((t) => !t.comingSoon && (!!t.source || !!t.rounds));
+  (ts ?? []).filter((t) => !t.comingSoon);
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
   track: null,
