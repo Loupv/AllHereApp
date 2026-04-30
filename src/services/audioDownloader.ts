@@ -38,57 +38,40 @@ async function ensureCacheDir(): Promise<void> {
 }
 
 /**
- * Download a file with retry logic
+ * Download directly to disk via expo-file-system (avoids loading the whole
+ * MP3 into JS memory, which would blow the stack on multi-MB files when
+ * later base64-encoded).
  */
-async function fetchWithRetry(
+async function downloadToFileWithRetry(
   url: string,
+  destUri: string,
   onProgress?: ProgressCallback,
-): Promise<ArrayBuffer> {
+): Promise<void> {
   let lastError: Error | undefined;
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const contentLength = response.headers.get('content-length');
-      const total = contentLength ? parseInt(contentLength, 10) : 0;
-      let downloaded = 0;
-
-      if (!response.body) {
-        throw new Error('No response body');
-      }
-
-      const reader = response.body.getReader();
-      const chunks: Uint8Array[] = [];
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        chunks.push(value);
-        downloaded += value.length;
-        onProgress?.(downloaded, total);
-      }
-
-      // Combine chunks into ArrayBuffer
-      const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-      const buffer = new Uint8Array(totalLength);
-      let offset = 0;
-      for (const chunk of chunks) {
-        buffer.set(chunk, offset);
-        offset += chunk.length;
-      }
-
-      return buffer.buffer;
+      const dl = FileSystem.createDownloadResumable(
+        url,
+        destUri,
+        {},
+        onProgress
+          ? (progress) =>
+              onProgress(
+                progress.totalBytesWritten,
+                progress.totalBytesExpectedToWrite,
+              )
+          : undefined,
+      );
+      const result = await dl.downloadAsync();
+      if (!result?.uri) throw new Error('Download returned no uri');
+      const status = (result as any).status as number | undefined;
+      if (status && status >= 400) throw new Error(`HTTP ${status}`);
+      return;
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
-
       if (attempt < MAX_RETRIES - 1) {
-        const delay = RETRY_DELAYS[attempt];
-        await new Promise((resolve) => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAYS[attempt]));
       }
     }
   }
@@ -132,20 +115,14 @@ export async function downloadAudio(
 
     await ensureCacheDir();
 
-    // Download file
-    const buffer = await fetchWithRetry(url, onProgress);
-
-    // Write to cache
+    // Download file directly to disk (no JS-memory base64 round-trip)
     const cacheFileName = getCacheFileName(trackId);
     const cacheUri = CACHE_DIR + cacheFileName;
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    await downloadToFileWithRetry(url, cacheUri, onProgress);
 
-    await FileSystem.writeAsStringAsync(cacheUri, base64, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-
-    // Record in cache metadata
-    const fileSize = buffer.byteLength;
+    // Read file size for cache bookkeeping
+    const info = await FileSystem.getInfoAsync(cacheUri);
+    const fileSize = (info as any).size ?? 0;
     await audioCacheManager.setCached(trackId, cacheUri, fileSize);
 
     // Cleanup if cache is too large
