@@ -355,14 +355,17 @@ function PlayerInner() {
     resolve();
   }, [track?.id, currentRound, inBreak]);
 
-  // Prefetch next round while current is playing
+  // Prefetch next round of the current track AND the next track in the
+  // playlist while playback is going so the user gets instant start when
+  // they advance — no buffering wait at the segue.
   useEffect(() => {
-    if (status.playing && track?.id) {
-      prefetchAudio(`${track.id}-next-${currentRound + 1}`).catch(() => {
-        // Background prefetch errors are not fatal
-      });
+    if (!status.playing || !track?.id) return;
+    prefetchAudio(`${track.id}-next-${currentRound + 1}`).catch(() => {});
+    const nextInPlaylist = playlist[index + 1];
+    if (nextInPlaylist?.id) {
+      prefetchAudio(nextInPlaylist.id).catch(() => {});
     }
-  }, [status.playing, track?.id, currentRound]);
+  }, [status.playing, track?.id, currentRound, playlist, index]);
 
   // Download audio for offline listening
   const handleDownloadForOffline = async () => {
@@ -436,6 +439,13 @@ function PlayerInner() {
     setFinished(false);
     endedHandled.current = false;
     roundChangedAt.current = 0;
+    // Drop the previous track's URI so useAudioPlayer releases the
+    // outgoing source. Without this, opening a different track from a
+    // playlist sometimes left the old audio engine playing because
+    // expo-audio didn't observe a meaningful source change before the
+    // resolve effect produced the new URI a tick later.
+    setResolvedUri(null);
+    setPendingSeekTo(null);
     return () => { try { player.pause(); } catch {} };
   }, [track?.id]);
 
@@ -622,17 +632,26 @@ function PlayerInner() {
    * (WP serves 206 Partial Content, so this works against allhere.org).
    * Also pins pendingSeekTo so the timeline holds at the target until
    * the player reports the new currentTime.
+   *
+   * Guarded against rapid overlapping seeks (multiple ±15 taps, scrub
+   * + tap mix): only the latest seek's resume actually fires. Without
+   * this we observed a trembling loop where stale resume calls played
+   * briefly from the old position before the next seek landed.
    */
+  const seekInFlight = useRef(0);
   const seekAndResume = (target: number) => {
     if (!Number.isFinite(target) || target < 0) return;
+    const id = ++seekInFlight.current;
     const wasPlaying = !!status.playing;
     try { player.pause(); } catch {}
-    try {
-      Promise.resolve(player.seekTo(target))
-        .then(() => { if (wasPlaying) { try { player.play(); } catch {} } })
-        .catch(() => { if (wasPlaying) { try { player.play(); } catch {} } });
-    } catch {
+    const resume = () => {
+      if (id !== seekInFlight.current) return; // superseded by a newer seek
       if (wasPlaying) { try { player.play(); } catch {} }
+    };
+    try {
+      Promise.resolve(player.seekTo(target)).then(resume).catch(resume);
+    } catch {
+      resume();
     }
     setPendingSeekTo(target);
   };
@@ -643,17 +662,20 @@ function PlayerInner() {
   };
 
   // Clear the post-seek hold once the player's reported time lands
-  // close to the target (within 0.4 s — generous because expo-audio
-  // emits status updates at ~10 Hz). Safety timeout after 600 ms in
-  // case the seek silently fails (network audio over a slow link, a
-  // session interrupt, etc.) so the timeline never freezes.
+  // close to the target (within 0.5 s — generous because expo-audio
+  // emits status updates at ~10 Hz). Safety timeout after 3 s for
+  // streamed remote audio: a Range-request rebuffer can take >1 s on a
+  // slow network, and a 600 ms safety previously released the pin too
+  // early — the visual then flashed back to status.currentTime (still
+  // the old position) before the audio caught up, producing a visible
+  // tremble.
   useEffect(() => {
     if (pendingSeekTo == null) return;
-    if (Math.abs(status.currentTime - pendingSeekTo) < 0.4) {
+    if (Math.abs(status.currentTime - pendingSeekTo) < 0.5) {
       setPendingSeekTo(null);
       return;
     }
-    const id = setTimeout(() => setPendingSeekTo(null), 600);
+    const id = setTimeout(() => setPendingSeekTo(null), 3000);
     return () => clearTimeout(id);
   }, [pendingSeekTo, status.currentTime]);
 
