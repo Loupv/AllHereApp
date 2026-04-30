@@ -33,6 +33,16 @@ jobs:
       - name: Build web
         run: npm run build:web
 
+      # GitHub Pages serves static files only — refreshing on a deep
+      # path like /AllHereApp/silent-mind/part1 would 404 because the
+      # file doesn't physically exist (the route is resolved client-
+      # side by expo-router). Classic SPA fallback: copy index.html to
+      # 404.html so Pages serves the same shell for every unknown URL,
+      # the SPA boots, expo-router reads the URL and lands the user on
+      # the right screen.
+      - name: SPA fallback
+        run: cp dist/index.html dist/404.html
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
