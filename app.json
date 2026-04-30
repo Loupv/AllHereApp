@@ -51,9 +51,6 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
-    "experiments": {
-      "baseUrl": "/AllHereApp"
-    },
     "plugins": [
       "expo-router",
       "expo-audio",
