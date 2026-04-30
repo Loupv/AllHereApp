@@ -30,28 +30,35 @@ export async function resolveAudioSource(
   onProgress?: (bytes: number, total: number) => void,
 ): Promise<ResolvedAudio> {
   // Handle overloads:
-  // resolveAudioSource(trackId, onProgress)
-  // resolveAudioSource(trackId, roundIndex, onProgress)
-  // resolveAudioSource(trackId, roundIndex, isInter, onProgress)
+  //   resolveAudioSource(trackId, onProgress)
+  //   resolveAudioSource(trackId, roundIndex, onProgress)
+  //   resolveAudioSource(trackId, roundIndex, isInter, onProgress)
+  // The previous version's outer guard was `typeof isInterOrOnProgress
+  // === 'function'`, which made the 4-arg branch unreachable (a boolean
+  // is never a function). For QM tracks the Player calls with
+  // (trackId, 0, false, fn) — roundIndex stayed undefined,
+  // getAudioSource('qm1-4', undefined) returned null, and the resolve
+  // threw "Audio source not found". Restructure as three independent
+  // sibling branches keyed off the actual types.
   let actualRoundIndex: number | undefined;
   let actualIsInter = false;
   let actualOnProgress: ((bytes: number, total: number) => void) | undefined;
 
   if (typeof roundIndex === 'function') {
-    // Overload 1: (trackId, onProgress)
+    // (trackId, onProgress)
     actualOnProgress = roundIndex;
+  } else if (typeof isInterOrOnProgress === 'boolean') {
+    // (trackId, roundIndex, isInter, onProgress)
+    actualRoundIndex = roundIndex as number | undefined;
+    actualIsInter = isInterOrOnProgress;
+    actualOnProgress = onProgress;
   } else if (typeof isInterOrOnProgress === 'function') {
-    // Overload 2: (trackId, roundIndex, onProgress) or (trackId, roundIndex, isInter, onProgress) with isInter boolean
-    if (typeof isInterOrOnProgress === 'boolean') {
-      // (trackId, roundIndex, isInter, onProgress) - isInter is bool, onProgress is last param
-      actualRoundIndex = roundIndex as number | undefined;
-      actualIsInter = isInterOrOnProgress;
-      actualOnProgress = onProgress;
-    } else {
-      // (trackId, roundIndex, onProgress)
-      actualRoundIndex = roundIndex as number | undefined;
-      actualOnProgress = isInterOrOnProgress;
-    }
+    // (trackId, roundIndex, onProgress)
+    actualRoundIndex = roundIndex as number | undefined;
+    actualOnProgress = isInterOrOnProgress;
+  } else {
+    // (trackId, roundIndex)  — no progress callback, no isInter
+    actualRoundIndex = roundIndex as number | undefined;
   }
 
   // Get the appropriate source based on whether this is an inter or regular round
