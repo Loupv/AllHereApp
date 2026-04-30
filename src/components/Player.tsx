@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, PanResponder, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, PanResponder, Platform, useWindowDimensions, ActivityIndicator } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,7 @@ import { loadTranscript } from '../content/loadTranscript';
 import { findCueIndex, TranscriptCue } from '../content/transcript';
 import { trackProgram, trackLocation } from '../content/catalog';
 import { resolveAudioSource, prefetchAudio } from '../content/audioResolver';
+import { getAudioSource, getInterSource } from '../content/audioRegistry';
 import { WAVEFORMS } from '../content/waveforms.generated';
 import { colors, radius, spacing, type } from '../theme';
 import { noOrphan } from '../utils/noOrphan';
@@ -249,13 +250,24 @@ function PlayerInner() {
   const roundSource = (() => {
     if (!track) return undefined;
     const r = track.rounds;
-    if (inBreak) return r?.roundInters?.[currentRound - 1] ?? undefined;
+    if (inBreak) {
+      const interSrc = r?.roundInters?.[currentRound - 1];
+      if (interSrc) return interSrc;
+      // Remote round-based tracks: derive canonical URL via registry so
+      // peaksForSource can extract the filename stem and find the waveform.
+      return getInterSource(track.id, currentRound - 1)?.remote ?? undefined;
+    }
     if (currentRound === 0) return r?.introSource;
     if (r?.roundSources && r.roundSources[currentRound - 1]) return r.roundSources[currentRound - 1];
-    // Fallback to track.source (legacy bundled tracks); when source is missing
-    // (remote tracks resolved by id), use the resolvedUri so peaksForSource can
-    // still derive the filename stem for the waveform lookup.
-    return track.source ?? resolvedUri ?? undefined;
+    if (track.source) return track.source;
+    // Remote audio (cached or streaming): prefer the canonical remote URL
+    // for the waveform lookup. resolvedUri rotates between
+    //   https://allhere.org/.../1.-Welcome.mp3   (streaming, key matches)
+    //   file:///cache/audio_intro_1.mp3          (cached, key DOESN'T match)
+    // — so always prefer the registry's remote URL when present.
+    const roundIdx = r ? Math.max(0, currentRound - 1) : undefined;
+    const remote = getAudioSource(track.id, roundIdx)?.remote;
+    return remote ?? resolvedUri ?? undefined;
   })();
 
   /**
@@ -896,7 +908,8 @@ function PlayerInner() {
           <View style={{ width: circleSize, height: circleSize }} />
         ) : isLoading ? (
           <View style={[styles.loadingCircle, { width: circleSize, height: circleSize, borderRadius: circleSize / 2 }]}>
-            <Text style={styles.loadingText}>Loading…</Text>
+            <ActivityIndicator size="large" color={accent} style={{ marginBottom: spacing.xs }} />
+            <Text style={styles.loadingText}>Buffering…</Text>
           </View>
         ) : !hasStarted ? (
           <CircleButton
