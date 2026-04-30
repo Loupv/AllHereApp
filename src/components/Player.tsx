@@ -612,15 +612,33 @@ function PlayerInner() {
   // attached to the bar element; native keeps PanResponder.
   const progressEl = useRef<View>(null);
 
-  const commitSeek = () => {
-    const target = scrubValue.current;
-    if (Number.isFinite(target) && target >= 0) {
-      try { Promise.resolve(player.seekTo(target)).catch(() => {}); } catch {}
-      // Hold the visual at the target until status.currentTime catches
-      // up — see the `t` selector above for the rationale. The clear
-      // happens in the convergence effect below.
-      setPendingSeekTo(target);
+  /**
+   * Seek that actually flushes the buffer on streamed remote audio.
+   * expo-audio (AVPlayer on iOS) sometimes ignores a bare seekTo while
+   * it's still feeding already-buffered bytes — the audio keeps playing
+   * from the old position and the UI freezes until status.currentTime
+   * crosses the target. Pause → seek → play forces AVPlayer to drop the
+   * existing buffer and issue a fresh Range request from the new offset
+   * (WP serves 206 Partial Content, so this works against allhere.org).
+   * Also pins pendingSeekTo so the timeline holds at the target until
+   * the player reports the new currentTime.
+   */
+  const seekAndResume = (target: number) => {
+    if (!Number.isFinite(target) || target < 0) return;
+    const wasPlaying = !!status.playing;
+    try { player.pause(); } catch {}
+    try {
+      Promise.resolve(player.seekTo(target))
+        .then(() => { if (wasPlaying) { try { player.play(); } catch {} } })
+        .catch(() => { if (wasPlaying) { try { player.play(); } catch {} } });
+    } catch {
+      if (wasPlaying) { try { player.play(); } catch {} }
     }
+    setPendingSeekTo(target);
+  };
+
+  const commitSeek = () => {
+    seekAndResume(scrubValue.current);
     setScrubbing(false);
   };
 
@@ -899,7 +917,7 @@ function PlayerInner() {
 
       <View style={styles.circleRow}>
         {hasStarted && !finished && canSeek ? (
-          <Pressable onPress={() => player.seekTo(Math.max(0, t - 15))} style={styles.sideBtn}>
+          <Pressable onPress={() => seekAndResume(Math.max(0, t - 15))} style={styles.sideBtn}>
             <Text style={styles.sideBtnText}>-15s</Text>
           </Pressable>
         ) : <View style={styles.sideBtnPlaceholder} />}
@@ -949,7 +967,7 @@ function PlayerInner() {
             <Text style={styles.sideBtnText}>⬇</Text>
           </Pressable>
         ) : hasStarted && !finished && canSeek ? (
-          <Pressable onPress={() => player.seekTo(Math.min(duration, t + 15))} style={styles.sideBtn}>
+          <Pressable onPress={() => seekAndResume(Math.min(duration, t + 15))} style={styles.sideBtn}>
             <Text style={styles.sideBtnText}>+15s</Text>
           </Pressable>
         ) : <View style={styles.sideBtnPlaceholder} />}
