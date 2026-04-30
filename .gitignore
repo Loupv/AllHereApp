@@ -48,5 +48,15 @@ assets/audio/Part0
 assets/audio/Part1
 assets/audio/Part2
 assets/audio/Part3
-assets/audio/QMPart1
 assets/audio/QMPart2
+# QMPart1: exclude all except the 3 QM3 home rounds + 2 inters (bundled for offline)
+assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round04*
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round05*
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round06*
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round07*
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round03_inter*
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round04_inter*
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round05_inter*
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round06_inter*
+assets/audio/QMPart1/Words/QM5_5rounds_Center of Gravity.wjson

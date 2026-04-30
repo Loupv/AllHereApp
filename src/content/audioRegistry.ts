@@ -10,15 +10,12 @@ export type AudioSource = {
 
 // Bundled audio sources (included in app build) — exported for use in catalog.ts
 export const BUNDLED_AUDIO = {
-  introWelcome: require('../../assets/audio/Part0/1. Welcome.mp3'),
-  introSilentMind: require('../../assets/audio/Part0/2. Silent Mind.mp3'),
-  introQMFormat: require('../../assets/audio/Part0/4. QM Format.mp3'),
   homeOneMin: require('../../assets/audio/Home/One minute meditation.mp3'),
   homeThreeMin: require('../../assets/audio/Home/Three minutes meditation.mp3'),
   bell: require('../../assets/audio/bell.mp3'),
   bellShort: require('../../assets/audio/bell_short.mp3'),
   tick: require('../../assets/audio/tick.mp3'),
-  // QM3 Home rounds
+  // QM3 Home rounds (first 3 rounds only, bundled for offline home practice)
   qm3Br1: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01.mp3'),
   qm3Br2: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02.mp3'),
   qm3Br3: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round03.mp3'),
@@ -27,9 +24,6 @@ export const BUNDLED_AUDIO = {
 } as const;
 
 export const BUNDLED_TRANSCRIPTS = {
-  introWelcome: require('../../assets/audio/Part0/Words/1. Welcome.wjson'),
-  introSilentMind: require('../../assets/audio/Part0/Words/2. Silent Mind.wjson'),
-  introQMFormat: require('../../assets/audio/Part0/Words/4. QM Format.wjson'),
   homeOneMin: require('../../assets/audio/Home/Words/One minute meditation.wjson'),
   homeThreeMin: require('../../assets/audio/Home/Words/Three minutes meditation.wjson'),
   qm3: require('../../assets/audio/QMPart1/Words/QM3_7rounds_Breath and Self-Observation.wjson'),
@@ -49,9 +43,6 @@ const REMOTE_PATTERN = (path: string) => `${BASE_URL}/${path}`;
 export function getAudioSource(trackId: string, roundIndex?: number): AudioSource | null {
   // Map bundled track IDs to their audio sources
   const bundledMap: Record<string, number> = {
-    'intro-1': BUNDLED_AUDIO.introWelcome,
-    'intro-2': BUNDLED_AUDIO.introSilentMind,
-    'intro-4': BUNDLED_AUDIO.introQMFormat,
     'home-1min': BUNDLED_AUDIO.homeOneMin,
     'home-3min': BUNDLED_AUDIO.homeThreeMin,
     'qm3-home-round-01': BUNDLED_AUDIO.qm3Br1,
@@ -67,6 +58,10 @@ export function getAudioSource(trackId: string, roundIndex?: number): AudioSourc
 
   // Map remote tracks by explicit ID → filename mapping
   const remoteMap: Record<string, string> = {
+    // Part0 (intro tracks — remote)
+    'intro-1': 'Part0/1. Welcome.mp3',
+    'intro-2': 'Part0/2. Silent Mind.mp3',
+    'intro-4': 'Part0/4. QM Format.mp3',
     // Part1
     'p1-1': 'Part1/1 - Turning Inward (Eyes-open, introductory practice).mp3',
     'p1-2': 'Part1/2 - Self-Observation and Breath Following.mp3',
@@ -116,9 +111,6 @@ export function getAudioSource(trackId: string, roundIndex?: number): AudioSourc
  */
 export function getTranscriptSource(trackId: string, roundIndex?: number): AudioSource | null {
   const bundledMap: Record<string, number> = {
-    'intro-1': BUNDLED_TRANSCRIPTS.introWelcome,
-    'intro-2': BUNDLED_TRANSCRIPTS.introSilentMind,
-    'intro-4': BUNDLED_TRANSCRIPTS.introQMFormat,
     'home-1min': BUNDLED_TRANSCRIPTS.homeOneMin,
     'home-3min': BUNDLED_TRANSCRIPTS.homeThreeMin,
     'qm3-home': BUNDLED_TRANSCRIPTS.qm3,
@@ -130,6 +122,10 @@ export function getTranscriptSource(trackId: string, roundIndex?: number): Audio
 
   // Map remote transcripts by explicit filename mapping
   const remoteMap: Record<string, string> = {
+    // Part0 transcripts (remote)
+    'intro-1': 'Part0/Words/1. Welcome.wjson',
+    'intro-2': 'Part0/Words/2. Silent Mind.wjson',
+    'intro-4': 'Part0/Words/4. QM Format.wjson',
     'p1-1': 'Part1/Words/1 - Turning Inward (Eyes-open, introductory practice).wjson',
     'p1-2': 'Part1/Words/2 - Self-Observation and Breath Following.wjson',
     'p1-3': 'Part1/Words/3 - Center of Gravity.wjson',
@@ -174,9 +170,6 @@ export function getTranscriptSource(trackId: string, roundIndex?: number): Audio
  */
 export function isBundled(trackId: string): boolean {
   const bundledMap: Record<string, number> = {
-    'intro-1': BUNDLED_AUDIO.introWelcome,
-    'intro-2': BUNDLED_AUDIO.introSilentMind,
-    'intro-4': BUNDLED_AUDIO.introQMFormat,
     'home-1min': BUNDLED_AUDIO.homeOneMin,
     'home-3min': BUNDLED_AUDIO.homeThreeMin,
     'qm3-home-round-01': BUNDLED_AUDIO.qm3Br1,
