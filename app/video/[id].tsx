@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
-import { createElement } from 'react';
 import { ScrollView, Text, View, Image, StyleSheet, Pressable, Linking, Platform } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Background } from '../../src/components/Background';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { HtmlViewer } from '../../src/components/HtmlViewer';
+import { EmbedPlayer } from '../../src/components/EmbedPlayer';
 import { videoItems } from '../../src/content/catalog';
 import { useRemoteStore } from '../../src/content/remoteStore';
 import { useNotifications } from '../../src/player/notificationStore';
@@ -42,13 +42,8 @@ export default function VideoArticleScreen() {
       <Stack.Screen options={{ title: '' }} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.column, { maxWidth: columnMax }]}>
-          {video.embedUrl && Platform.OS === 'web'
-            ? createElement('iframe', {
-                src: video.embedUrl,
-                style: { width: '100%', aspectRatio: '16 / 9', height: 'auto', border: 0, display: 'block' },
-                allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
-                allowFullScreen: true,
-              })
+          {video.embedUrl
+            ? <EmbedPlayer src={video.embedUrl} />
             : <Image source={video.poster} style={styles.hero} resizeMode="cover" />}
           <View style={styles.body}>
             {video.duration ? <Text style={styles.date}>{video.duration}</Text> : null}
