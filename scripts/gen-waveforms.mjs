@@ -38,41 +38,22 @@ const PEAKS_PER_SECOND = 20;
 const SAMPLE_RATE = 8000;               // plenty for peak extraction
 const BYTES_PER_SAMPLE = 2;             // s16le
 
-/** Walks dir and returns all .mp3 paths (absolute), only from bundled folders:
- *  - assets/audio/Home/ (home meditations)
- *  - assets/audio/QMPart1/Rounds/QM3_7rounds_Breath\ and\ Self-Observation/ (QM3 home)
- *  - assets/audio/*.mp3 (UI sounds: bell, tick)
- *  Skips Part0, Part1, Part2, Part3, QMPart1 (except QM3), QMPart2 (moved to WordPress)
+/** Walks assets/audio/** and returns every .mp3 path, except files under
+ *  the local-only `excluded/` folder. The remote-served audio (Part0..3,
+ *  QMPart1/2) is still on disk locally even though only its waveforms ship
+ *  in the bundle — generating peaks from the local copy is the whole point
+ *  of running this script offline.
  */
 function findMp3s(dir, acc = []) {
-  const bundledFolders = [
-    path.join(AUDIO_ROOT, 'Home'),
-    path.join(AUDIO_ROOT, 'QMPart1', 'Rounds', 'QM3_7rounds_Breath and Self-Observation'),
-  ];
-
-  // Add UI sounds at root level
-  const entries = fs.readdirSync(AUDIO_ROOT, { withFileTypes: true });
-  for (const entry of entries) {
-    const full = path.join(AUDIO_ROOT, entry.name);
-    if (entry.isFile() && entry.name.toLowerCase().endsWith('.mp3')) {
-      acc.push(full);
-    }
-  }
-
-  // Add bundled folder contents
-  for (const bundledFolder of bundledFolders) {
-    if (fs.existsSync(bundledFolder)) {
-      walkDir(bundledFolder, acc);
-    }
-  }
-
+  walkDir(AUDIO_ROOT, acc);
   return acc;
 }
 
-/** Recursively walk a directory and collect all .mp3 files */
+/** Recursively walk a directory and collect all .mp3 files (skipping excluded/). */
 function walkDir(dir, acc) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
+    if (entry.name === 'excluded') continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       walkDir(full, acc);

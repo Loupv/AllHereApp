@@ -135,7 +135,7 @@ export const silentMindProgram = {
 export const introAudios: AudioTrack[] = [
   {
     id: 'intro-1', title: 'Welcome',
-    source: BUNDLED_AUDIO.introWelcome,
+    // source is remote (Part0 on WordPress) — Player resolves via track.id
     transcript: BUNDLED_TRANSCRIPTS.introWelcome,
     durationHint: '2:30',
     description: "Welcome to the Silent Mind program, All Here's journey into a quiet and attentive way of being. A vertical progression toward advanced meditation practice.",
@@ -145,14 +145,12 @@ export const introAudios: AudioTrack[] = [
   // still exist under assets/audio/Part0/, just unreferenced.
   {
     id: 'intro-2', title: 'Silent Mind',
-    source: BUNDLED_AUDIO.introSilentMind,
     transcript: BUNDLED_TRANSCRIPTS.introSilentMind,
     durationHint: '2:17',
     description: "At the heart of our practice is the development of the Silent Mind — a practical method to reduce fluctuations of consciousness and cultivate a profound inner presence.",
   },
   {
     id: 'intro-4', title: 'QM Training',
-    source: BUNDLED_AUDIO.introQMFormat,
     transcript: BUNDLED_TRANSCRIPTS.introQMFormat,
     durationHint: '1:13',
     description: [

@@ -1,0 +1,618 @@
+{
+  "text": " Welcome to QM3 training by All Here. It is designed to train in six rounds consisting of three minutes each with one minute break in between. The purpose of this particular training is to train the ability to quickly mobilize meditative attention towards the same meditative state. This practice is centered on witnessing the presence of air, a fine and invisible object. We will now begin in 10 seconds.",
+  "segments": [
+    {
+      "id": 0,
+      "seek": 0,
+      "start": 2.080000000000001,
+      "end": 7.02,
+      "text": " Welcome to QM3 training by All Here.",
+      "tokens": [
+        50364,
+        4027,
+        281,
+        1249,
+        44,
+        18,
+        3097,
+        538,
+        439,
+        510,
+        13,
+        50844
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.18774564642655223,
+      "compression_ratio": 1.247787610619469,
+      "no_speech_prob": 0.18213918805122375,
+      "words": [
+        {
+          "word": " Welcome",
+          "start": 2.080000000000001,
+          "end": 3.2,
+          "probability": 0.9315224289894104
+        },
+        {
+          "word": " to",
+          "start": 3.2,
+          "end": 3.48,
+          "probability": 0.9962894916534424
+        },
+        {
+          "word": " QM3",
+          "start": 3.48,
+          "end": 4.38,
+          "probability": 0.8372316161791483
+        },
+        {
+          "word": " training",
+          "start": 4.38,
+          "end": 5.24,
+          "probability": 0.8088083267211914
+        },
+        {
+          "word": " by",
+          "start": 5.24,
+          "end": 5.96,
+          "probability": 0.868347704410553
+        },
+        {
+          "word": " All",
+          "start": 5.96,
+          "end": 6.42,
+          "probability": 0.6300228238105774
+        },
+        {
+          "word": " Here.",
+          "start": 6.42,
+          "end": 7.02,
+          "probability": 0.9761298298835754
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "seek": 0,
+      "start": 9.6,
+      "end": 21.22,
+      "text": " It is designed to train in six rounds consisting of three minutes each with one minute break",
+      "tokens": [
+        50844,
+        467,
+        307,
+        4761,
+        281,
+        3847,
+        294,
+        2309,
+        13757,
+        33921,
+        295,
+        1045,
+        2077,
+        1184,
+        365,
+        472,
+        3456,
+        1821,
+        51440
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.18774564642655223,
+      "compression_ratio": 1.247787610619469,
+      "no_speech_prob": 0.18213918805122375,
+      "words": [
+        {
+          "word": " It",
+          "start": 9.080000000000002,
+          "end": 9.64,
+          "probability": 0.958859920501709
+        },
+        {
+          "word": " is",
+          "start": 9.64,
+          "end": 9.82,
+          "probability": 0.9841412901878357
+        },
+        {
+          "word": " designed",
+          "start": 9.82,
+          "end": 10.36,
+          "probability": 0.9979987740516663
+        },
+        {
+          "word": " to",
+          "start": 10.36,
+          "end": 11.44,
+          "probability": 0.9937321543693542
+        },
+        {
+          "word": " train",
+          "start": 11.44,
+          "end": 11.92,
+          "probability": 0.9976301193237305
+        },
+        {
+          "word": " in",
+          "start": 11.92,
+          "end": 12.74,
+          "probability": 0.9902850985527039
+        },
+        {
+          "word": " six",
+          "start": 12.74,
+          "end": 13.1,
+          "probability": 0.6573949456214905
+        },
+        {
+          "word": " rounds",
+          "start": 13.1,
+          "end": 13.68,
+          "probability": 0.9978781938552856
+        },
+        {
+          "word": " consisting",
+          "start": 13.68,
+          "end": 16.1,
+          "probability": 0.5029888153076172
+        },
+        {
+          "word": " of",
+          "start": 16.1,
+          "end": 16.62,
+          "probability": 0.9972963929176331
+        },
+        {
+          "word": " three",
+          "start": 16.62,
+          "end": 16.96,
+          "probability": 0.8137975335121155
+        },
+        {
+          "word": " minutes",
+          "start": 16.96,
+          "end": 17.4,
+          "probability": 0.997456967830658
+        },
+        {
+          "word": " each",
+          "start": 17.4,
+          "end": 17.92,
+          "probability": 0.9862047433853149
+        },
+        {
+          "word": " with",
+          "start": 17.92,
+          "end": 19.64,
+          "probability": 0.708937406539917
+        },
+        {
+          "word": " one",
+          "start": 19.64,
+          "end": 20.14,
+          "probability": 0.8647211790084839
+        },
+        {
+          "word": " minute",
+          "start": 20.14,
+          "end": 20.54,
+          "probability": 0.9451315999031067
+        },
+        {
+          "word": " break",
+          "start": 20.54,
+          "end": 21.22,
+          "probability": 0.9725985527038574
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "seek": 0,
+      "start": 21.22,
+      "end": 21.98,
+      "text": " in between.",
+      "tokens": [
+        51440,
+        294,
+        1296,
+        13,
+        51592
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.18774564642655223,
+      "compression_ratio": 1.247787610619469,
+      "no_speech_prob": 0.18213918805122375,
+      "words": [
+        {
+          "word": " in",
+          "start": 21.22,
+          "end": 21.68,
+          "probability": 0.992569625377655
+        },
+        {
+          "word": " between.",
+          "start": 21.68,
+          "end": 21.98,
+          "probability": 0.9492562413215637
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "seek": 2198,
+      "start": 21.98,
+      "end": 33.94,
+      "text": " The purpose of this particular training is to train the ability to quickly mobilize meditative",
+      "tokens": [
+        50364,
+        440,
+        4334,
+        295,
+        341,
+        1729,
+        3097,
+        307,
+        281,
+        3847,
+        264,
+        3485,
+        281,
+        2661,
+        48637,
+        1205,
+        14275,
+        50964
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.14809126853942872,
+      "compression_ratio": 1.3365384615384615,
+      "no_speech_prob": 0.5569506287574768,
+      "words": [
+        {
+          "word": " The",
+          "start": 21.98,
+          "end": 24.58,
+          "probability": 0.6950758695602417
+        },
+        {
+          "word": " purpose",
+          "start": 24.58,
+          "end": 24.92,
+          "probability": 0.9951263666152954
+        },
+        {
+          "word": " of",
+          "start": 24.92,
+          "end": 25.5,
+          "probability": 0.9960758090019226
+        },
+        {
+          "word": " this",
+          "start": 25.5,
+          "end": 25.7,
+          "probability": 0.9940726161003113
+        },
+        {
+          "word": " particular",
+          "start": 25.7,
+          "end": 26.28,
+          "probability": 0.9597174525260925
+        },
+        {
+          "word": " training",
+          "start": 26.28,
+          "end": 26.8,
+          "probability": 0.964647114276886
+        },
+        {
+          "word": " is",
+          "start": 26.8,
+          "end": 27.76,
+          "probability": 0.954275906085968
+        },
+        {
+          "word": " to",
+          "start": 27.76,
+          "end": 27.94,
+          "probability": 0.9949778914451599
+        },
+        {
+          "word": " train",
+          "start": 27.94,
+          "end": 28.38,
+          "probability": 0.9969817996025085
+        },
+        {
+          "word": " the",
+          "start": 28.38,
+          "end": 28.6,
+          "probability": 0.9962388277053833
+        },
+        {
+          "word": " ability",
+          "start": 28.6,
+          "end": 29.3,
+          "probability": 0.993631899356842
+        },
+        {
+          "word": " to",
+          "start": 29.3,
+          "end": 30.48,
+          "probability": 0.984991729259491
+        },
+        {
+          "word": " quickly",
+          "start": 30.48,
+          "end": 31.08,
+          "probability": 0.9859730005264282
+        },
+        {
+          "word": " mobilize",
+          "start": 31.08,
+          "end": 32.42,
+          "probability": 0.8713013529777527
+        },
+        {
+          "word": " meditative",
+          "start": 32.42,
+          "end": 33.94,
+          "probability": 0.9936616718769073
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "seek": 2198,
+      "start": 33.94,
+      "end": 39.58,
+      "text": " attention towards the same meditative state.",
+      "tokens": [
+        50964,
+        3202,
+        3030,
+        264,
+        912,
+        1205,
+        14275,
+        1785,
+        13,
+        51490
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.14809126853942872,
+      "compression_ratio": 1.3365384615384615,
+      "no_speech_prob": 0.5569506287574768,
+      "words": [
+        {
+          "word": " attention",
+          "start": 33.94,
+          "end": 34.68,
+          "probability": 0.9981529116630554
+        },
+        {
+          "word": " towards",
+          "start": 34.68,
+          "end": 36.22,
+          "probability": 0.9273288249969482
+        },
+        {
+          "word": " the",
+          "start": 36.22,
+          "end": 36.94,
+          "probability": 0.9896141886711121
+        },
+        {
+          "word": " same",
+          "start": 36.94,
+          "end": 37.44,
+          "probability": 0.9947978258132935
+        },
+        {
+          "word": " meditative",
+          "start": 37.44,
+          "end": 39.02,
+          "probability": 0.9937731027603149
+        },
+        {
+          "word": " state.",
+          "start": 39.02,
+          "end": 39.58,
+          "probability": 0.9967612624168396
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "seek": 3958,
+      "start": 43.120000000000005,
+      "end": 59.16,
+      "text": " This practice is centered on witnessing the presence of air, a fine and invisible object.",
+      "tokens": [
+        50364,
+        639,
+        3124,
+        307,
+        18988,
+        322,
+        39233,
+        264,
+        6814,
+        295,
+        1988,
+        11,
+        257,
+        2489,
+        293,
+        14603,
+        2657,
+        13,
+        51652
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.19224223636445545,
+      "compression_ratio": 1.1125,
+      "no_speech_prob": 0.24029381573200226,
+      "words": [
+        {
+          "word": " This",
+          "start": 43.120000000000005,
+          "end": 44.52,
+          "probability": 0.5158082842826843
+        },
+        {
+          "word": " practice",
+          "start": 44.52,
+          "end": 44.98,
+          "probability": 0.9787260293960571
+        },
+        {
+          "word": " is",
+          "start": 44.98,
+          "end": 45.96,
+          "probability": 0.9964655637741089
+        },
+        {
+          "word": " centered",
+          "start": 45.96,
+          "end": 46.38,
+          "probability": 0.9120433330535889
+        },
+        {
+          "word": " on",
+          "start": 46.38,
+          "end": 47.62,
+          "probability": 0.9890667200088501
+        },
+        {
+          "word": " witnessing",
+          "start": 47.62,
+          "end": 48.14,
+          "probability": 0.9870162010192871
+        },
+        {
+          "word": " the",
+          "start": 48.14,
+          "end": 49.1,
+          "probability": 0.9937260746955872
+        },
+        {
+          "word": " presence",
+          "start": 49.1,
+          "end": 49.54,
+          "probability": 0.9727550745010376
+        },
+        {
+          "word": " of",
+          "start": 49.54,
+          "end": 50.64,
+          "probability": 0.9974051117897034
+        },
+        {
+          "word": " air,",
+          "start": 50.64,
+          "end": 51.12,
+          "probability": 0.9458142518997192
+        },
+        {
+          "word": " a",
+          "start": 52.68,
+          "end": 55.92,
+          "probability": 0.9720433950424194
+        },
+        {
+          "word": " fine",
+          "start": 55.92,
+          "end": 56.48,
+          "probability": 0.9931970834732056
+        },
+        {
+          "word": " and",
+          "start": 56.48,
+          "end": 57.16,
+          "probability": 0.9584922194480896
+        },
+        {
+          "word": " invisible",
+          "start": 57.16,
+          "end": 57.84,
+          "probability": 0.9951785802841187
+        },
+        {
+          "word": " object.",
+          "start": 57.84,
+          "end": 59.16,
+          "probability": 0.9971816539764404
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "seek": 5916,
+      "start": 64.12,
+      "end": 68.3,
+      "text": " We will now begin in 10 seconds.",
+      "tokens": [
+        50364,
+        492,
+        486,
+        586,
+        1841,
+        294,
+        1266,
+        3949,
+        13,
+        50832
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.530809922651811,
+      "compression_ratio": 0.8421052631578947,
+      "no_speech_prob": 0.09983419626951218,
+      "words": [
+        {
+          "word": " We",
+          "start": 64.12,
+          "end": 65.36,
+          "probability": 0.6420706510543823
+        },
+        {
+          "word": " will",
+          "start": 65.36,
+          "end": 65.56,
+          "probability": 0.9579090476036072
+        },
+        {
+          "word": " now",
+          "start": 65.56,
+          "end": 65.84,
+          "probability": 0.9746102690696716
+        },
+        {
+          "word": " begin",
+          "start": 65.84,
+          "end": 66.36,
+          "probability": 0.9925112724304199
+        },
+        {
+          "word": " in",
+          "start": 66.36,
+          "end": 67.14,
+          "probability": 0.9289962649345398
+        },
+        {
+          "word": " 10",
+          "start": 67.14,
+          "end": 67.58,
+          "probability": 0.7811132073402405
+        },
+        {
+          "word": " seconds.",
+          "start": 67.58,
+          "end": 68.3,
+          "probability": 0.961073637008667
+        }
+      ]
+    }
+  ],
+  "language": "en"
+}

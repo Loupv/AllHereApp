@@ -1,0 +1,1035 @@
+{
+  "text": " Round 6. Visualize a single star in the dark sky. Look at the shining star, starlight coming in your direction. See how the star is moving closer to you, increasing in size and forming into an image The image of sun in front of you. Look at the sun and the sunlight shining onto your face, onto your body, shining through. The sun is moving closer, the giant sun in front of you, the light piercing through your your body as you enter the space of sun. the sun, enter, the sunlight, lighting up the entire space. Please, you absorb into the sun. Merge into the sun. You become the sunlight. You",
+  "segments": [
+    {
+      "id": 0,
+      "seek": 0,
+      "start": 0,
+      "end": 3.84,
+      "text": " Round 6.",
+      "tokens": [
+        50364,
+        18525,
+        1386,
+        13,
+        50914
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.42068416193911906,
+      "compression_ratio": 0.8596491228070176,
+      "no_speech_prob": 0.07283595204353333,
+      "words": [
+        {
+          "word": " Round",
+          "start": 0,
+          "end": 2.58,
+          "probability": 0.7108288407325745
+        },
+        {
+          "word": " 6.",
+          "start": 2.58,
+          "end": 3.84,
+          "probability": 0.3964850604534149
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "seek": 0,
+      "start": 11,
+      "end": 15.84,
+      "text": " Visualize a single star in the dark sky.",
+      "tokens": [
+        50914,
+        23187,
+        1125,
+        257,
+        2167,
+        3543,
+        294,
+        264,
+        2877,
+        5443,
+        13,
+        51464
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.42068416193911906,
+      "compression_ratio": 0.8596491228070176,
+      "no_speech_prob": 0.07283595204353333,
+      "words": [
+        {
+          "word": " Visualize",
+          "start": 10.520000000000001,
+          "end": 11.22,
+          "probability": 0.8673386573791504
+        },
+        {
+          "word": " a",
+          "start": 11.22,
+          "end": 11.94,
+          "probability": 0.9854876399040222
+        },
+        {
+          "word": " single",
+          "start": 11.94,
+          "end": 12.46,
+          "probability": 0.9891955852508545
+        },
+        {
+          "word": " star",
+          "start": 12.46,
+          "end": 13.62,
+          "probability": 0.9755235314369202
+        },
+        {
+          "word": " in",
+          "start": 13.62,
+          "end": 14.9,
+          "probability": 0.948432981967926
+        },
+        {
+          "word": " the",
+          "start": 14.9,
+          "end": 15.04,
+          "probability": 0.9984757304191589
+        },
+        {
+          "word": " dark",
+          "start": 15.04,
+          "end": 15.4,
+          "probability": 0.9940418601036072
+        },
+        {
+          "word": " sky.",
+          "start": 15.4,
+          "end": 15.84,
+          "probability": 0.9982377290725708
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "seek": 1584,
+      "start": 21.04,
+      "end": 41.18,
+      "text": " Look at the shining star, starlight coming in your direction.",
+      "tokens": [
+        50364,
+        2053,
+        412,
+        264,
+        18269,
+        3543,
+        11,
+        3543,
+        2764,
+        1348,
+        294,
+        294,
+        428,
+        3513,
+        13,
+        51664
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.5953612857394748,
+      "compression_ratio": 1,
+      "no_speech_prob": 0.08014300465583801,
+      "words": [
+        {
+          "word": " Look",
+          "start": 21.04,
+          "end": 22.04,
+          "probability": 0.6014117002487183
+        },
+        {
+          "word": " at",
+          "start": 22.04,
+          "end": 22.48,
+          "probability": 0.9708728194236755
+        },
+        {
+          "word": " the",
+          "start": 22.48,
+          "end": 22.64,
+          "probability": 0.8887346982955933
+        },
+        {
+          "word": " shining",
+          "start": 22.64,
+          "end": 23.06,
+          "probability": 0.9469819068908691
+        },
+        {
+          "word": " star,",
+          "start": 23.06,
+          "end": 26.3,
+          "probability": 0.8575655817985535
+        },
+        {
+          "word": " starlight",
+          "start": 26.8,
+          "end": 37.86,
+          "probability": 0.6578787863254547
+        },
+        {
+          "word": " coming",
+          "start": 37.86,
+          "end": 39.92,
+          "probability": 0.8909808397293091
+        },
+        {
+          "word": " in",
+          "start": 39.92,
+          "end": 40.48,
+          "probability": 0.9744764566421509
+        },
+        {
+          "word": " your",
+          "start": 40.48,
+          "end": 40.64,
+          "probability": 0.8764771819114685
+        },
+        {
+          "word": " direction.",
+          "start": 40.64,
+          "end": 41.18,
+          "probability": 0.9937155842781067
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "seek": 4118,
+      "start": 48.300000000000004,
+      "end": 64.46,
+      "text": " See how the star is moving closer to you, increasing in size and forming into an image",
+      "tokens": [
+        50364,
+        3008,
+        577,
+        264,
+        3543,
+        307,
+        2684,
+        4966,
+        281,
+        291,
+        11,
+        5662,
+        294,
+        2744,
+        293,
+        15745,
+        666,
+        364,
+        3256,
+        51580
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.16692376136779785,
+      "compression_ratio": 1.1025641025641026,
+      "no_speech_prob": 0.1680513620376587,
+      "words": [
+        {
+          "word": " See",
+          "start": 48.300000000000004,
+          "end": 49.34,
+          "probability": 0.7302323579788208
+        },
+        {
+          "word": " how",
+          "start": 49.34,
+          "end": 49.64,
+          "probability": 0.985600471496582
+        },
+        {
+          "word": " the",
+          "start": 49.64,
+          "end": 49.86,
+          "probability": 0.9713498950004578
+        },
+        {
+          "word": " star",
+          "start": 49.86,
+          "end": 50.3,
+          "probability": 0.9683246612548828
+        },
+        {
+          "word": " is",
+          "start": 50.3,
+          "end": 51.74,
+          "probability": 0.9861198663711548
+        },
+        {
+          "word": " moving",
+          "start": 51.74,
+          "end": 52.04,
+          "probability": 0.9960446357727051
+        },
+        {
+          "word": " closer",
+          "start": 52.04,
+          "end": 52.92,
+          "probability": 0.99068284034729
+        },
+        {
+          "word": " to",
+          "start": 52.92,
+          "end": 53.68,
+          "probability": 0.9939618706703186
+        },
+        {
+          "word": " you,",
+          "start": 53.68,
+          "end": 54.08,
+          "probability": 0.9911451935768127
+        },
+        {
+          "word": " increasing",
+          "start": 55.86,
+          "end": 57.7,
+          "probability": 0.9898118376731873
+        },
+        {
+          "word": " in",
+          "start": 57.7,
+          "end": 58.2,
+          "probability": 0.9958979487419128
+        },
+        {
+          "word": " size",
+          "start": 58.2,
+          "end": 58.74,
+          "probability": 0.9990628361701965
+        },
+        {
+          "word": " and",
+          "start": 58.74,
+          "end": 62.22,
+          "probability": 0.725705087184906
+        },
+        {
+          "word": " forming",
+          "start": 62.22,
+          "end": 62.7,
+          "probability": 0.996614396572113
+        },
+        {
+          "word": " into",
+          "start": 62.7,
+          "end": 63.76,
+          "probability": 0.9881276488304138
+        },
+        {
+          "word": " an",
+          "start": 63.76,
+          "end": 64.08,
+          "probability": 0.99367755651474
+        },
+        {
+          "word": " image",
+          "start": 64.08,
+          "end": 64.46,
+          "probability": 0.9978523254394531
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "seek": 6446,
+      "start": 64.46,
+      "end": 68.4,
+      "text": " The image of sun in front of you.",
+      "tokens": [
+        50364,
+        440,
+        3256,
+        295,
+        3295,
+        294,
+        1868,
+        295,
+        291,
+        13,
+        50804
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.37350786433500405,
+      "compression_ratio": 1.3225806451612903,
+      "no_speech_prob": 0.1386130452156067,
+      "words": [
+        {
+          "word": " The",
+          "start": 64.46,
+          "end": 64.46,
+          "probability": 0.14028652012348175
+        },
+        {
+          "word": " image",
+          "start": 64.46,
+          "end": 64.6,
+          "probability": 0.22431372106075287
+        },
+        {
+          "word": " of",
+          "start": 64.6,
+          "end": 65.7,
+          "probability": 0.9958288073539734
+        },
+        {
+          "word": " sun",
+          "start": 65.7,
+          "end": 66.24,
+          "probability": 0.7064688205718994
+        },
+        {
+          "word": " in",
+          "start": 66.24,
+          "end": 67.46,
+          "probability": 0.9474640488624573
+        },
+        {
+          "word": " front",
+          "start": 67.46,
+          "end": 67.78,
+          "probability": 0.9969682097434998
+        },
+        {
+          "word": " of",
+          "start": 67.78,
+          "end": 68.08,
+          "probability": 0.9976602792739868
+        },
+        {
+          "word": " you.",
+          "start": 68.08,
+          "end": 68.4,
+          "probability": 0.9946081638336182
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "seek": 6446,
+      "start": 72.12,
+      "end": 88.84,
+      "text": " Look at the sun and the sunlight shining onto your face, onto your body, shining through.",
+      "tokens": [
+        50804,
+        2053,
+        412,
+        264,
+        3295,
+        293,
+        264,
+        18379,
+        18269,
+        3911,
+        428,
+        1851,
+        11,
+        3911,
+        428,
+        1772,
+        11,
+        18269,
+        807,
+        13,
+        51846
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.37350786433500405,
+      "compression_ratio": 1.3225806451612903,
+      "no_speech_prob": 0.1386130452156067,
+      "words": [
+        {
+          "word": " Look",
+          "start": 72.12,
+          "end": 73.2,
+          "probability": 0.9913759827613831
+        },
+        {
+          "word": " at",
+          "start": 73.2,
+          "end": 73.38,
+          "probability": 0.9957078695297241
+        },
+        {
+          "word": " the",
+          "start": 73.38,
+          "end": 73.52,
+          "probability": 0.9955714344978333
+        },
+        {
+          "word": " sun",
+          "start": 73.52,
+          "end": 74.02,
+          "probability": 0.9624040126800537
+        },
+        {
+          "word": " and",
+          "start": 74.02,
+          "end": 78.76,
+          "probability": 0.40866971015930176
+        },
+        {
+          "word": " the",
+          "start": 78.76,
+          "end": 79,
+          "probability": 0.9828048348426819
+        },
+        {
+          "word": " sunlight",
+          "start": 79,
+          "end": 79.4,
+          "probability": 0.9930846691131592
+        },
+        {
+          "word": " shining",
+          "start": 79.4,
+          "end": 81.44,
+          "probability": 0.9778655767440796
+        },
+        {
+          "word": " onto",
+          "start": 81.44,
+          "end": 82.02,
+          "probability": 0.8660635948181152
+        },
+        {
+          "word": " your",
+          "start": 82.02,
+          "end": 82.28,
+          "probability": 0.9826396703720093
+        },
+        {
+          "word": " face,",
+          "start": 82.28,
+          "end": 82.66,
+          "probability": 0.9977635145187378
+        },
+        {
+          "word": " onto",
+          "start": 84,
+          "end": 84.66,
+          "probability": 0.9754237532615662
+        },
+        {
+          "word": " your",
+          "start": 84.66,
+          "end": 84.84,
+          "probability": 0.9970068335533142
+        },
+        {
+          "word": " body,",
+          "start": 84.84,
+          "end": 85.28,
+          "probability": 0.9986749291419983
+        },
+        {
+          "word": " shining",
+          "start": 87.24,
+          "end": 88.28,
+          "probability": 0.9923070073127747
+        },
+        {
+          "word": " through.",
+          "start": 88.28,
+          "end": 88.84,
+          "probability": 0.996807873249054
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "seek": 8884,
+      "start": 92.96000000000001,
+      "end": 113.92,
+      "text": " The sun is moving closer, the giant sun in front of you, the light piercing through your",
+      "tokens": [
+        50364,
+        440,
+        3295,
+        307,
+        2684,
+        4966,
+        11,
+        264,
+        7410,
+        3295,
+        294,
+        1868,
+        295,
+        291,
+        11,
+        264,
+        1442,
+        42972,
+        807,
+        428,
+        51614
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3366152307261591,
+      "compression_ratio": 1.1428571428571428,
+      "no_speech_prob": 0.12055924534797668,
+      "words": [
+        {
+          "word": " The",
+          "start": 92.96000000000001,
+          "end": 94,
+          "probability": 0.3859702944755554
+        },
+        {
+          "word": " sun",
+          "start": 94,
+          "end": 94.42,
+          "probability": 0.7775620818138123
+        },
+        {
+          "word": " is",
+          "start": 94.42,
+          "end": 94.76,
+          "probability": 0.986128568649292
+        },
+        {
+          "word": " moving",
+          "start": 94.76,
+          "end": 95.1,
+          "probability": 0.9871467351913452
+        },
+        {
+          "word": " closer,",
+          "start": 95.1,
+          "end": 95.82,
+          "probability": 0.9859792590141296
+        },
+        {
+          "word": " the",
+          "start": 96.64,
+          "end": 104.06,
+          "probability": 0.9182041883468628
+        },
+        {
+          "word": " giant",
+          "start": 104.06,
+          "end": 104.58,
+          "probability": 0.9769721031188965
+        },
+        {
+          "word": " sun",
+          "start": 104.58,
+          "end": 105.68,
+          "probability": 0.980465292930603
+        },
+        {
+          "word": " in",
+          "start": 105.68,
+          "end": 106.4,
+          "probability": 0.9621552228927612
+        },
+        {
+          "word": " front",
+          "start": 106.4,
+          "end": 106.68,
+          "probability": 0.997582197189331
+        },
+        {
+          "word": " of",
+          "start": 106.68,
+          "end": 107.04,
+          "probability": 0.9923837780952454
+        },
+        {
+          "word": " you,",
+          "start": 107.04,
+          "end": 107.38,
+          "probability": 0.997614860534668
+        },
+        {
+          "word": " the",
+          "start": 109.2,
+          "end": 111.82,
+          "probability": 0.9825189113616943
+        },
+        {
+          "word": " light",
+          "start": 111.82,
+          "end": 112.14,
+          "probability": 0.9942400455474854
+        },
+        {
+          "word": " piercing",
+          "start": 112.14,
+          "end": 113.22,
+          "probability": 0.8493373990058899
+        },
+        {
+          "word": " through",
+          "start": 113.22,
+          "end": 113.74,
+          "probability": 0.9886056780815125
+        },
+        {
+          "word": " your",
+          "start": 113.74,
+          "end": 113.92,
+          "probability": 0.9897163510322571
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "seek": 11392,
+      "start": 113.92,
+      "end": 120.28,
+      "text": " your body as you enter the space of sun.",
+      "tokens": [
+        50364,
+        428,
+        1772,
+        382,
+        291,
+        3242,
+        264,
+        1901,
+        295,
+        3295,
+        13,
+        50964
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.5280670438494001,
+      "compression_ratio": 0.8333333333333334,
+      "no_speech_prob": 0.09283832460641861,
+      "words": [
+        {
+          "word": " your",
+          "start": 113.92,
+          "end": 113.92,
+          "probability": 0.12269877642393112
+        },
+        {
+          "word": " body",
+          "start": 113.92,
+          "end": 114.3,
+          "probability": 0.991541862487793
+        },
+        {
+          "word": " as",
+          "start": 114.3,
+          "end": 117.2,
+          "probability": 0.7986891865730286
+        },
+        {
+          "word": " you",
+          "start": 117.2,
+          "end": 117.36,
+          "probability": 0.9975801706314087
+        },
+        {
+          "word": " enter",
+          "start": 117.36,
+          "end": 117.86,
+          "probability": 0.996803879737854
+        },
+        {
+          "word": " the",
+          "start": 117.86,
+          "end": 118.88,
+          "probability": 0.8695440292358398
+        },
+        {
+          "word": " space",
+          "start": 118.88,
+          "end": 119.36,
+          "probability": 0.9855247139930725
+        },
+        {
+          "word": " of",
+          "start": 119.36,
+          "end": 119.84,
+          "probability": 0.9949204325675964
+        },
+        {
+          "word": " sun.",
+          "start": 119.84,
+          "end": 120.28,
+          "probability": 0.7044869661331177
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "seek": 12028,
+      "start": 124.64,
+      "end": 148.58,
+      "text": " the sun, enter, the sunlight, lighting up the entire space.",
+      "tokens": [
+        50364,
+        264,
+        3295,
+        11,
+        3242,
+        11,
+        264,
+        18379,
+        11,
+        9577,
+        493,
+        264,
+        2302,
+        1901,
+        13,
+        51814
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.7925705909729004,
+      "compression_ratio": 1.0925925925925926,
+      "no_speech_prob": 0.10638921707868576,
+      "words": [
+        {
+          "word": " the",
+          "start": 124.64,
+          "end": 126.04,
+          "probability": 0.0160067118704319
+        },
+        {
+          "word": " sun,",
+          "start": 126.04,
+          "end": 126.04,
+          "probability": 0.3971247673034668
+        },
+        {
+          "word": " enter,",
+          "start": 126.04,
+          "end": 126.04,
+          "probability": 0.004540120717138052
+        },
+        {
+          "word": " the",
+          "start": 129.5,
+          "end": 130.6,
+          "probability": 0.7157629132270813
+        },
+        {
+          "word": " sunlight,",
+          "start": 130.6,
+          "end": 141.9,
+          "probability": 0.9623192548751831
+        },
+        {
+          "word": " lighting",
+          "start": 143.46,
+          "end": 146.9,
+          "probability": 0.5444387793540955
+        },
+        {
+          "word": " up",
+          "start": 146.9,
+          "end": 147.24,
+          "probability": 0.9594229459762573
+        },
+        {
+          "word": " the",
+          "start": 147.24,
+          "end": 147.54,
+          "probability": 0.9768728017807007
+        },
+        {
+          "word": " entire",
+          "start": 147.54,
+          "end": 147.96,
+          "probability": 0.992024302482605
+        },
+        {
+          "word": " space.",
+          "start": 147.96,
+          "end": 148.58,
+          "probability": 0.9946385025978088
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "seek": 14858,
+      "start": 148.58,
+      "end": 154.44,
+      "text": " Please, you absorb into the sun.",
+      "tokens": [
+        50364,
+        2555,
+        11,
+        291,
+        15631,
+        666,
+        264,
+        3295,
+        13,
+        50714
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.5380124678978553,
+      "compression_ratio": 1.1846153846153846,
+      "no_speech_prob": 0.03248518332839012,
+      "words": [
+        {
+          "word": " Please,",
+          "start": 148.58,
+          "end": 148.84,
+          "probability": 0.06547018140554428
+        },
+        {
+          "word": " you",
+          "start": 150.48,
+          "end": 151.6,
+          "probability": 0.9415992498397827
+        },
+        {
+          "word": " absorb",
+          "start": 151.6,
+          "end": 152.32,
+          "probability": 0.9615163207054138
+        },
+        {
+          "word": " into",
+          "start": 152.32,
+          "end": 153.66,
+          "probability": 0.9840888977050781
+        },
+        {
+          "word": " the",
+          "start": 153.66,
+          "end": 154.02,
+          "probability": 0.9941157102584839
+        },
+        {
+          "word": " sun.",
+          "start": 154.02,
+          "end": 154.44,
+          "probability": 0.680672824382782
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "seek": 14858,
+      "start": 160.58,
+      "end": 162.44,
+      "text": " Merge into the sun.",
+      "tokens": [
+        50964,
+        6124,
+        432,
+        666,
+        264,
+        3295,
+        13,
+        51164
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.5380124678978553,
+      "compression_ratio": 1.1846153846153846,
+      "no_speech_prob": 0.03248518332839012,
+      "words": [
+        {
+          "word": " Merge",
+          "start": 160.12,
+          "end": 160.82,
+          "probability": 0.9500021934509277
+        },
+        {
+          "word": " into",
+          "start": 160.82,
+          "end": 161.6,
+          "probability": 0.9856635332107544
+        },
+        {
+          "word": " the",
+          "start": 161.6,
+          "end": 161.98,
+          "probability": 0.9941629767417908
+        },
+        {
+          "word": " sun.",
+          "start": 161.98,
+          "end": 162.44,
+          "probability": 0.9737189412117004
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "seek": 14858,
+      "start": 167.58,
+      "end": 172.02,
+      "text": " You become the sunlight.",
+      "tokens": [
+        51314,
+        509,
+        1813,
+        264,
+        18379,
+        13,
+        51614
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.5380124678978553,
+      "compression_ratio": 1.1846153846153846,
+      "no_speech_prob": 0.03248518332839012,
+      "words": [
+        {
+          "word": " You",
+          "start": 167.26000000000002,
+          "end": 167.96,
+          "probability": 0.9876490235328674
+        },
+        {
+          "word": " become",
+          "start": 167.96,
+          "end": 168.42,
+          "probability": 0.9966514706611633
+        },
+        {
+          "word": " the",
+          "start": 168.42,
+          "end": 171.62,
+          "probability": 0.9632824063301086
+        },
+        {
+          "word": " sunlight.",
+          "start": 171.62,
+          "end": 172.02,
+          "probability": 0.9870087504386902
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "seek": 17858,
+      "start": 178.58,
+      "end": 179.96,
+      "text": " You",
+      "tokens": [
+        50364,
+        509,
+        50464
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.9236732125282288,
+      "compression_ratio": 0.2727272727272727,
+      "no_speech_prob": 0.8696959614753723,
+      "words": [
+        {
+          "word": " You",
+          "start": 178.58,
+          "end": 179.96,
+          "probability": 0.06740585714578629
+        }
+      ]
+    }
+  ],
+  "language": "en"
+}

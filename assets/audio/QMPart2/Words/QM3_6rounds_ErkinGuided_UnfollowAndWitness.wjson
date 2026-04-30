@@ -1,0 +1,5233 @@
+{
+  "text": " Welcome to QM3 training by All Here. It is designed to train in six rounds consisting of three minutes each with one minute break in between. The purpose of this particular training is to train the ability to quickly mobilize meditative attention towards the same meditative state. This practice is centered on witnessing the presence of air. A fine and invisible object. We will now begin in ten seconds. Let's observe the presence of air in front of you. Since the presence of air. The presence of air does not follow its movement. Don't follow your breathing. Just witness the presence of air in front of your face. Do not follow the air. Do not follow your breathing. Do not follow your breathing. The air is moving on its own. The body is breathing by itself. You are just the witness. How it's all happening by itself. Just witness the presence of air in front of you. Do not follow your breathing. End of round one. Round two. Witness the presence of air in front of your face. The presence of air. Let the body breathe by itself. The air is moving on its own. Do not participate. Just watch. The presence of air. Do not follow the air. Stay a witness of air in front of you. Don't follow your breathing. Don't follow the air. The air in front of you. Do not follow your breathing. Witness the air. The presence of air. We air. And, of round. Round 3. Round 3. The presence of air in front of you. The presence of air in front of you. The presence of air in front of you. Let the body breathe by itself. The air moves on its own. Stay in a witness. Do not follow the air movement. Remain for witness. The presence of air in front of you. Remain for witness. Wait. Remain for witness. Round 4. I observe the presence of air. Remain for witness. The presence of air in front of you. Remain for witness. The presence of air. Remain for witness. Don't follow just witness the presence. The air in front of you. Don't follow the breathing. Don't follow the air movement. Don't follow the breathing. Remain for witness. And of round 4. Remain for witness. The presence of air. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. And of round 5. And of round 6. Remain for witness. Let's go to straight witnessing of air in front of you. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. Remain for witness. And of round 6.",
+  "segments": [
+    {
+      "id": 0,
+      "seek": 0,
+      "start": 2.0400000000000005,
+      "end": 7.02,
+      "text": " Welcome to QM3 training by All Here.",
+      "tokens": [
+        50364,
+        4027,
+        281,
+        1249,
+        44,
+        18,
+        3097,
+        538,
+        439,
+        510,
+        13,
+        50844
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.20261478424072266,
+      "compression_ratio": 1.247787610619469,
+      "no_speech_prob": 0.09807363152503967,
+      "words": [
+        {
+          "word": " Welcome",
+          "start": 2.0400000000000005,
+          "end": 3.22,
+          "probability": 0.9122828841209412
+        },
+        {
+          "word": " to",
+          "start": 3.22,
+          "end": 3.5,
+          "probability": 0.9967459440231323
+        },
+        {
+          "word": " QM3",
+          "start": 3.5,
+          "end": 4.4,
+          "probability": 0.8683818181355795
+        },
+        {
+          "word": " training",
+          "start": 4.4,
+          "end": 5.24,
+          "probability": 0.49077868461608887
+        },
+        {
+          "word": " by",
+          "start": 5.24,
+          "end": 5.96,
+          "probability": 0.8520849943161011
+        },
+        {
+          "word": " All",
+          "start": 5.96,
+          "end": 6.36,
+          "probability": 0.7654145956039429
+        },
+        {
+          "word": " Here.",
+          "start": 6.36,
+          "end": 7.02,
+          "probability": 0.9662066698074341
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "seek": 0,
+      "start": 9.6,
+      "end": 21.08,
+      "text": " It is designed to train in six rounds consisting of three minutes each with one minute break",
+      "tokens": [
+        50844,
+        467,
+        307,
+        4761,
+        281,
+        3847,
+        294,
+        2309,
+        13757,
+        33921,
+        295,
+        1045,
+        2077,
+        1184,
+        365,
+        472,
+        3456,
+        1821,
+        51440
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.20261478424072266,
+      "compression_ratio": 1.247787610619469,
+      "no_speech_prob": 0.09807363152503967,
+      "words": [
+        {
+          "word": " It",
+          "start": 9.03,
+          "end": 9.62,
+          "probability": 0.9847817420959473
+        },
+        {
+          "word": " is",
+          "start": 9.62,
+          "end": 9.8,
+          "probability": 0.9958505630493164
+        },
+        {
+          "word": " designed",
+          "start": 9.8,
+          "end": 10.38,
+          "probability": 0.9969766139984131
+        },
+        {
+          "word": " to",
+          "start": 10.38,
+          "end": 11.44,
+          "probability": 0.9940391778945923
+        },
+        {
+          "word": " train",
+          "start": 11.44,
+          "end": 11.9,
+          "probability": 0.9973505735397339
+        },
+        {
+          "word": " in",
+          "start": 11.9,
+          "end": 12.74,
+          "probability": 0.9949415326118469
+        },
+        {
+          "word": " six",
+          "start": 12.74,
+          "end": 13.18,
+          "probability": 0.7634350657463074
+        },
+        {
+          "word": " rounds",
+          "start": 13.18,
+          "end": 13.7,
+          "probability": 0.9835714101791382
+        },
+        {
+          "word": " consisting",
+          "start": 13.7,
+          "end": 16.16,
+          "probability": 0.6088723540306091
+        },
+        {
+          "word": " of",
+          "start": 16.16,
+          "end": 16.56,
+          "probability": 0.9982967972755432
+        },
+        {
+          "word": " three",
+          "start": 16.56,
+          "end": 16.96,
+          "probability": 0.9252943992614746
+        },
+        {
+          "word": " minutes",
+          "start": 16.96,
+          "end": 17.28,
+          "probability": 0.998902440071106
+        },
+        {
+          "word": " each",
+          "start": 17.28,
+          "end": 18,
+          "probability": 0.9964648485183716
+        },
+        {
+          "word": " with",
+          "start": 18,
+          "end": 19.6,
+          "probability": 0.7713837623596191
+        },
+        {
+          "word": " one",
+          "start": 19.6,
+          "end": 20.14,
+          "probability": 0.8992975354194641
+        },
+        {
+          "word": " minute",
+          "start": 20.14,
+          "end": 20.48,
+          "probability": 0.986329972743988
+        },
+        {
+          "word": " break",
+          "start": 20.48,
+          "end": 21.08,
+          "probability": 0.969912588596344
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "seek": 0,
+      "start": 21.08,
+      "end": 22,
+      "text": " in between.",
+      "tokens": [
+        51440,
+        294,
+        1296,
+        13,
+        51592
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.20261478424072266,
+      "compression_ratio": 1.247787610619469,
+      "no_speech_prob": 0.09807363152503967,
+      "words": [
+        {
+          "word": " in",
+          "start": 21.08,
+          "end": 21.66,
+          "probability": 0.9872254729270935
+        },
+        {
+          "word": " between.",
+          "start": 21.66,
+          "end": 22,
+          "probability": 0.9161797761917114
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "seek": 2200,
+      "start": 22,
+      "end": 32.38,
+      "text": " The purpose of this particular training is to train the ability to quickly mobilize",
+      "tokens": [
+        50368,
+        440,
+        4334,
+        295,
+        341,
+        1729,
+        3097,
+        307,
+        281,
+        3847,
+        264,
+        3485,
+        281,
+        2661,
+        48637,
+        50888
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.28605776741391137,
+      "compression_ratio": 1.4705882352941178,
+      "no_speech_prob": 0.20893239974975586,
+      "words": [
+        {
+          "word": " The",
+          "start": 22,
+          "end": 24.58,
+          "probability": 0.6973211169242859
+        },
+        {
+          "word": " purpose",
+          "start": 24.58,
+          "end": 24.9,
+          "probability": 0.9970019459724426
+        },
+        {
+          "word": " of",
+          "start": 24.9,
+          "end": 25.48,
+          "probability": 0.9971386194229126
+        },
+        {
+          "word": " this",
+          "start": 25.48,
+          "end": 25.7,
+          "probability": 0.9928120970726013
+        },
+        {
+          "word": " particular",
+          "start": 25.7,
+          "end": 26.32,
+          "probability": 0.9957993626594543
+        },
+        {
+          "word": " training",
+          "start": 26.32,
+          "end": 26.84,
+          "probability": 0.9873439073562622
+        },
+        {
+          "word": " is",
+          "start": 26.84,
+          "end": 27.72,
+          "probability": 0.9798462986946106
+        },
+        {
+          "word": " to",
+          "start": 27.72,
+          "end": 27.96,
+          "probability": 0.9938110709190369
+        },
+        {
+          "word": " train",
+          "start": 27.96,
+          "end": 28.36,
+          "probability": 0.995161235332489
+        },
+        {
+          "word": " the",
+          "start": 28.36,
+          "end": 28.62,
+          "probability": 0.9973316192626953
+        },
+        {
+          "word": " ability",
+          "start": 28.62,
+          "end": 29.3,
+          "probability": 0.9972104430198669
+        },
+        {
+          "word": " to",
+          "start": 29.3,
+          "end": 30.46,
+          "probability": 0.995269238948822
+        },
+        {
+          "word": " quickly",
+          "start": 30.46,
+          "end": 31.12,
+          "probability": 0.9976069927215576
+        },
+        {
+          "word": " mobilize",
+          "start": 31.12,
+          "end": 32.38,
+          "probability": 0.9423320889472961
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "seek": 2200,
+      "start": 32.38,
+      "end": 39.68,
+      "text": " meditative attention towards the same meditative state.",
+      "tokens": [
+        50888,
+        1205,
+        14275,
+        3202,
+        3030,
+        264,
+        912,
+        1205,
+        14275,
+        1785,
+        13,
+        51240
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.28605776741391137,
+      "compression_ratio": 1.4705882352941178,
+      "no_speech_prob": 0.20893239974975586,
+      "words": [
+        {
+          "word": " meditative",
+          "start": 32.38,
+          "end": 33.96,
+          "probability": 0.9677667319774628
+        },
+        {
+          "word": " attention",
+          "start": 33.96,
+          "end": 34.64,
+          "probability": 0.9930421113967896
+        },
+        {
+          "word": " towards",
+          "start": 34.64,
+          "end": 36.26,
+          "probability": 0.9764782190322876
+        },
+        {
+          "word": " the",
+          "start": 36.26,
+          "end": 36.92,
+          "probability": 0.9967929720878601
+        },
+        {
+          "word": " same",
+          "start": 36.92,
+          "end": 37.48,
+          "probability": 0.9970241189002991
+        },
+        {
+          "word": " meditative",
+          "start": 37.48,
+          "end": 39.04,
+          "probability": 0.9934042394161224
+        },
+        {
+          "word": " state.",
+          "start": 39.04,
+          "end": 39.68,
+          "probability": 0.9972171783447266
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "seek": 2200,
+      "start": 43.22,
+      "end": 51.08,
+      "text": " This practice is centered on witnessing the presence of air.",
+      "tokens": [
+        51424,
+        639,
+        3124,
+        307,
+        18988,
+        322,
+        39233,
+        264,
+        6814,
+        295,
+        1988,
+        13,
+        51812
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.28605776741391137,
+      "compression_ratio": 1.4705882352941178,
+      "no_speech_prob": 0.20893239974975586,
+      "words": [
+        {
+          "word": " This",
+          "start": 43.22,
+          "end": 44.54,
+          "probability": 0.9874798655509949
+        },
+        {
+          "word": " practice",
+          "start": 44.54,
+          "end": 45,
+          "probability": 0.991508960723877
+        },
+        {
+          "word": " is",
+          "start": 45,
+          "end": 45.94,
+          "probability": 0.9983054399490356
+        },
+        {
+          "word": " centered",
+          "start": 45.94,
+          "end": 46.4,
+          "probability": 0.969231128692627
+        },
+        {
+          "word": " on",
+          "start": 46.4,
+          "end": 47.6,
+          "probability": 0.9978322386741638
+        },
+        {
+          "word": " witnessing",
+          "start": 47.6,
+          "end": 48.14,
+          "probability": 0.9976075887680054
+        },
+        {
+          "word": " the",
+          "start": 48.14,
+          "end": 49.1,
+          "probability": 0.9975060820579529
+        },
+        {
+          "word": " presence",
+          "start": 49.1,
+          "end": 49.54,
+          "probability": 0.9703516960144043
+        },
+        {
+          "word": " of",
+          "start": 49.54,
+          "end": 50.66,
+          "probability": 0.9979642629623413
+        },
+        {
+          "word": " air.",
+          "start": 50.66,
+          "end": 51.08,
+          "probability": 0.9486894607543945
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "seek": 5200,
+      "start": 54.52,
+      "end": 59.3,
+      "text": " A fine and invisible object.",
+      "tokens": [
+        50404,
+        316,
+        2489,
+        293,
+        14603,
+        2657,
+        13,
+        50728
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.49612492009213094,
+      "compression_ratio": 0.9538461538461539,
+      "no_speech_prob": 0.06519836187362671,
+      "words": [
+        {
+          "word": " A",
+          "start": 54.52,
+          "end": 55.92,
+          "probability": 0.6193857192993164
+        },
+        {
+          "word": " fine",
+          "start": 55.92,
+          "end": 56.38,
+          "probability": 0.9399845004081726
+        },
+        {
+          "word": " and",
+          "start": 56.38,
+          "end": 57.24,
+          "probability": 0.9041523337364197
+        },
+        {
+          "word": " invisible",
+          "start": 57.24,
+          "end": 57.86,
+          "probability": 0.9883660674095154
+        },
+        {
+          "word": " object.",
+          "start": 57.86,
+          "end": 59.3,
+          "probability": 0.9949061870574951
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "seek": 5200,
+      "start": 65.12,
+      "end": 68.44,
+      "text": " We will now begin in ten seconds.",
+      "tokens": [
+        51020,
+        492,
+        486,
+        586,
+        1841,
+        294,
+        2064,
+        3949,
+        13,
+        51484
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.49612492009213094,
+      "compression_ratio": 0.9538461538461539,
+      "no_speech_prob": 0.06519836187362671,
+      "words": [
+        {
+          "word": " We",
+          "start": 64.7,
+          "end": 65.4,
+          "probability": 0.9843915700912476
+        },
+        {
+          "word": " will",
+          "start": 65.4,
+          "end": 65.54,
+          "probability": 0.9826869368553162
+        },
+        {
+          "word": " now",
+          "start": 65.54,
+          "end": 65.82,
+          "probability": 0.9539639949798584
+        },
+        {
+          "word": " begin",
+          "start": 65.82,
+          "end": 66.36,
+          "probability": 0.9981982111930847
+        },
+        {
+          "word": " in",
+          "start": 66.36,
+          "end": 67.1,
+          "probability": 0.9574888944625854
+        },
+        {
+          "word": " ten",
+          "start": 67.1,
+          "end": 67.58,
+          "probability": 0.6496433615684509
+        },
+        {
+          "word": " seconds.",
+          "start": 67.58,
+          "end": 68.44,
+          "probability": 0.9950791597366333
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "seek": 8200,
+      "start": 83.1,
+      "end": 91.44,
+      "text": " Let's observe the presence of air in front of you.",
+      "tokens": [
+        50388,
+        961,
+        311,
+        11441,
+        264,
+        6814,
+        295,
+        1988,
+        294,
+        1868,
+        295,
+        291,
+        13,
+        50836
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3874233663082123,
+      "compression_ratio": 0.9090909090909091,
+      "no_speech_prob": 0.00937896128743887,
+      "words": [
+        {
+          "word": " Let's",
+          "start": 83.1,
+          "end": 84.5,
+          "probability": 0.8743650019168854
+        },
+        {
+          "word": " observe",
+          "start": 84.5,
+          "end": 85.9,
+          "probability": 0.9873600602149963
+        },
+        {
+          "word": " the",
+          "start": 85.9,
+          "end": 87.82,
+          "probability": 0.9545286893844604
+        },
+        {
+          "word": " presence",
+          "start": 87.82,
+          "end": 88.2,
+          "probability": 0.9847480654716492
+        },
+        {
+          "word": " of",
+          "start": 88.2,
+          "end": 89.1,
+          "probability": 0.9977752566337585
+        },
+        {
+          "word": " air",
+          "start": 89.1,
+          "end": 89.58,
+          "probability": 0.9113039970397949
+        },
+        {
+          "word": " in",
+          "start": 89.58,
+          "end": 90.64,
+          "probability": 0.9580014944076538
+        },
+        {
+          "word": " front",
+          "start": 90.64,
+          "end": 90.98,
+          "probability": 0.9979448914527893
+        },
+        {
+          "word": " of",
+          "start": 90.98,
+          "end": 91.28,
+          "probability": 0.9994487166404724
+        },
+        {
+          "word": " you.",
+          "start": 91.28,
+          "end": 91.98,
+          "probability": 0.9973015785217285
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "seek": 9198,
+      "start": 98.74,
+      "end": 104.04,
+      "text": " Since the presence of air.",
+      "tokens": [
+        50364,
+        4162,
+        264,
+        6814,
+        295,
+        1988,
+        13,
+        51512
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.8656400680541992,
+      "compression_ratio": 0.8387096774193549,
+      "no_speech_prob": 0.11570243537425995,
+      "words": [
+        {
+          "word": " Since",
+          "start": 98.74,
+          "end": 100.14,
+          "probability": 0.17490732669830322
+        },
+        {
+          "word": " the",
+          "start": 100.14,
+          "end": 101.54,
+          "probability": 0.8537854552268982
+        },
+        {
+          "word": " presence",
+          "start": 101.54,
+          "end": 101.98,
+          "probability": 0.8776406645774841
+        },
+        {
+          "word": " of",
+          "start": 101.98,
+          "end": 103.54,
+          "probability": 0.9915772676467896
+        },
+        {
+          "word": " air.",
+          "start": 103.54,
+          "end": 104.04,
+          "probability": 0.8488659858703613
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "seek": 10404,
+      "start": 120.24,
+      "end": 132.6,
+      "text": " The presence of air does not follow its movement.",
+      "tokens": [
+        50364,
+        440,
+        6814,
+        295,
+        1988,
+        775,
+        406,
+        1524,
+        1080,
+        3963,
+        13,
+        51796
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.8111662497887244,
+      "compression_ratio": 0.8596491228070176,
+      "no_speech_prob": 0.10661453008651733,
+      "words": [
+        {
+          "word": " The",
+          "start": 120.24,
+          "end": 121.64,
+          "probability": 0.04765506088733673
+        },
+        {
+          "word": " presence",
+          "start": 121.64,
+          "end": 123.04,
+          "probability": 0.13589191436767578
+        },
+        {
+          "word": " of",
+          "start": 123.04,
+          "end": 124.7,
+          "probability": 0.9546871781349182
+        },
+        {
+          "word": " air",
+          "start": 124.7,
+          "end": 125.18,
+          "probability": 0.036272499710321426
+        },
+        {
+          "word": " does",
+          "start": 125.18,
+          "end": 129.38,
+          "probability": 0.10075389593839645
+        },
+        {
+          "word": " not",
+          "start": 129.38,
+          "end": 129.52,
+          "probability": 0.9850085973739624
+        },
+        {
+          "word": " follow",
+          "start": 129.52,
+          "end": 130.08,
+          "probability": 0.8614401817321777
+        },
+        {
+          "word": " its",
+          "start": 130.08,
+          "end": 132,
+          "probability": 0.35600602626800537
+        },
+        {
+          "word": " movement.",
+          "start": 132,
+          "end": 132.6,
+          "probability": 0.9396543502807617
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "seek": 13404,
+      "start": 136.34,
+      "end": 139.02,
+      "text": " Don't follow your breathing.",
+      "tokens": [
+        50372,
+        1468,
+        380,
+        1524,
+        428,
+        9570,
+        13,
+        50864
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.5358661568683126,
+      "compression_ratio": 1.05,
+      "no_speech_prob": 0.017752083018422127,
+      "words": [
+        {
+          "word": " Don't",
+          "start": 136.34,
+          "end": 137.5,
+          "probability": 0.9038472771644592
+        },
+        {
+          "word": " follow",
+          "start": 137.5,
+          "end": 137.82,
+          "probability": 0.9640117883682251
+        },
+        {
+          "word": " your",
+          "start": 137.82,
+          "end": 138.44,
+          "probability": 0.945459246635437
+        },
+        {
+          "word": " breathing.",
+          "start": 138.44,
+          "end": 139.02,
+          "probability": 0.986083447933197
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "seek": 13404,
+      "start": 145.72,
+      "end": 155.5,
+      "text": " Just witness the presence of air in front of your face.",
+      "tokens": [
+        50948,
+        1449,
+        7286,
+        264,
+        6814,
+        295,
+        1988,
+        294,
+        1868,
+        295,
+        428,
+        1851,
+        13,
+        51432
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.5358661568683126,
+      "compression_ratio": 1.05,
+      "no_speech_prob": 0.017752083018422127,
+      "words": [
+        {
+          "word": " Just",
+          "start": 145.48,
+          "end": 146.06,
+          "probability": 0.9864567518234253
+        },
+        {
+          "word": " witness",
+          "start": 146.06,
+          "end": 146.56,
+          "probability": 0.9782488346099854
+        },
+        {
+          "word": " the",
+          "start": 146.56,
+          "end": 148.08,
+          "probability": 0.9596552848815918
+        },
+        {
+          "word": " presence",
+          "start": 148.08,
+          "end": 148.52,
+          "probability": 0.9832346439361572
+        },
+        {
+          "word": " of",
+          "start": 148.52,
+          "end": 149.84,
+          "probability": 0.9194316864013672
+        },
+        {
+          "word": " air",
+          "start": 149.84,
+          "end": 150.32,
+          "probability": 0.831440269947052
+        },
+        {
+          "word": " in",
+          "start": 150.32,
+          "end": 154.42,
+          "probability": 0.632802426815033
+        },
+        {
+          "word": " front",
+          "start": 154.42,
+          "end": 154.72,
+          "probability": 0.9921168684959412
+        },
+        {
+          "word": " of",
+          "start": 154.72,
+          "end": 155.02,
+          "probability": 0.9983668923377991
+        },
+        {
+          "word": " your",
+          "start": 155.02,
+          "end": 155.16,
+          "probability": 0.9845601320266724
+        },
+        {
+          "word": " face.",
+          "start": 155.16,
+          "end": 155.5,
+          "probability": 0.995473325252533
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "seek": 16404,
+      "start": 175.72,
+      "end": 179.42,
+      "text": " Do not follow the air.",
+      "tokens": [
+        50364,
+        1144,
+        406,
+        1524,
+        264,
+        1988,
+        13,
+        51112
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.7904084205627442,
+      "compression_ratio": 0.7333333333333333,
+      "no_speech_prob": 0.024142809212207794,
+      "words": [
+        {
+          "word": " Do",
+          "start": 175.72,
+          "end": 177.12,
+          "probability": 0.5834532976150513
+        },
+        {
+          "word": " not",
+          "start": 177.12,
+          "end": 177.32,
+          "probability": 0.9955054521560669
+        },
+        {
+          "word": " follow",
+          "start": 177.32,
+          "end": 177.8,
+          "probability": 0.7869027256965637
+        },
+        {
+          "word": " the",
+          "start": 177.8,
+          "end": 179.02,
+          "probability": 0.9424229264259338
+        },
+        {
+          "word": " air.",
+          "start": 179.02,
+          "end": 179.42,
+          "probability": 0.9219693541526794
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "seek": 17942,
+      "start": 184.16,
+      "end": 187.48,
+      "text": " Do not follow your breathing.",
+      "tokens": [
+        50368,
+        1144,
+        406,
+        1524,
+        428,
+        9570,
+        13,
+        50756
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.5905725002288819,
+      "compression_ratio": 0.7837837837837838,
+      "no_speech_prob": 0.021805141121149063,
+      "words": [
+        {
+          "word": " Do",
+          "start": 184.16,
+          "end": 185.48,
+          "probability": 0.06414861232042313
+        },
+        {
+          "word": " not",
+          "start": 185.48,
+          "end": 185.68,
+          "probability": 0.9937745332717896
+        },
+        {
+          "word": " follow",
+          "start": 185.68,
+          "end": 186.16,
+          "probability": 0.7340355515480042
+        },
+        {
+          "word": " your",
+          "start": 186.16,
+          "end": 186.76,
+          "probability": 0.9325284361839294
+        },
+        {
+          "word": " breathing.",
+          "start": 186.76,
+          "end": 187.48,
+          "probability": 0.974260151386261
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "seek": 18748,
+      "start": 188.28,
+      "end": 217.38,
+      "text": " Do not follow your breathing.",
+      "tokens": [
+        50404,
+        1144,
+        406,
+        1524,
+        428,
+        9570,
+        13,
+        50612
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.8833953857421875,
+      "compression_ratio": 0.7837837837837838,
+      "no_speech_prob": 0.08782199025154114,
+      "words": [
+        {
+          "word": " Do",
+          "start": 188.28,
+          "end": 189.28,
+          "probability": 0.0005499666440300643
+        },
+        {
+          "word": " not",
+          "start": 189.28,
+          "end": 193.82,
+          "probability": 0.33977019786834717
+        },
+        {
+          "word": " follow",
+          "start": 193.82,
+          "end": 197.98,
+          "probability": 0.002471549203619361
+        },
+        {
+          "word": " your",
+          "start": 197.98,
+          "end": 198,
+          "probability": 0.0413372702896595
+        },
+        {
+          "word": " breathing.",
+          "start": 198,
+          "end": 217.38,
+          "probability": 0.0027041241992264986
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "seek": 21738,
+      "start": 218.34,
+      "end": 221.04,
+      "text": " The air is moving on its own.",
+      "tokens": [
+        50412,
+        440,
+        1988,
+        307,
+        2684,
+        322,
+        1080,
+        1065,
+        13,
+        50540
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3208826260688977,
+      "compression_ratio": 1.2323232323232323,
+      "no_speech_prob": 0.02719370648264885,
+      "words": [
+        {
+          "word": " The",
+          "start": 218.26000000000002,
+          "end": 218.74,
+          "probability": 0.3991241157054901
+        },
+        {
+          "word": " air",
+          "start": 218.74,
+          "end": 219.18,
+          "probability": 0.7777119278907776
+        },
+        {
+          "word": " is",
+          "start": 219.18,
+          "end": 219.5,
+          "probability": 0.7519325613975525
+        },
+        {
+          "word": " moving",
+          "start": 219.5,
+          "end": 220.08,
+          "probability": 0.9622748494148254
+        },
+        {
+          "word": " on",
+          "start": 220.08,
+          "end": 220.34,
+          "probability": 0.9623393416404724
+        },
+        {
+          "word": " its",
+          "start": 220.34,
+          "end": 220.6,
+          "probability": 0.9706670045852661
+        },
+        {
+          "word": " own.",
+          "start": 220.6,
+          "end": 221.04,
+          "probability": 0.9962475895881653
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "seek": 21738,
+      "start": 224.26,
+      "end": 226.64,
+      "text": " The body is breathing by itself.",
+      "tokens": [
+        50708,
+        440,
+        1772,
+        307,
+        9570,
+        538,
+        2564,
+        13,
+        50820
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3208826260688977,
+      "compression_ratio": 1.2323232323232323,
+      "no_speech_prob": 0.02719370648264885,
+      "words": [
+        {
+          "word": " The",
+          "start": 224.06,
+          "end": 224.54,
+          "probability": 0.9588751196861267
+        },
+        {
+          "word": " body",
+          "start": 224.54,
+          "end": 224.94,
+          "probability": 0.991605281829834
+        },
+        {
+          "word": " is",
+          "start": 224.94,
+          "end": 225.36,
+          "probability": 0.9929081201553345
+        },
+        {
+          "word": " breathing",
+          "start": 225.36,
+          "end": 225.66,
+          "probability": 0.9938517808914185
+        },
+        {
+          "word": " by",
+          "start": 225.66,
+          "end": 225.98,
+          "probability": 0.994087815284729
+        },
+        {
+          "word": " itself.",
+          "start": 225.98,
+          "end": 226.64,
+          "probability": 0.993498682975769
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "seek": 21738,
+      "start": 231.7,
+      "end": 233.48,
+      "text": " You are just the witness.",
+      "tokens": [
+        51080,
+        509,
+        366,
+        445,
+        264,
+        7286,
+        13,
+        51172
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3208826260688977,
+      "compression_ratio": 1.2323232323232323,
+      "no_speech_prob": 0.02719370648264885,
+      "words": [
+        {
+          "word": " You",
+          "start": 231.52,
+          "end": 232,
+          "probability": 0.9449297189712524
+        },
+        {
+          "word": " are",
+          "start": 232,
+          "end": 232.14,
+          "probability": 0.9588043689727783
+        },
+        {
+          "word": " just",
+          "start": 232.14,
+          "end": 232.62,
+          "probability": 0.9959380626678467
+        },
+        {
+          "word": " the",
+          "start": 232.62,
+          "end": 233.1,
+          "probability": 0.9793682098388672
+        },
+        {
+          "word": " witness.",
+          "start": 233.1,
+          "end": 233.48,
+          "probability": 0.9769009947776794
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "seek": 21738,
+      "start": 235.78,
+      "end": 238.96,
+      "text": " How it's all happening by itself.",
+      "tokens": [
+        51284,
+        1012,
+        309,
+        311,
+        439,
+        2737,
+        538,
+        2564,
+        13,
+        51440
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3208826260688977,
+      "compression_ratio": 1.2323232323232323,
+      "no_speech_prob": 0.02719370648264885,
+      "words": [
+        {
+          "word": " How",
+          "start": 235.60000000000002,
+          "end": 236.08,
+          "probability": 0.6703159809112549
+        },
+        {
+          "word": " it's",
+          "start": 236.08,
+          "end": 236.34,
+          "probability": 0.7722789943218231
+        },
+        {
+          "word": " all",
+          "start": 236.34,
+          "end": 236.68,
+          "probability": 0.9904240965843201
+        },
+        {
+          "word": " happening",
+          "start": 236.68,
+          "end": 237.24,
+          "probability": 0.994820237159729
+        },
+        {
+          "word": " by",
+          "start": 237.24,
+          "end": 238.44,
+          "probability": 0.9635730981826782
+        },
+        {
+          "word": " itself.",
+          "start": 238.44,
+          "end": 238.96,
+          "probability": 0.9935854077339172
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "seek": 23896,
+      "start": 243.29999999999998,
+      "end": 254.46,
+      "text": " Just witness the presence of air in front of you.",
+      "tokens": [
+        50372,
+        1449,
+        7286,
+        264,
+        6814,
+        295,
+        1988,
+        294,
+        1868,
+        295,
+        291,
+        13,
+        51292
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.6003121058146159,
+      "compression_ratio": 0.9074074074074074,
+      "no_speech_prob": 0.0074804252944886684,
+      "words": [
+        {
+          "word": " Just",
+          "start": 243.29999999999998,
+          "end": 244.42,
+          "probability": 0.4722706973552704
+        },
+        {
+          "word": " witness",
+          "start": 244.42,
+          "end": 244.96,
+          "probability": 0.9279767274856567
+        },
+        {
+          "word": " the",
+          "start": 244.96,
+          "end": 245.54,
+          "probability": 0.9924564361572266
+        },
+        {
+          "word": " presence",
+          "start": 245.54,
+          "end": 245.94,
+          "probability": 0.9841575026512146
+        },
+        {
+          "word": " of",
+          "start": 245.94,
+          "end": 247.26,
+          "probability": 0.9819158315658569
+        },
+        {
+          "word": " air",
+          "start": 247.26,
+          "end": 247.76,
+          "probability": 0.9604982137680054
+        },
+        {
+          "word": " in",
+          "start": 247.76,
+          "end": 250.36,
+          "probability": 0.7770225405693054
+        },
+        {
+          "word": " front",
+          "start": 250.36,
+          "end": 250.74,
+          "probability": 0.9867938160896301
+        },
+        {
+          "word": " of",
+          "start": 250.74,
+          "end": 250.92,
+          "probability": 0.9988425970077515
+        },
+        {
+          "word": " you.",
+          "start": 250.92,
+          "end": 254.46,
+          "probability": 0.9870679974555969
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "seek": 25446,
+      "start": 254.46,
+      "end": 263.02,
+      "text": " Do not follow your breathing.",
+      "tokens": [
+        50412,
+        1144,
+        406,
+        1524,
+        428,
+        9570,
+        13,
+        50740
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.8590260148048401,
+      "compression_ratio": 0.9038461538461539,
+      "no_speech_prob": 0.06264249980449677,
+      "words": [
+        {
+          "word": " Do",
+          "start": 254.46,
+          "end": 254.46,
+          "probability": 0.000056185457651736215
+        },
+        {
+          "word": " not",
+          "start": 254.46,
+          "end": 263.02,
+          "probability": 0.09225830435752869
+        },
+        {
+          "word": " follow",
+          "start": 263.02,
+          "end": 263.02,
+          "probability": 0.003914493601769209
+        },
+        {
+          "word": " your",
+          "start": 263.02,
+          "end": 263.02,
+          "probability": 0.02548603154718876
+        },
+        {
+          "word": " breathing.",
+          "start": 263.02,
+          "end": 263.02,
+          "probability": 0.0005623599281534553
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "seek": 25446,
+      "start": 263.98,
+      "end": 265.72,
+      "text": " End of round one.",
+      "tokens": [
+        50840,
+        6967,
+        295,
+        3098,
+        472,
+        13,
+        51292
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.8590260148048401,
+      "compression_ratio": 0.9038461538461539,
+      "no_speech_prob": 0.06264249980449677,
+      "words": [
+        {
+          "word": " End",
+          "start": 263.62,
+          "end": 264.32,
+          "probability": 0.0873950645327568
+        },
+        {
+          "word": " of",
+          "start": 264.32,
+          "end": 264.54,
+          "probability": 0.9606463313102722
+        },
+        {
+          "word": " round",
+          "start": 264.54,
+          "end": 264.9,
+          "probability": 0.7433793544769287
+        },
+        {
+          "word": " one.",
+          "start": 264.9,
+          "end": 265.72,
+          "probability": 0.45357903838157654
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "seek": 31446,
+      "start": 315.28000000000003,
+      "end": 318.08,
+      "text": " Round two.",
+      "tokens": [
+        50392,
+        18525,
+        732,
+        13,
+        50628
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.6450720335307875,
+      "compression_ratio": 0.9384615384615385,
+      "no_speech_prob": 0.008811218664050102,
+      "words": [
+        {
+          "word": " Round",
+          "start": 315.28000000000003,
+          "end": 316.68,
+          "probability": 0.5085919499397278
+        },
+        {
+          "word": " two.",
+          "start": 316.68,
+          "end": 318.08,
+          "probability": 0.3755848705768585
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "seek": 31446,
+      "start": 321.74000000000007,
+      "end": 329.12,
+      "text": " Witness the presence of air in front of your face.",
+      "tokens": [
+        50752,
+        41366,
+        264,
+        6814,
+        295,
+        1988,
+        294,
+        1868,
+        295,
+        428,
+        1851,
+        13,
+        51392
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.6450720335307875,
+      "compression_ratio": 0.9384615384615385,
+      "no_speech_prob": 0.008811218664050102,
+      "words": [
+        {
+          "word": " Witness",
+          "start": 321.74000000000007,
+          "end": 323.14000000000004,
+          "probability": 0.8349781632423401
+        },
+        {
+          "word": " the",
+          "start": 323.14000000000004,
+          "end": 324.54,
+          "probability": 0.9379706978797913
+        },
+        {
+          "word": " presence",
+          "start": 324.54,
+          "end": 325.18,
+          "probability": 0.9883705377578735
+        },
+        {
+          "word": " of",
+          "start": 325.18,
+          "end": 326.06,
+          "probability": 0.9966012239456177
+        },
+        {
+          "word": " air",
+          "start": 326.06,
+          "end": 326.6,
+          "probability": 0.9461889863014221
+        },
+        {
+          "word": " in",
+          "start": 326.6,
+          "end": 327.96,
+          "probability": 0.9322391748428345
+        },
+        {
+          "word": " front",
+          "start": 327.96,
+          "end": 328.26,
+          "probability": 0.998387336730957
+        },
+        {
+          "word": " of",
+          "start": 328.26,
+          "end": 328.52,
+          "probability": 0.9989897608757019
+        },
+        {
+          "word": " your",
+          "start": 328.52,
+          "end": 328.66,
+          "probability": 0.9857579469680786
+        },
+        {
+          "word": " face.",
+          "start": 328.66,
+          "end": 329.12,
+          "probability": 0.9988962411880493
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "seek": 34446,
+      "start": 344.6,
+      "end": 347.9,
+      "text": " The presence of air.",
+      "tokens": [
+        50384,
+        440,
+        6814,
+        295,
+        1988,
+        13,
+        50528
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.6134154001871744,
+      "compression_ratio": 0.9454545454545454,
+      "no_speech_prob": 0.007783001288771629,
+      "words": [
+        {
+          "word": " The",
+          "start": 344.6,
+          "end": 346,
+          "probability": 0.32639366388320923
+        },
+        {
+          "word": " presence",
+          "start": 346,
+          "end": 346.44,
+          "probability": 0.7748742699623108
+        },
+        {
+          "word": " of",
+          "start": 346.44,
+          "end": 347.38,
+          "probability": 0.9925980567932129
+        },
+        {
+          "word": " air.",
+          "start": 347.38,
+          "end": 347.9,
+          "probability": 0.9614558219909668
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "seek": 34446,
+      "start": 356.46,
+      "end": 359.62,
+      "text": " Let the body breathe by itself.",
+      "tokens": [
+        50964,
+        961,
+        264,
+        1772,
+        10192,
+        538,
+        2564,
+        13,
+        51424
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.6134154001871744,
+      "compression_ratio": 0.9454545454545454,
+      "no_speech_prob": 0.007783001288771629,
+      "words": [
+        {
+          "word": " Let",
+          "start": 356.04,
+          "end": 356.74,
+          "probability": 0.9759416580200195
+        },
+        {
+          "word": " the",
+          "start": 356.74,
+          "end": 356.92,
+          "probability": 0.9911991953849792
+        },
+        {
+          "word": " body",
+          "start": 356.92,
+          "end": 357.26,
+          "probability": 0.996562659740448
+        },
+        {
+          "word": " breathe",
+          "start": 357.26,
+          "end": 357.92,
+          "probability": 0.8852602243423462
+        },
+        {
+          "word": " by",
+          "start": 357.92,
+          "end": 358.94,
+          "probability": 0.9414274096488953
+        },
+        {
+          "word": " itself.",
+          "start": 358.94,
+          "end": 359.62,
+          "probability": 0.9886095523834229
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "seek": 35962,
+      "start": 370.56,
+      "end": 373.94,
+      "text": " The air is moving on its own.",
+      "tokens": [
+        50396,
+        440,
+        1988,
+        307,
+        2684,
+        322,
+        1080,
+        1065,
+        13,
+        51072
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.5411906864332117,
+      "compression_ratio": 0.9242424242424242,
+      "no_speech_prob": 0.019000640138983727,
+      "words": [
+        {
+          "word": " The",
+          "start": 370.56,
+          "end": 371.76,
+          "probability": 0.41379785537719727
+        },
+        {
+          "word": " air",
+          "start": 371.76,
+          "end": 372.18,
+          "probability": 0.920939028263092
+        },
+        {
+          "word": " is",
+          "start": 372.18,
+          "end": 372.6,
+          "probability": 0.050840504467487335
+        },
+        {
+          "word": " moving",
+          "start": 372.6,
+          "end": 372.86,
+          "probability": 0.8500889539718628
+        },
+        {
+          "word": " on",
+          "start": 372.86,
+          "end": 373.22,
+          "probability": 0.9646350145339966
+        },
+        {
+          "word": " its",
+          "start": 373.22,
+          "end": 373.5,
+          "probability": 0.9852563738822937
+        },
+        {
+          "word": " own.",
+          "start": 373.5,
+          "end": 373.94,
+          "probability": 0.9990221261978149
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "seek": 35962,
+      "start": 376.26,
+      "end": 378,
+      "text": " Do not participate.",
+      "tokens": [
+        51216,
+        1144,
+        406,
+        8197,
+        13,
+        51292
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.5411906864332117,
+      "compression_ratio": 0.9242424242424242,
+      "no_speech_prob": 0.019000640138983727,
+      "words": [
+        {
+          "word": " Do",
+          "start": 376.26,
+          "end": 376.98,
+          "probability": 0.7125181555747986
+        },
+        {
+          "word": " not",
+          "start": 376.98,
+          "end": 377.28,
+          "probability": 0.9970198273658752
+        },
+        {
+          "word": " participate.",
+          "start": 377.28,
+          "end": 378,
+          "probability": 0.9426664710044861
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "seek": 35962,
+      "start": 381.38,
+      "end": 382.32,
+      "text": " Just watch.",
+      "tokens": [
+        51452,
+        1449,
+        1159,
+        13,
+        51496
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.5411906864332117,
+      "compression_ratio": 0.9242424242424242,
+      "no_speech_prob": 0.019000640138983727,
+      "words": [
+        {
+          "word": " Just",
+          "start": 381.12,
+          "end": 381.72,
+          "probability": 0.9697429537773132
+        },
+        {
+          "word": " watch.",
+          "start": 381.72,
+          "end": 382.32,
+          "probability": 0.9645620584487915
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "seek": 38232,
+      "start": 385.1,
+      "end": 388.26,
+      "text": " The presence of air.",
+      "tokens": [
+        50412,
+        440,
+        6814,
+        295,
+        1988,
+        13,
+        50648
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.43267938068934847,
+      "compression_ratio": 1.0789473684210527,
+      "no_speech_prob": 0.04120764508843422,
+      "words": [
+        {
+          "word": " The",
+          "start": 385.1,
+          "end": 386.5,
+          "probability": 0.187940776348114
+        },
+        {
+          "word": " presence",
+          "start": 386.5,
+          "end": 386.88,
+          "probability": 0.8049967885017395
+        },
+        {
+          "word": " of",
+          "start": 386.88,
+          "end": 387.64,
+          "probability": 0.9951900243759155
+        },
+        {
+          "word": " air.",
+          "start": 387.64,
+          "end": 388.26,
+          "probability": 0.8616452813148499
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "seek": 38232,
+      "start": 394.71999999999997,
+      "end": 397.34,
+      "text": " Do not follow the air.",
+      "tokens": [
+        50984,
+        1144,
+        406,
+        1524,
+        264,
+        1988,
+        13,
+        51108
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.43267938068934847,
+      "compression_ratio": 1.0789473684210527,
+      "no_speech_prob": 0.04120764508843422,
+      "words": [
+        {
+          "word": " Do",
+          "start": 394.32,
+          "end": 395.02,
+          "probability": 0.9029363393783569
+        },
+        {
+          "word": " not",
+          "start": 395.02,
+          "end": 395.22,
+          "probability": 0.9958223104476929
+        },
+        {
+          "word": " follow",
+          "start": 395.22,
+          "end": 395.72,
+          "probability": 0.9860566854476929
+        },
+        {
+          "word": " the",
+          "start": 395.72,
+          "end": 396.98,
+          "probability": 0.9794901013374329
+        },
+        {
+          "word": " air.",
+          "start": 396.98,
+          "end": 397.34,
+          "probability": 0.9906151294708252
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "seek": 38232,
+      "start": 404.71999999999997,
+      "end": 410.34,
+      "text": " Stay a witness of air in front of you.",
+      "tokens": [
+        51484,
+        8691,
+        257,
+        7286,
+        295,
+        1988,
+        294,
+        1868,
+        295,
+        291,
+        13,
+        51760
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.43267938068934847,
+      "compression_ratio": 1.0789473684210527,
+      "no_speech_prob": 0.04120764508843422,
+      "words": [
+        {
+          "word": " Stay",
+          "start": 404.44,
+          "end": 405.14,
+          "probability": 0.9719344973564148
+        },
+        {
+          "word": " a",
+          "start": 405.14,
+          "end": 405.98,
+          "probability": 0.6608222723007202
+        },
+        {
+          "word": " witness",
+          "start": 405.98,
+          "end": 406.42,
+          "probability": 0.990972638130188
+        },
+        {
+          "word": " of",
+          "start": 406.42,
+          "end": 407.76,
+          "probability": 0.9786469340324402
+        },
+        {
+          "word": " air",
+          "start": 407.76,
+          "end": 408.32,
+          "probability": 0.9765288233757019
+        },
+        {
+          "word": " in",
+          "start": 408.32,
+          "end": 409.4,
+          "probability": 0.8574299812316895
+        },
+        {
+          "word": " front",
+          "start": 409.4,
+          "end": 409.78,
+          "probability": 0.9917837381362915
+        },
+        {
+          "word": " of",
+          "start": 409.78,
+          "end": 410.04,
+          "probability": 0.9968558549880981
+        },
+        {
+          "word": " you.",
+          "start": 410.04,
+          "end": 410.34,
+          "probability": 0.9971332550048828
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "seek": 41232,
+      "start": 424.59999999999997,
+      "end": 427.26,
+      "text": " Don't follow your breathing.",
+      "tokens": [
+        50364,
+        1468,
+        380,
+        1524,
+        428,
+        9570,
+        13,
+        51104
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.89302978515625,
+      "compression_ratio": 0.7777777777777778,
+      "no_speech_prob": 0.02391330525279045,
+      "words": [
+        {
+          "word": " Don't",
+          "start": 424.59999999999997,
+          "end": 425.84,
+          "probability": 0.9320875704288483
+        },
+        {
+          "word": " follow",
+          "start": 425.84,
+          "end": 426.36,
+          "probability": 0.9720037579536438
+        },
+        {
+          "word": " your",
+          "start": 426.36,
+          "end": 426.64,
+          "probability": 0.9905603528022766
+        },
+        {
+          "word": " breathing.",
+          "start": 426.64,
+          "end": 427.26,
+          "probability": 0.9904474020004272
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "seek": 42726,
+      "start": 437.16,
+      "end": 440.28,
+      "text": " Don't follow the air.",
+      "tokens": [
+        50372,
+        1468,
+        380,
+        1524,
+        264,
+        1988,
+        13,
+        51168
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.8426506042480468,
+      "compression_ratio": 0.7241379310344828,
+      "no_speech_prob": 0.06704270094633102,
+      "words": [
+        {
+          "word": " Don't",
+          "start": 437.16,
+          "end": 438.56,
+          "probability": 0.7979675829410553
+        },
+        {
+          "word": " follow",
+          "start": 438.56,
+          "end": 438.98,
+          "probability": 0.9337525367736816
+        },
+        {
+          "word": " the",
+          "start": 438.98,
+          "end": 439.86,
+          "probability": 0.9850311279296875
+        },
+        {
+          "word": " air.",
+          "start": 439.86,
+          "end": 440.28,
+          "probability": 0.9424031972885132
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "seek": 44028,
+      "start": 449.64000000000004,
+      "end": 453.23999999999995,
+      "text": " The air in front of you.",
+      "tokens": [
+        50380,
+        440,
+        1988,
+        294,
+        1868,
+        295,
+        291,
+        13,
+        51012
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.8890685168179598,
+      "compression_ratio": 0.75,
+      "no_speech_prob": 0.06828079372644424,
+      "words": [
+        {
+          "word": " The",
+          "start": 449.64000000000004,
+          "end": 451.04,
+          "probability": 0.19002343714237213
+        },
+        {
+          "word": " air",
+          "start": 451.04,
+          "end": 451.6,
+          "probability": 0.938398540019989
+        },
+        {
+          "word": " in",
+          "start": 451.6,
+          "end": 452.36,
+          "probability": 0.9419752359390259
+        },
+        {
+          "word": " front",
+          "start": 452.36,
+          "end": 452.76,
+          "probability": 0.9807499051094055
+        },
+        {
+          "word": " of",
+          "start": 452.76,
+          "end": 453.12,
+          "probability": 0.9947015643119812
+        },
+        {
+          "word": " you.",
+          "start": 453.12,
+          "end": 453.82,
+          "probability": 0.9944822788238525
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "seek": 45382,
+      "start": 453.82,
+      "end": 464.94,
+      "text": " Do not follow your breathing.",
+      "tokens": [
+        50384,
+        1144,
+        406,
+        1524,
+        428,
+        9570,
+        13,
+        50552
+      ],
+      "temperature": 1,
+      "avg_logprob": -1.307394114407626,
+      "compression_ratio": 0.9571428571428572,
+      "no_speech_prob": 0.02714960277080536,
+      "words": [
+        {
+          "word": " Do",
+          "start": 453.82,
+          "end": 453.82,
+          "probability": 0.00033994371187873185
+        },
+        {
+          "word": " not",
+          "start": 453.82,
+          "end": 464.94,
+          "probability": 0.09886801242828369
+        },
+        {
+          "word": " follow",
+          "start": 464.94,
+          "end": 464.94,
+          "probability": 0.005058469716459513
+        },
+        {
+          "word": " your",
+          "start": 464.94,
+          "end": 464.94,
+          "probability": 0.03353005275130272
+        },
+        {
+          "word": " breathing.",
+          "start": 464.94,
+          "end": 464.94,
+          "probability": 0.0012041530571877956
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "seek": 45382,
+      "start": 464.94,
+      "end": 471.14,
+      "text": " Witness the air.",
+      "tokens": [
+        50892,
+        41366,
+        264,
+        1988,
+        13,
+        51312
+      ],
+      "temperature": 1,
+      "avg_logprob": -1.307394114407626,
+      "compression_ratio": 0.9571428571428572,
+      "no_speech_prob": 0.02714960277080536,
+      "words": [
+        {
+          "word": " Witness",
+          "start": 464.94,
+          "end": 464.94,
+          "probability": 0.009389788843691349
+        },
+        {
+          "word": " the",
+          "start": 464.94,
+          "end": 470.72,
+          "probability": 0.4096161723136902
+        },
+        {
+          "word": " air.",
+          "start": 470.72,
+          "end": 471.14,
+          "probability": 0.8546090126037598
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "seek": 45382,
+      "start": 478.86,
+      "end": 482.32,
+      "text": " The presence of air.",
+      "tokens": [
+        51380,
+        440,
+        6814,
+        295,
+        1988,
+        13,
+        51484
+      ],
+      "temperature": 1,
+      "avg_logprob": -1.307394114407626,
+      "compression_ratio": 0.9571428571428572,
+      "no_speech_prob": 0.02714960277080536,
+      "words": [
+        {
+          "word": " The",
+          "start": 478.86,
+          "end": 480.26,
+          "probability": 0.8053155541419983
+        },
+        {
+          "word": " presence",
+          "start": 480.26,
+          "end": 480.74,
+          "probability": 0.9784276485443115
+        },
+        {
+          "word": " of",
+          "start": 480.74,
+          "end": 481.72,
+          "probability": 0.9938949942588806
+        },
+        {
+          "word": " air.",
+          "start": 481.72,
+          "end": 482.32,
+          "probability": 0.9418191313743591
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "seek": 48382,
+      "start": 493.14000000000004,
+      "end": 495.32,
+      "text": " We air.",
+      "tokens": [
+        50364,
+        492,
+        1988,
+        13,
+        51433
+      ],
+      "temperature": 1,
+      "avg_logprob": -1.458069120134626,
+      "compression_ratio": 0.4666666666666667,
+      "no_speech_prob": 0.14905819296836853,
+      "words": [
+        {
+          "word": " We",
+          "start": 493.14000000000004,
+          "end": 494.54,
+          "probability": 0.06801627576351166
+        },
+        {
+          "word": " air.",
+          "start": 494.54,
+          "end": 495.32,
+          "probability": 0.5943589210510254
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "seek": 49532,
+      "start": 504.22,
+      "end": 505.78,
+      "text": " And, of round.",
+      "tokens": [
+        50364,
+        400,
+        11,
+        295,
+        3098,
+        13,
+        51077
+      ],
+      "temperature": 1,
+      "avg_logprob": -1.5464964972601996,
+      "compression_ratio": 0.6363636363636364,
+      "no_speech_prob": 0.21407154202461243,
+      "words": [
+        {
+          "word": " And,",
+          "start": 504.22,
+          "end": 504.98,
+          "probability": 0.294490247964859
+        },
+        {
+          "word": " of",
+          "start": 505.28,
+          "end": 505.4,
+          "probability": 0.367106169462204
+        },
+        {
+          "word": " round.",
+          "start": 505.4,
+          "end": 505.78,
+          "probability": 0.16067716479301453
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "seek": 53578,
+      "start": 554.76,
+      "end": 556.94,
+      "text": " Round 3.",
+      "tokens": [
+        50364,
+        18525,
+        805,
+        13,
+        51814
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.729811532156808,
+      "compression_ratio": 0.5,
+      "no_speech_prob": 0.29251429438591003,
+      "words": [
+        {
+          "word": " Round",
+          "start": 554.76,
+          "end": 556.16,
+          "probability": 0.7261262536048889
+        },
+        {
+          "word": " 3.",
+          "start": 556.16,
+          "end": 556.94,
+          "probability": 0.4957772195339203
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "seek": 55694,
+      "start": 556.94,
+      "end": 557.6,
+      "text": " Round 3.",
+      "tokens": [
+        50364,
+        18525,
+        805,
+        13,
+        50764
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3436968856387668,
+      "compression_ratio": 0.9,
+      "no_speech_prob": 0.08633936941623688,
+      "words": [
+        {
+          "word": " Round",
+          "start": 556.94,
+          "end": 557.6,
+          "probability": 0.000007773776815156452
+        },
+        {
+          "word": " 3.",
+          "start": 557.6,
+          "end": 557.6,
+          "probability": 0.10743701457977295
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "seek": 55694,
+      "start": 563.5,
+      "end": 570.86,
+      "text": " The presence of air in front of you.",
+      "tokens": [
+        50764,
+        440,
+        6814,
+        295,
+        1988,
+        294,
+        1868,
+        295,
+        291,
+        13,
+        51264
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3436968856387668,
+      "compression_ratio": 0.9,
+      "no_speech_prob": 0.08633936941623688,
+      "words": [
+        {
+          "word": " The",
+          "start": 563.5,
+          "end": 564.82,
+          "probability": 0.6094087362289429
+        },
+        {
+          "word": " presence",
+          "start": 564.82,
+          "end": 565.36,
+          "probability": 0.8252517580986023
+        },
+        {
+          "word": " of",
+          "start": 565.36,
+          "end": 566.48,
+          "probability": 0.9963099360466003
+        },
+        {
+          "word": " air",
+          "start": 566.48,
+          "end": 567.28,
+          "probability": 0.9285091161727905
+        },
+        {
+          "word": " in",
+          "start": 567.28,
+          "end": 569.28,
+          "probability": 0.87650465965271
+        },
+        {
+          "word": " front",
+          "start": 569.28,
+          "end": 569.62,
+          "probability": 0.9929836988449097
+        },
+        {
+          "word": " of",
+          "start": 569.62,
+          "end": 569.94,
+          "probability": 0.9983389377593994
+        },
+        {
+          "word": " you.",
+          "start": 569.94,
+          "end": 570.86,
+          "probability": 0.9952941536903381
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "seek": 57086,
+      "start": 570.86,
+      "end": 600.84,
+      "text": " The presence of air in front of you.",
+      "tokens": [
+        50364,
+        440,
+        6814,
+        295,
+        1988,
+        294,
+        1868,
+        295,
+        291,
+        13,
+        50864
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.5204958548912635,
+      "compression_ratio": 0.8780487804878049,
+      "no_speech_prob": 0.220139279961586,
+      "words": [
+        {
+          "word": " The",
+          "start": 570.86,
+          "end": 570.86,
+          "probability": 0.0017044421983882785
+        },
+        {
+          "word": " presence",
+          "start": 570.86,
+          "end": 570.86,
+          "probability": 0.0020200584549456835
+        },
+        {
+          "word": " of",
+          "start": 570.86,
+          "end": 577.38,
+          "probability": 0.8421040773391724
+        },
+        {
+          "word": " air",
+          "start": 577.38,
+          "end": 600.84,
+          "probability": 0.0005248566740192473
+        },
+        {
+          "word": " in",
+          "start": 600.84,
+          "end": 600.84,
+          "probability": 0.07688436657190323
+        },
+        {
+          "word": " front",
+          "start": 600.84,
+          "end": 600.84,
+          "probability": 0.006243414711207151
+        },
+        {
+          "word": " of",
+          "start": 600.84,
+          "end": 600.84,
+          "probability": 0.9432153105735779
+        },
+        {
+          "word": " you.",
+          "start": 600.84,
+          "end": 600.84,
+          "probability": 0.18673858046531677
+        }
+      ]
+    },
+    {
+      "id": 45,
+      "seek": 60084,
+      "start": 600.84,
+      "end": 610.1,
+      "text": " The presence of air in front of you.",
+      "tokens": [
+        50364,
+        440,
+        6814,
+        295,
+        1988,
+        294,
+        1868,
+        295,
+        291,
+        13,
+        51264
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.23483287204395642,
+      "compression_ratio": 0.9855072463768116,
+      "no_speech_prob": 0.14991140365600586,
+      "words": [
+        {
+          "word": " The",
+          "start": 600.84,
+          "end": 600.84,
+          "probability": 0.011077857576310635
+        },
+        {
+          "word": " presence",
+          "start": 600.84,
+          "end": 600.84,
+          "probability": 0.0004284656315576285
+        },
+        {
+          "word": " of",
+          "start": 600.84,
+          "end": 601.3,
+          "probability": 0.879806399345398
+        },
+        {
+          "word": " air",
+          "start": 601.3,
+          "end": 605.42,
+          "probability": 0.4690142571926117
+        },
+        {
+          "word": " in",
+          "start": 605.42,
+          "end": 608.88,
+          "probability": 0.6259393095970154
+        },
+        {
+          "word": " front",
+          "start": 608.88,
+          "end": 609.24,
+          "probability": 0.980036735534668
+        },
+        {
+          "word": " of",
+          "start": 609.24,
+          "end": 609.54,
+          "probability": 0.9954239726066589
+        },
+        {
+          "word": " you.",
+          "start": 609.54,
+          "end": 610.1,
+          "probability": 0.9765596985816956
+        }
+      ]
+    },
+    {
+      "id": 46,
+      "seek": 60084,
+      "start": 618.84,
+      "end": 622,
+      "text": " Let the body breathe by itself.",
+      "tokens": [
+        51264,
+        961,
+        264,
+        1772,
+        10192,
+        538,
+        2564,
+        13,
+        51814
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.23483287204395642,
+      "compression_ratio": 0.9855072463768116,
+      "no_speech_prob": 0.14991140365600586,
+      "words": [
+        {
+          "word": " Let",
+          "start": 618.76,
+          "end": 619.42,
+          "probability": 0.9275197982788086
+        },
+        {
+          "word": " the",
+          "start": 619.42,
+          "end": 619.62,
+          "probability": 0.97420334815979
+        },
+        {
+          "word": " body",
+          "start": 619.62,
+          "end": 620.06,
+          "probability": 0.9916055202484131
+        },
+        {
+          "word": " breathe",
+          "start": 620.06,
+          "end": 620.86,
+          "probability": 0.7177310585975647
+        },
+        {
+          "word": " by",
+          "start": 620.86,
+          "end": 621.24,
+          "probability": 0.974198043346405
+        },
+        {
+          "word": " itself.",
+          "start": 621.24,
+          "end": 622,
+          "probability": 0.9957394599914551
+        }
+      ]
+    },
+    {
+      "id": 47,
+      "seek": 62200,
+      "start": 629.5,
+      "end": 634.02,
+      "text": " The air moves on its own.",
+      "tokens": [
+        50364,
+        440,
+        1988,
+        6067,
+        322,
+        1080,
+        1065,
+        13,
+        51464
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.4113828485662287,
+      "compression_ratio": 0.8064516129032258,
+      "no_speech_prob": 0.10114402323961258,
+      "words": [
+        {
+          "word": " The",
+          "start": 629.5,
+          "end": 630.9,
+          "probability": 0.34596219658851624
+        },
+        {
+          "word": " air",
+          "start": 630.9,
+          "end": 631.36,
+          "probability": 0.9309199452400208
+        },
+        {
+          "word": " moves",
+          "start": 631.36,
+          "end": 632.46,
+          "probability": 0.7596256732940674
+        },
+        {
+          "word": " on",
+          "start": 632.46,
+          "end": 632.94,
+          "probability": 0.9774467349052429
+        },
+        {
+          "word": " its",
+          "start": 632.94,
+          "end": 633.22,
+          "probability": 0.9791175127029419
+        },
+        {
+          "word": " own.",
+          "start": 633.22,
+          "end": 634.02,
+          "probability": 0.9972803592681885
+        }
+      ]
+    },
+    {
+      "id": 48,
+      "seek": 63402,
+      "start": 643.3000000000001,
+      "end": 645.28,
+      "text": " Stay in a witness.",
+      "tokens": [
+        50364,
+        8691,
+        294,
+        257,
+        7286,
+        13,
+        51714
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.2899336020151774,
+      "compression_ratio": 0.6923076923076923,
+      "no_speech_prob": 0.5614272952079773,
+      "words": [
+        {
+          "word": " Stay",
+          "start": 643.3000000000001,
+          "end": 644.22,
+          "probability": 0.7360092401504517
+        },
+        {
+          "word": " in",
+          "start": 644.22,
+          "end": 644.54,
+          "probability": 0.9140977263450623
+        },
+        {
+          "word": " a",
+          "start": 644.54,
+          "end": 644.82,
+          "probability": 0.6055145859718323
+        },
+        {
+          "word": " witness.",
+          "start": 644.82,
+          "end": 645.28,
+          "probability": 0.9495480060577393
+        }
+      ]
+    },
+    {
+      "id": 49,
+      "seek": 64528,
+      "start": 660.48,
+      "end": 667.58,
+      "text": " Do not follow the air movement.",
+      "tokens": [
+        50364,
+        1144,
+        406,
+        1524,
+        264,
+        1988,
+        3963,
+        13,
+        51564
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3396867405284535,
+      "compression_ratio": 0.7948717948717948,
+      "no_speech_prob": 0.344229131937027,
+      "words": [
+        {
+          "word": " Do",
+          "start": 660.48,
+          "end": 661.88,
+          "probability": 0.4117993414402008
+        },
+        {
+          "word": " not",
+          "start": 661.88,
+          "end": 662.2,
+          "probability": 0.9915993213653564
+        },
+        {
+          "word": " follow",
+          "start": 662.2,
+          "end": 663,
+          "probability": 0.8535075187683105
+        },
+        {
+          "word": " the",
+          "start": 663,
+          "end": 666.4,
+          "probability": 0.6994284987449646
+        },
+        {
+          "word": " air",
+          "start": 666.4,
+          "end": 666.8,
+          "probability": 0.8859537839889526
+        },
+        {
+          "word": " movement.",
+          "start": 666.8,
+          "end": 667.58,
+          "probability": 0.9845548272132874
+        }
+      ]
+    },
+    {
+      "id": 50,
+      "seek": 66758,
+      "start": 684.28,
+      "end": 687.38,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51664
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.43091265360514325,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.4188666045665741,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 684.28,
+          "end": 685.68,
+          "probability": 0.6911544799804688
+        },
+        {
+          "word": " for",
+          "start": 685.68,
+          "end": 686.9,
+          "probability": 0.853736400604248
+        },
+        {
+          "word": " witness.",
+          "start": 686.9,
+          "end": 687.38,
+          "probability": 0.8856915831565857
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "seek": 68738,
+      "start": 700.12,
+      "end": 709.56,
+      "text": " The presence of air in front of you.",
+      "tokens": [
+        50364,
+        440,
+        6814,
+        295,
+        1988,
+        294,
+        1868,
+        295,
+        291,
+        13,
+        51564
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3258840854351337,
+      "compression_ratio": 0.8780487804878049,
+      "no_speech_prob": 0.3801038861274719,
+      "words": [
+        {
+          "word": " The",
+          "start": 700.12,
+          "end": 701.52,
+          "probability": 0.1499895453453064
+        },
+        {
+          "word": " presence",
+          "start": 701.52,
+          "end": 702.92,
+          "probability": 0.9591909050941467
+        },
+        {
+          "word": " of",
+          "start": 702.92,
+          "end": 704.16,
+          "probability": 0.99154132604599
+        },
+        {
+          "word": " air",
+          "start": 704.16,
+          "end": 705.4,
+          "probability": 0.9576084613800049
+        },
+        {
+          "word": " in",
+          "start": 705.4,
+          "end": 708.56,
+          "probability": 0.7507016062736511
+        },
+        {
+          "word": " front",
+          "start": 708.56,
+          "end": 708.98,
+          "probability": 0.9887874722480774
+        },
+        {
+          "word": " of",
+          "start": 708.98,
+          "end": 709.3,
+          "probability": 0.9984388947486877
+        },
+        {
+          "word": " you.",
+          "start": 709.3,
+          "end": 709.56,
+          "probability": 0.9929068088531494
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "seek": 70956,
+      "start": 709.56,
+      "end": 726.84,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51664
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.375263770421346,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.3706541657447815,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 709.56,
+          "end": 709.56,
+          "probability": 0.059506147939828224
+        },
+        {
+          "word": " for",
+          "start": 709.56,
+          "end": 711.12,
+          "probability": 0.011168991215527058
+        },
+        {
+          "word": " witness.",
+          "start": 711.12,
+          "end": 726.84,
+          "probability": 0.00002188559119531419
+        }
+      ]
+    },
+    {
+      "id": 53,
+      "seek": 72684,
+      "start": 751.98,
+      "end": 753.38,
+      "text": " Wait.",
+      "tokens": [
+        50364,
+        3802,
+        13,
+        50764
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.41153331597646076,
+      "compression_ratio": 0.38461538461538464,
+      "no_speech_prob": 0.16390429437160492,
+      "words": [
+        {
+          "word": " Wait.",
+          "start": 751.98,
+          "end": 753.38,
+          "probability": 0.20322638750076294
+        }
+      ]
+    },
+    {
+      "id": 54,
+      "seek": 75338,
+      "start": 781.96,
+      "end": 783.36,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51564
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3727986812591553,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.9452186822891235,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 781.96,
+          "end": 783.36,
+          "probability": 0.02422602163733245
+        },
+        {
+          "word": " for",
+          "start": 783.36,
+          "end": 783.36,
+          "probability": 0.04822864010930061
+        },
+        {
+          "word": " witness.",
+          "start": 783.36,
+          "end": 783.36,
+          "probability": 0.000011898394404852297
+        }
+      ]
+    },
+    {
+      "id": 55,
+      "seek": 78336,
+      "start": 794.86,
+      "end": 797.66,
+      "text": " Round 4.",
+      "tokens": [
+        50364,
+        18525,
+        1017,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.16624612467629568,
+      "compression_ratio": 0.5,
+      "no_speech_prob": 0.10761954635381699,
+      "words": [
+        {
+          "word": " Round",
+          "start": 794.86,
+          "end": 796.26,
+          "probability": 0.6252291202545166
+        },
+        {
+          "word": " 4.",
+          "start": 796.26,
+          "end": 797.66,
+          "probability": 0.3364037573337555
+        }
+      ]
+    },
+    {
+      "id": 56,
+      "seek": 79766,
+      "start": 802.82,
+      "end": 811.98,
+      "text": " I observe the presence of air.",
+      "tokens": [
+        50364,
+        286,
+        11441,
+        264,
+        6814,
+        295,
+        1988,
+        13,
+        51664
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.2960301529277455,
+      "compression_ratio": 0.7894736842105263,
+      "no_speech_prob": 0.17562006413936615,
+      "words": [
+        {
+          "word": " I",
+          "start": 802.82,
+          "end": 804.22,
+          "probability": 0.5809837579727173
+        },
+        {
+          "word": " observe",
+          "start": 804.22,
+          "end": 804.78,
+          "probability": 0.9281115531921387
+        },
+        {
+          "word": " the",
+          "start": 804.78,
+          "end": 808.48,
+          "probability": 0.9257514476776123
+        },
+        {
+          "word": " presence",
+          "start": 808.48,
+          "end": 808.98,
+          "probability": 0.9827041029930115
+        },
+        {
+          "word": " of",
+          "start": 808.98,
+          "end": 811.32,
+          "probability": 0.9766482710838318
+        },
+        {
+          "word": " air.",
+          "start": 811.32,
+          "end": 811.98,
+          "probability": 0.8742198348045349
+        }
+      ]
+    },
+    {
+      "id": 57,
+      "seek": 81198,
+      "start": 813.72,
+      "end": 815.12,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51564
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.27660123507181805,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.8970292806625366,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 813.72,
+          "end": 815.12,
+          "probability": 0.024287771337185404
+        },
+        {
+          "word": " for",
+          "start": 815.12,
+          "end": 815.12,
+          "probability": 0.023062704131007195
+        },
+        {
+          "word": " witness.",
+          "start": 815.12,
+          "end": 815.12,
+          "probability": 0.000006743772246409208
+        }
+      ]
+    },
+    {
+      "id": 58,
+      "seek": 81512,
+      "start": 841.82,
+      "end": 845.1,
+      "text": " The presence of air in front of you.",
+      "tokens": [
+        50364,
+        440,
+        6814,
+        295,
+        1988,
+        294,
+        1868,
+        295,
+        291,
+        13,
+        51764
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.27765384087195766,
+      "compression_ratio": 0.8780487804878049,
+      "no_speech_prob": 0.8653348684310913,
+      "words": [
+        {
+          "word": " The",
+          "start": 841.82,
+          "end": 843.22,
+          "probability": 0.0016443126369267702
+        },
+        {
+          "word": " presence",
+          "start": 843.22,
+          "end": 843.52,
+          "probability": 0.00010683402069844306
+        },
+        {
+          "word": " of",
+          "start": 843.52,
+          "end": 845.1,
+          "probability": 0.8526669144630432
+        },
+        {
+          "word": " air",
+          "start": 845.1,
+          "end": 845.1,
+          "probability": 0.0008300547488033772
+        },
+        {
+          "word": " in",
+          "start": 845.1,
+          "end": 845.1,
+          "probability": 0.13224554061889648
+        },
+        {
+          "word": " front",
+          "start": 845.1,
+          "end": 845.1,
+          "probability": 0.0033122531604021788
+        },
+        {
+          "word": " of",
+          "start": 845.1,
+          "end": 845.1,
+          "probability": 0.9396957159042358
+        },
+        {
+          "word": " you.",
+          "start": 845.1,
+          "end": 845.1,
+          "probability": 0.08460340648889542
+        }
+      ]
+    },
+    {
+      "id": 59,
+      "seek": 84510,
+      "start": 845.1,
+      "end": 855.1,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        50864
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.423922061920166,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.46707555651664734,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 845.1,
+          "end": 847.62,
+          "probability": 0.03615117821050262
+        },
+        {
+          "word": " for",
+          "start": 847.62,
+          "end": 848.8,
+          "probability": 0.028739243745803833
+        },
+        {
+          "word": " witness.",
+          "start": 848.8,
+          "end": 855.1,
+          "probability": 0.000010875851330638397
+        }
+      ]
+    },
+    {
+      "id": 60,
+      "seek": 85510,
+      "start": 857.4200000000001,
+      "end": 863.18,
+      "text": " The presence of air.",
+      "tokens": [
+        50364,
+        440,
+        6814,
+        295,
+        1988,
+        13,
+        51664
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.5035674836900499,
+      "compression_ratio": 0.7142857142857143,
+      "no_speech_prob": 0.516574501991272,
+      "words": [
+        {
+          "word": " The",
+          "start": 857.4200000000001,
+          "end": 858.82,
+          "probability": 0.05408819392323494
+        },
+        {
+          "word": " presence",
+          "start": 858.82,
+          "end": 859.22,
+          "probability": 0.86905437707901
+        },
+        {
+          "word": " of",
+          "start": 859.22,
+          "end": 862.78,
+          "probability": 0.9306889772415161
+        },
+        {
+          "word": " air.",
+          "start": 862.78,
+          "end": 863.18,
+          "probability": 0.17021340131759644
+        }
+      ]
+    },
+    {
+      "id": 61,
+      "seek": 86318,
+      "start": 864.64,
+      "end": 887.18,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51564
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.10965104897816975,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.7803134918212891,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 864.64,
+          "end": 866.04,
+          "probability": 0.014257015740440693
+        },
+        {
+          "word": " for",
+          "start": 866.04,
+          "end": 866.04,
+          "probability": 0.006445784587413073
+        },
+        {
+          "word": " witness.",
+          "start": 866.04,
+          "end": 887.18,
+          "probability": 0.000004398400960781146
+        }
+      ]
+    },
+    {
+      "id": 62,
+      "seek": 88718,
+      "start": 887.18,
+      "end": 896.36,
+      "text": " Don't follow just witness the presence.",
+      "tokens": [
+        50364,
+        1468,
+        380,
+        1524,
+        445,
+        7286,
+        264,
+        6814,
+        13,
+        51164
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3666381041208903,
+      "compression_ratio": 0.8297872340425532,
+      "no_speech_prob": 0.0816269963979721,
+      "words": [
+        {
+          "word": " Don't",
+          "start": 887.18,
+          "end": 887.76,
+          "probability": 0.799969881772995
+        },
+        {
+          "word": " follow",
+          "start": 887.76,
+          "end": 888.2,
+          "probability": 0.9732979536056519
+        },
+        {
+          "word": " just",
+          "start": 888.2,
+          "end": 892.6,
+          "probability": 0.30668437480926514
+        },
+        {
+          "word": " witness",
+          "start": 892.6,
+          "end": 893.44,
+          "probability": 0.9063981771469116
+        },
+        {
+          "word": " the",
+          "start": 893.44,
+          "end": 895.8,
+          "probability": 0.9339002966880798
+        },
+        {
+          "word": " presence.",
+          "start": 895.8,
+          "end": 896.36,
+          "probability": 0.9311392903327942
+        }
+      ]
+    },
+    {
+      "id": 63,
+      "seek": 89636,
+      "start": 903.5600000000001,
+      "end": 908.64,
+      "text": " The air in front of you.",
+      "tokens": [
+        50364,
+        440,
+        1988,
+        294,
+        1868,
+        295,
+        291,
+        13,
+        51764
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.37910131974653766,
+      "compression_ratio": 0.75,
+      "no_speech_prob": 0.7971100807189941,
+      "words": [
+        {
+          "word": " The",
+          "start": 903.5600000000001,
+          "end": 904.72,
+          "probability": 0.15953317284584045
+        },
+        {
+          "word": " air",
+          "start": 904.72,
+          "end": 905.3,
+          "probability": 0.9352095723152161
+        },
+        {
+          "word": " in",
+          "start": 905.3,
+          "end": 907.06,
+          "probability": 0.838577389717102
+        },
+        {
+          "word": " front",
+          "start": 907.06,
+          "end": 907.6,
+          "probability": 0.9914308190345764
+        },
+        {
+          "word": " of",
+          "start": 907.6,
+          "end": 907.88,
+          "probability": 0.9971258044242859
+        },
+        {
+          "word": " you.",
+          "start": 907.88,
+          "end": 908.64,
+          "probability": 0.9931787252426147
+        }
+      ]
+    },
+    {
+      "id": 64,
+      "seek": 90864,
+      "start": 927.5600000000001,
+      "end": 931.14,
+      "text": " Don't follow the breathing.",
+      "tokens": [
+        50364,
+        1468,
+        380,
+        1524,
+        264,
+        9570,
+        13,
+        51664
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.26348950862884524,
+      "compression_ratio": 0.7714285714285715,
+      "no_speech_prob": 0.4222799837589264,
+      "words": [
+        {
+          "word": " Don't",
+          "start": 927.5600000000001,
+          "end": 928.96,
+          "probability": 0.7824146449565887
+        },
+        {
+          "word": " follow",
+          "start": 928.96,
+          "end": 929.42,
+          "probability": 0.7461495995521545
+        },
+        {
+          "word": " the",
+          "start": 929.42,
+          "end": 930.54,
+          "probability": 0.6238316893577576
+        },
+        {
+          "word": " breathing.",
+          "start": 930.54,
+          "end": 931.14,
+          "probability": 0.6853770613670349
+        }
+      ]
+    },
+    {
+      "id": 65,
+      "seek": 93114,
+      "start": 934.24,
+      "end": 938.44,
+      "text": " Don't follow the air movement.",
+      "tokens": [
+        50364,
+        1468,
+        380,
+        1524,
+        264,
+        1988,
+        3963,
+        13,
+        50864
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.2493640726262873,
+      "compression_ratio": 0.7894736842105263,
+      "no_speech_prob": 0.34377261996269226,
+      "words": [
+        {
+          "word": " Don't",
+          "start": 934.24,
+          "end": 935.64,
+          "probability": 0.5929825156927109
+        },
+        {
+          "word": " follow",
+          "start": 935.64,
+          "end": 936.02,
+          "probability": 0.9146724939346313
+        },
+        {
+          "word": " the",
+          "start": 936.02,
+          "end": 937.42,
+          "probability": 0.9598861336708069
+        },
+        {
+          "word": " air",
+          "start": 937.42,
+          "end": 937.78,
+          "probability": 0.003039955161511898
+        },
+        {
+          "word": " movement.",
+          "start": 937.78,
+          "end": 938.44,
+          "probability": 0.9611390233039856
+        }
+      ]
+    },
+    {
+      "id": 66,
+      "seek": 93844,
+      "start": 943.22,
+      "end": 960.9,
+      "text": " Don't follow the breathing.",
+      "tokens": [
+        50364,
+        1468,
+        380,
+        1524,
+        264,
+        9570,
+        13,
+        51564
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.4177551746368408,
+      "compression_ratio": 0.7714285714285715,
+      "no_speech_prob": 0.35830238461494446,
+      "words": [
+        {
+          "word": " Don't",
+          "start": 943.22,
+          "end": 944.62,
+          "probability": 0.512845829129219
+        },
+        {
+          "word": " follow",
+          "start": 944.62,
+          "end": 945.78,
+          "probability": 0.000003561557605280541
+        },
+        {
+          "word": " the",
+          "start": 945.78,
+          "end": 947.64,
+          "probability": 0.1713314652442932
+        },
+        {
+          "word": " breathing.",
+          "start": 947.64,
+          "end": 960.9,
+          "probability": 0.00016582921671215445
+        }
+      ]
+    },
+    {
+      "id": 67,
+      "seek": 96090,
+      "start": 960.9,
+      "end": 980.9,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3138387203216553,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.164693221449852,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 960.9,
+          "end": 962.6,
+          "probability": 0.02457720243546646
+        },
+        {
+          "word": " for",
+          "start": 962.6,
+          "end": 968.04,
+          "probability": 0.03616878390312195
+        },
+        {
+          "word": " witness.",
+          "start": 968.04,
+          "end": 980.9,
+          "probability": 0.00004118513243156485
+        }
+      ]
+    },
+    {
+      "id": 68,
+      "seek": 98090,
+      "start": 982.82,
+      "end": 987.1,
+      "text": " And of round 4.",
+      "tokens": [
+        50364,
+        400,
+        295,
+        3098,
+        1017,
+        13,
+        50864
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.5681115388870239,
+      "compression_ratio": 0.7142857142857143,
+      "no_speech_prob": 0.3761710524559021,
+      "words": [
+        {
+          "word": " And",
+          "start": 982.82,
+          "end": 984.22,
+          "probability": 0.3946278691291809
+        },
+        {
+          "word": " of",
+          "start": 984.22,
+          "end": 985.3,
+          "probability": 0.5822409987449646
+        },
+        {
+          "word": " round",
+          "start": 985.3,
+          "end": 985.64,
+          "probability": 0.9331603050231934
+        },
+        {
+          "word": " 4.",
+          "start": 985.64,
+          "end": 987.1,
+          "probability": 0.2284967005252838
+        }
+      ]
+    },
+    {
+      "id": 69,
+      "seek": 101090,
+      "start": 1033.8,
+      "end": 1040.82,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51464
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3093428346845839,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.3569258451461792,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1033.8,
+          "end": 1035.2,
+          "probability": 0.00013255251542432234
+        },
+        {
+          "word": " for",
+          "start": 1035.2,
+          "end": 1036.12,
+          "probability": 0.0255175419151783
+        },
+        {
+          "word": " witness.",
+          "start": 1036.12,
+          "end": 1040.82,
+          "probability": 5.898418748984113e-7
+        }
+      ]
+    },
+    {
+      "id": 70,
+      "seek": 104082,
+      "start": 1044.02,
+      "end": 1052.38,
+      "text": " The presence of air.",
+      "tokens": [
+        50364,
+        440,
+        6814,
+        295,
+        1988,
+        13,
+        51464
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.22888172997368705,
+      "compression_ratio": 0.7142857142857143,
+      "no_speech_prob": 0.1377689093351364,
+      "words": [
+        {
+          "word": " The",
+          "start": 1044.02,
+          "end": 1045.42,
+          "probability": 0.7115696668624878
+        },
+        {
+          "word": " presence",
+          "start": 1045.42,
+          "end": 1045.84,
+          "probability": 0.9147878289222717
+        },
+        {
+          "word": " of",
+          "start": 1045.84,
+          "end": 1048.76,
+          "probability": 0.9294742941856384
+        },
+        {
+          "word": " air.",
+          "start": 1048.76,
+          "end": 1052.38,
+          "probability": 0.9291434288024902
+        }
+      ]
+    },
+    {
+      "id": 71,
+      "seek": 105238,
+      "start": 1064.1599999999999,
+      "end": 1073,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51764
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.14372724956936306,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.5221579074859619,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1064.1599999999999,
+          "end": 1065.56,
+          "probability": 0.03316614526556805
+        },
+        {
+          "word": " for",
+          "start": 1065.56,
+          "end": 1065.56,
+          "probability": 0.056171394884586334
+        },
+        {
+          "word": " witness.",
+          "start": 1065.56,
+          "end": 1073,
+          "probability": 0.000009319427590526175
+        }
+      ]
+    },
+    {
+      "id": 72,
+      "seek": 107300,
+      "start": 1073,
+      "end": 1074.48,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        50864
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.2720215320587158,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.17105719447135925,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1073,
+          "end": 1074.42,
+          "probability": 0.0138078637100989
+        },
+        {
+          "word": " for",
+          "start": 1074.42,
+          "end": 1074.48,
+          "probability": 0.03026113286614418
+        },
+        {
+          "word": " witness.",
+          "start": 1074.48,
+          "end": 1074.48,
+          "probability": 0.00007482607907149941
+        }
+      ]
+    },
+    {
+      "id": 73,
+      "seek": 107448,
+      "start": 1083.5,
+      "end": 1104.44,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        50864
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.31389252344767254,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.44481492042541504,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1083.5,
+          "end": 1084.9,
+          "probability": 0.005475318956769115
+        },
+        {
+          "word": " for",
+          "start": 1084.9,
+          "end": 1084.92,
+          "probability": 0.04709383472800255
+        },
+        {
+          "word": " witness.",
+          "start": 1084.92,
+          "end": 1104.44,
+          "probability": 0.000003878371444443474
+        }
+      ]
+    },
+    {
+      "id": 74,
+      "seek": 110444,
+      "start": 1106.9999999999998,
+      "end": 1109.8,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        50864
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.24516373210483128,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.31488585472106934,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1106.9999999999998,
+          "end": 1108.3999999999999,
+          "probability": 0.0378678807282995
+        },
+        {
+          "word": " for",
+          "start": 1108.3999999999999,
+          "end": 1109.8,
+          "probability": 0.015381424687802792
+        },
+        {
+          "word": " witness.",
+          "start": 1109.8,
+          "end": 1109.8,
+          "probability": 0.0001128625008277595
+        }
+      ]
+    },
+    {
+      "id": 75,
+      "seek": 110980,
+      "start": 1120.9599999999998,
+      "end": 1139.78,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        50864
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.22134926584031847,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.5810160040855408,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1120.9599999999998,
+          "end": 1122.36,
+          "probability": 0.028005876896713744
+        },
+        {
+          "word": " for",
+          "start": 1122.36,
+          "end": 1122.36,
+          "probability": 0.04781282693147659
+        },
+        {
+          "word": " witness.",
+          "start": 1122.36,
+          "end": 1139.78,
+          "probability": 0.000009102905096369796
+        }
+      ]
+    },
+    {
+      "id": 76,
+      "seek": 113978,
+      "start": 1148.8799999999999,
+      "end": 1169.76,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        50864
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.1808229552374946,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.7201076149940491,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1148.8799999999999,
+          "end": 1150.28,
+          "probability": 0.12890059440087498
+        },
+        {
+          "word": " for",
+          "start": 1150.28,
+          "end": 1150.3,
+          "probability": 0.016871074214577675
+        },
+        {
+          "word": " witness.",
+          "start": 1150.3,
+          "end": 1169.76,
+          "probability": 0.0000019739475192182
+        }
+      ]
+    },
+    {
+      "id": 77,
+      "seek": 116976,
+      "start": 1169.76,
+      "end": 1172.04,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.2217033306757609,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.4466019868850708,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1169.76,
+          "end": 1172.04,
+          "probability": 0.03945713177017751
+        },
+        {
+          "word": " for",
+          "start": 1172.04,
+          "end": 1172.04,
+          "probability": 0.04600365832448006
+        },
+        {
+          "word": " witness.",
+          "start": 1172.04,
+          "end": 1172.04,
+          "probability": 0.000008671848263475113
+        }
+      ]
+    },
+    {
+      "id": 78,
+      "seek": 117204,
+      "start": 1179.82,
+      "end": 1198.88,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51764
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.23847341537475586,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.714559018611908,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1179.82,
+          "end": 1181.22,
+          "probability": 0.01310508582514558
+        },
+        {
+          "word": " for",
+          "start": 1181.22,
+          "end": 1181.9,
+          "probability": 0.06100468710064888
+        },
+        {
+          "word": " witness.",
+          "start": 1181.9,
+          "end": 1198.88,
+          "probability": 0.000004995928520656889
+        }
+      ]
+    },
+    {
+      "id": 79,
+      "seek": 119888,
+      "start": 1201.7199999999998,
+      "end": 1222.88,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51564
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.2712719175550673,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.17835399508476257,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1201.7199999999998,
+          "end": 1203.12,
+          "probability": 0.03616260135140692
+        },
+        {
+          "word": " for",
+          "start": 1203.12,
+          "end": 1203.14,
+          "probability": 0.04314282909035683
+        },
+        {
+          "word": " witness.",
+          "start": 1203.14,
+          "end": 1222.88,
+          "probability": 0.000006453124569816282
+        }
+      ]
+    },
+    {
+      "id": 80,
+      "seek": 122288,
+      "start": 1222.88,
+      "end": 1227.38,
+      "text": " And of round 5.",
+      "tokens": [
+        50364,
+        400,
+        295,
+        3098,
+        1025,
+        13,
+        51764
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.27713003754615784,
+      "compression_ratio": 0.7142857142857143,
+      "no_speech_prob": 0.37179839611053467,
+      "words": [
+        {
+          "word": " And",
+          "start": 1222.88,
+          "end": 1224.7,
+          "probability": 0.4541630744934082
+        },
+        {
+          "word": " of",
+          "start": 1224.7,
+          "end": 1225.46,
+          "probability": 0.06545636057853699
+        },
+        {
+          "word": " round",
+          "start": 1225.46,
+          "end": 1225.86,
+          "probability": 0.906599760055542
+        },
+        {
+          "word": " 5.",
+          "start": 1225.86,
+          "end": 1227.38,
+          "probability": 0.29108282923698425
+        }
+      ]
+    },
+    {
+      "id": 81,
+      "seek": 125288,
+      "start": 1266.6999999999998,
+      "end": 1276.14,
+      "text": " And of round 6.",
+      "tokens": [
+        50364,
+        400,
+        295,
+        3098,
+        1386,
+        13,
+        51764
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.2349575095706516,
+      "compression_ratio": 0.7142857142857143,
+      "no_speech_prob": 0.4906662106513977,
+      "words": [
+        {
+          "word": " And",
+          "start": 1266.6999999999998,
+          "end": 1268.1,
+          "probability": 0.0046676574274897575
+        },
+        {
+          "word": " of",
+          "start": 1268.1,
+          "end": 1269.5,
+          "probability": 0.0003229081048630178
+        },
+        {
+          "word": " round",
+          "start": 1269.5,
+          "end": 1275.08,
+          "probability": 0.0002299754851264879
+        },
+        {
+          "word": " 6.",
+          "start": 1275.08,
+          "end": 1276.14,
+          "probability": 0.179098978638649
+        }
+      ]
+    },
+    {
+      "id": 82,
+      "seek": 127614,
+      "start": 1278.02,
+      "end": 1279.46,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.27808989418877494,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.3125852346420288,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1278.02,
+          "end": 1279.42,
+          "probability": 0.00028039371500199195
+        },
+        {
+          "word": " for",
+          "start": 1279.42,
+          "end": 1279.44,
+          "probability": 0.06675812602043152
+        },
+        {
+          "word": " witness.",
+          "start": 1279.44,
+          "end": 1279.46,
+          "probability": 0.000012036754924338311
+        }
+      ]
+    },
+    {
+      "id": 83,
+      "seek": 127946,
+      "start": 1281.56,
+      "end": 1290.78,
+      "text": " Let's go to straight witnessing of air in front of you.",
+      "tokens": [
+        50364,
+        961,
+        311,
+        352,
+        281,
+        2997,
+        39233,
+        295,
+        1988,
+        294,
+        1868,
+        295,
+        291,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.19987138579873479,
+      "compression_ratio": 0.9166666666666666,
+      "no_speech_prob": 0.34163951873779297,
+      "words": [
+        {
+          "word": " Let's",
+          "start": 1281.56,
+          "end": 1282.76,
+          "probability": 0.7520054578781128
+        },
+        {
+          "word": " go",
+          "start": 1282.76,
+          "end": 1282.94,
+          "probability": 0.9760370254516602
+        },
+        {
+          "word": " to",
+          "start": 1282.94,
+          "end": 1283.26,
+          "probability": 0.9337688684463501
+        },
+        {
+          "word": " straight",
+          "start": 1283.26,
+          "end": 1284.08,
+          "probability": 0.2786119878292084
+        },
+        {
+          "word": " witnessing",
+          "start": 1284.08,
+          "end": 1286.14,
+          "probability": 0.4897395670413971
+        },
+        {
+          "word": " of",
+          "start": 1286.14,
+          "end": 1288.08,
+          "probability": 0.7588173151016235
+        },
+        {
+          "word": " air",
+          "start": 1288.08,
+          "end": 1288.46,
+          "probability": 0.8835757374763489
+        },
+        {
+          "word": " in",
+          "start": 1288.46,
+          "end": 1289.84,
+          "probability": 0.9385852813720703
+        },
+        {
+          "word": " front",
+          "start": 1289.84,
+          "end": 1290.1,
+          "probability": 0.9941565990447998
+        },
+        {
+          "word": " of",
+          "start": 1290.1,
+          "end": 1290.44,
+          "probability": 0.9987781643867493
+        },
+        {
+          "word": " you.",
+          "start": 1290.44,
+          "end": 1290.78,
+          "probability": 0.9920406937599182
+        }
+      ]
+    },
+    {
+      "id": 84,
+      "seek": 129078,
+      "start": 1290.78,
+      "end": 1294.96,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.24767406781514487,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.5635218620300293,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1290.78,
+          "end": 1290.84,
+          "probability": 0.034349243655015016
+        },
+        {
+          "word": " for",
+          "start": 1290.84,
+          "end": 1294.96,
+          "probability": 0.0014661363093182445
+        },
+        {
+          "word": " witness.",
+          "start": 1294.96,
+          "end": 1294.96,
+          "probability": 0.000004017731498606736
+        }
+      ]
+    },
+    {
+      "id": 85,
+      "seek": 129496,
+      "start": 1297.32,
+      "end": 1298.72,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.19770602385203043,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.6696338057518005,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1297.32,
+          "end": 1298.72,
+          "probability": 0.07719876230839873
+        },
+        {
+          "word": " for",
+          "start": 1298.72,
+          "end": 1298.72,
+          "probability": 0.07211986184120178
+        },
+        {
+          "word": " witness.",
+          "start": 1298.72,
+          "end": 1298.72,
+          "probability": 0.00001213917312270496
+        }
+      ]
+    },
+    {
+      "id": 86,
+      "seek": 129872,
+      "start": 1298.72,
+      "end": 1300.78,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51564
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.2245026429494222,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.5749963521957397,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1298.72,
+          "end": 1300.62,
+          "probability": 0.007037775494609377
+        },
+        {
+          "word": " for",
+          "start": 1300.62,
+          "end": 1300.78,
+          "probability": 0.06610096246004105
+        },
+        {
+          "word": " witness.",
+          "start": 1300.78,
+          "end": 1300.78,
+          "probability": 0.000025045696020242758
+        }
+      ]
+    },
+    {
+      "id": 87,
+      "seek": 130078,
+      "start": 1300.78,
+      "end": 1302.8,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51464
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.26390165752834743,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.6530489325523376,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1300.78,
+          "end": 1302.8,
+          "probability": 0.031586030088874395
+        },
+        {
+          "word": " for",
+          "start": 1302.8,
+          "end": 1302.8,
+          "probability": 0.07068654894828796
+        },
+        {
+          "word": " witness.",
+          "start": 1302.8,
+          "end": 1302.8,
+          "probability": 0.000015747235011076555
+        }
+      ]
+    },
+    {
+      "id": 88,
+      "seek": 130280,
+      "start": 1307.52,
+      "end": 1309.26,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.19131641917758518,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.4455361068248749,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1307.52,
+          "end": 1308.92,
+          "probability": 0.05547371732609463
+        },
+        {
+          "word": " for",
+          "start": 1308.92,
+          "end": 1309.14,
+          "probability": 0.03351344168186188
+        },
+        {
+          "word": " witness.",
+          "start": 1309.14,
+          "end": 1309.26,
+          "probability": 0.000009627107829146553
+        }
+      ]
+    },
+    {
+      "id": 89,
+      "seek": 130926,
+      "start": 1309.26,
+      "end": 1309.78,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.19282490677303737,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.6449369192123413,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1309.26,
+          "end": 1309.78,
+          "probability": 0.032325046515325084
+        },
+        {
+          "word": " for",
+          "start": 1309.78,
+          "end": 1309.78,
+          "probability": 0.0747501328587532
+        },
+        {
+          "word": " witness.",
+          "start": 1309.78,
+          "end": 1309.78,
+          "probability": 0.00013399598537944257
+        }
+      ]
+    },
+    {
+      "id": 90,
+      "seek": 130978,
+      "start": 1314.54,
+      "end": 1321.92,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51764
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.1977455218633016,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.7564898729324341,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1314.54,
+          "end": 1315.94,
+          "probability": 0.026089652503287653
+        },
+        {
+          "word": " for",
+          "start": 1315.94,
+          "end": 1316.82,
+          "probability": 0.05818519741296768
+        },
+        {
+          "word": " witness.",
+          "start": 1316.82,
+          "end": 1321.92,
+          "probability": 0.00000845647809910588
+        }
+      ]
+    },
+    {
+      "id": 91,
+      "seek": 132192,
+      "start": 1321.92,
+      "end": 1341.92,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.27071714401245117,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.239020437002182,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1321.92,
+          "end": 1322.74,
+          "probability": 0.10163225490214245
+        },
+        {
+          "word": " for",
+          "start": 1322.74,
+          "end": 1324.94,
+          "probability": 0.014974096789956093
+        },
+        {
+          "word": " witness.",
+          "start": 1324.94,
+          "end": 1341.92,
+          "probability": 0.000017459471564507112
+        }
+      ]
+    },
+    {
+      "id": 92,
+      "seek": 134192,
+      "start": 1355.4399999999998,
+      "end": 1356.84,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.16654410627153185,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.41186368465423584,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1355.4399999999998,
+          "end": 1356.84,
+          "probability": 0.03174449405969426
+        },
+        {
+          "word": " for",
+          "start": 1356.84,
+          "end": 1356.84,
+          "probability": 0.03757829964160919
+        },
+        {
+          "word": " witness.",
+          "start": 1356.84,
+          "end": 1356.84,
+          "probability": 0.00003496542194625363
+        }
+      ]
+    },
+    {
+      "id": 93,
+      "seek": 135684,
+      "start": 1366.12,
+      "end": 1376.84,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.17336074511210123,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.70540452003479,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1366.12,
+          "end": 1367.52,
+          "probability": 0.007728480806690641
+        },
+        {
+          "word": " for",
+          "start": 1367.52,
+          "end": 1367.54,
+          "probability": 0.03569595143198967
+        },
+        {
+          "word": " witness.",
+          "start": 1367.54,
+          "end": 1376.84,
+          "probability": 0.00007136860222090036
+        }
+      ]
+    },
+    {
+      "id": 94,
+      "seek": 137684,
+      "start": 1378.54,
+      "end": 1396.84,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.09246314896477593,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.7730083465576172,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1378.54,
+          "end": 1379.94,
+          "probability": 0.17976602505768824
+        },
+        {
+          "word": " for",
+          "start": 1379.94,
+          "end": 1379.94,
+          "probability": 0.02438822016119957
+        },
+        {
+          "word": " witness.",
+          "start": 1379.94,
+          "end": 1396.84,
+          "probability": 0.000007282173100975342
+        }
+      ]
+    },
+    {
+      "id": 95,
+      "seek": 139684,
+      "start": 1396.84,
+      "end": 1403.62,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.19397703806559244,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.6868512630462646,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1396.84,
+          "end": 1398.38,
+          "probability": 0.017911629620357417
+        },
+        {
+          "word": " for",
+          "start": 1398.38,
+          "end": 1398.96,
+          "probability": 0.060347434133291245
+        },
+        {
+          "word": " witness.",
+          "start": 1398.96,
+          "end": 1403.62,
+          "probability": 0.000007607073257531738
+        }
+      ]
+    },
+    {
+      "id": 96,
+      "seek": 140362,
+      "start": 1403.62,
+      "end": 1407.18,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.1767512427435981,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.6243492364883423,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1403.62,
+          "end": 1405.44,
+          "probability": 0.056687512635335224
+        },
+        {
+          "word": " for",
+          "start": 1405.44,
+          "end": 1406.98,
+          "probability": 0.035087551921606064
+        },
+        {
+          "word": " witness.",
+          "start": 1406.98,
+          "end": 1407.18,
+          "probability": 0.000015890502254478633
+        }
+      ]
+    },
+    {
+      "id": 97,
+      "seek": 140718,
+      "start": 1422.4199999999998,
+      "end": 1427.18,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51364
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.17241297827826607,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.8239385485649109,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1422.4199999999998,
+          "end": 1423.82,
+          "probability": 0.012711461844673977
+        },
+        {
+          "word": " for",
+          "start": 1423.82,
+          "end": 1424.96,
+          "probability": 0.0665091723203659
+        },
+        {
+          "word": " witness.",
+          "start": 1424.96,
+          "end": 1427.18,
+          "probability": 0.000012706907909887377
+        }
+      ]
+    },
+    {
+      "id": 98,
+      "seek": 142718,
+      "start": 1449.3000000000002,
+      "end": 1450.88,
+      "text": " Remain for witness.",
+      "tokens": [
+        50364,
+        4080,
+        491,
+        337,
+        7286,
+        13,
+        51464
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.25667497515678406,
+      "compression_ratio": 0.7037037037037037,
+      "no_speech_prob": 0.7450121641159058,
+      "words": [
+        {
+          "word": " Remain",
+          "start": 1449.3000000000002,
+          "end": 1450.42,
+          "probability": 0.011447830280303606
+        },
+        {
+          "word": " for",
+          "start": 1450.42,
+          "end": 1450.82,
+          "probability": 0.04202258586883545
+        },
+        {
+          "word": " witness.",
+          "start": 1450.82,
+          "end": 1450.88,
+          "probability": 7.855305739212781e-7
+        }
+      ]
+    },
+    {
+      "id": 99,
+      "seek": 145718,
+      "start": 1462.1599999999999,
+      "end": 1465.92,
+      "text": " And of round 6.",
+      "tokens": [
+        50364,
+        400,
+        295,
+        3098,
+        1386,
+        13,
+        51564
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.23646633327007294,
+      "compression_ratio": 0.7142857142857143,
+      "no_speech_prob": 0.3447492718696594,
+      "words": [
+        {
+          "word": " And",
+          "start": 1462.1599999999999,
+          "end": 1463.56,
+          "probability": 0.1292150914669037
+        },
+        {
+          "word": " of",
+          "start": 1463.56,
+          "end": 1464.12,
+          "probability": 0.6612200140953064
+        },
+        {
+          "word": " round",
+          "start": 1464.12,
+          "end": 1464.46,
+          "probability": 0.8697731494903564
+        },
+        {
+          "word": " 6.",
+          "start": 1464.46,
+          "end": 1465.92,
+          "probability": 0.3025960922241211
+        }
+      ]
+    }
+  ],
+  "language": "en"
+}

@@ -1,0 +1,501 @@
+{
+  "text": " Back to observing your breathing body. How the body is breathing. Watch your breath. Watch the slow movement of your breathing, of the air, of your breathing, of your breathing. Just wait and witness your breathing or non-breathing. Continue observing your breath. Witness this moment. www.mooji.org",
+  "segments": [
+    {
+      "id": 0,
+      "seek": 0,
+      "start": 5.86,
+      "end": 13.08,
+      "text": " Back to observing your breathing body.",
+      "tokens": [
+        50668,
+        5833,
+        281,
+        22107,
+        428,
+        9570,
+        1772,
+        13,
+        51020
+      ],
+      "temperature": 0.2,
+      "avg_logprob": -0.4585470976652922,
+      "compression_ratio": 2.2388059701492535,
+      "no_speech_prob": 0.012645810842514038,
+      "words": [
+        {
+          "word": " Back",
+          "start": 5.86,
+          "end": 6.24,
+          "probability": 0.016350770369172096
+        },
+        {
+          "word": " to",
+          "start": 6.24,
+          "end": 8.64,
+          "probability": 0.8234005570411682
+        },
+        {
+          "word": " observing",
+          "start": 8.64,
+          "end": 9.32,
+          "probability": 0.9837227463722229
+        },
+        {
+          "word": " your",
+          "start": 9.32,
+          "end": 11.32,
+          "probability": 0.9630953669548035
+        },
+        {
+          "word": " breathing",
+          "start": 11.32,
+          "end": 11.74,
+          "probability": 0.9971019625663757
+        },
+        {
+          "word": " body.",
+          "start": 11.74,
+          "end": 13.08,
+          "probability": 0.9771612882614136
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "seek": 0,
+      "start": 22.8,
+      "end": 25.46,
+      "text": " How the body is breathing.",
+      "tokens": [
+        51504,
+        1012,
+        264,
+        1772,
+        307,
+        9570,
+        13,
+        51640
+      ],
+      "temperature": 0.2,
+      "avg_logprob": -0.4585470976652922,
+      "compression_ratio": 2.2388059701492535,
+      "no_speech_prob": 0.012645810842514038,
+      "words": [
+        {
+          "word": " How",
+          "start": 22.43,
+          "end": 23.06,
+          "probability": 0.8740308284759521
+        },
+        {
+          "word": " the",
+          "start": 23.06,
+          "end": 23.22,
+          "probability": 0.9927994012832642
+        },
+        {
+          "word": " body",
+          "start": 23.22,
+          "end": 23.7,
+          "probability": 0.9985374212265015
+        },
+        {
+          "word": " is",
+          "start": 23.7,
+          "end": 25.04,
+          "probability": 0.9977033734321594
+        },
+        {
+          "word": " breathing.",
+          "start": 25.04,
+          "end": 25.46,
+          "probability": 0.9991447925567627
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "seek": 3000,
+      "start": 40.18,
+      "end": 43.44,
+      "text": " Watch your breath.",
+      "tokens": [
+        50364,
+        7277,
+        428,
+        6045,
+        13,
+        51614
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.8806473016738892,
+      "compression_ratio": 0.6923076923076923,
+      "no_speech_prob": 0.04901944845914841,
+      "words": [
+        {
+          "word": " Watch",
+          "start": 40.18,
+          "end": 41.58,
+          "probability": 0.7919788956642151
+        },
+        {
+          "word": " your",
+          "start": 41.58,
+          "end": 42.98,
+          "probability": 0.7559645175933838
+        },
+        {
+          "word": " breath.",
+          "start": 42.98,
+          "end": 43.44,
+          "probability": 0.9958623647689819
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "seek": 7344,
+      "start": 76.03999999999999,
+      "end": 103.42,
+      "text": " Watch the slow movement of your breathing, of the air, of your breathing, of your breathing.",
+      "tokens": [
+        50364,
+        7277,
+        264,
+        2964,
+        3963,
+        295,
+        428,
+        9570,
+        11,
+        295,
+        264,
+        1988,
+        11,
+        295,
+        428,
+        9570,
+        11,
+        295,
+        428,
+        9570,
+        13,
+        51664
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.6056780417760214,
+      "compression_ratio": 1.4603174603174602,
+      "no_speech_prob": 0.08709660917520523,
+      "words": [
+        {
+          "word": " Watch",
+          "start": 76.03999999999999,
+          "end": 77.44,
+          "probability": 0.5175362825393677
+        },
+        {
+          "word": " the",
+          "start": 77.44,
+          "end": 78.12,
+          "probability": 0.5089138150215149
+        },
+        {
+          "word": " slow",
+          "start": 78.12,
+          "end": 78.48,
+          "probability": 0.9688084125518799
+        },
+        {
+          "word": " movement",
+          "start": 78.48,
+          "end": 79.46,
+          "probability": 0.9298263788223267
+        },
+        {
+          "word": " of",
+          "start": 79.46,
+          "end": 84.22,
+          "probability": 0.897486686706543
+        },
+        {
+          "word": " your",
+          "start": 84.22,
+          "end": 84.38,
+          "probability": 0.9584523439407349
+        },
+        {
+          "word": " breathing,",
+          "start": 84.38,
+          "end": 84.92,
+          "probability": 0.9979700446128845
+        },
+        {
+          "word": " of",
+          "start": 87.8,
+          "end": 92.06,
+          "probability": 0.8404644131660461
+        },
+        {
+          "word": " the",
+          "start": 92.06,
+          "end": 92.22,
+          "probability": 0.9252995848655701
+        },
+        {
+          "word": " air,",
+          "start": 92.22,
+          "end": 92.74,
+          "probability": 0.9864091873168945
+        },
+        {
+          "word": " of",
+          "start": 94.84,
+          "end": 103.42,
+          "probability": 0.6992971897125244
+        },
+        {
+          "word": " your",
+          "start": 103.42,
+          "end": 103.42,
+          "probability": 0.4076358377933502
+        },
+        {
+          "word": " breathing,",
+          "start": 103.42,
+          "end": 103.42,
+          "probability": 0.5041297078132629
+        },
+        {
+          "word": " of",
+          "start": 103.42,
+          "end": 103.42,
+          "probability": 0.8326759338378906
+        },
+        {
+          "word": " your",
+          "start": 103.42,
+          "end": 103.42,
+          "probability": 0.6770954132080078
+        },
+        {
+          "word": " breathing.",
+          "start": 103.42,
+          "end": 103.42,
+          "probability": 0.6360764503479004
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "seek": 10342,
+      "start": 105.28,
+      "end": 128.8,
+      "text": " Just wait and witness your breathing or non-breathing.",
+      "tokens": [
+        50364,
+        1449,
+        1699,
+        293,
+        7286,
+        428,
+        9570,
+        420,
+        2107,
+        12,
+        47674,
+        571,
+        13,
+        51664
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.48048096895217896,
+      "compression_ratio": 0.9818181818181818,
+      "no_speech_prob": 0.0709579586982727,
+      "words": [
+        {
+          "word": " Just",
+          "start": 105.28,
+          "end": 106.68,
+          "probability": 0.722760796546936
+        },
+        {
+          "word": " wait",
+          "start": 106.68,
+          "end": 107.18,
+          "probability": 0.9838287830352783
+        },
+        {
+          "word": " and",
+          "start": 107.18,
+          "end": 109.48,
+          "probability": 0.7905465364456177
+        },
+        {
+          "word": " witness",
+          "start": 109.48,
+          "end": 110.02,
+          "probability": 0.9970372915267944
+        },
+        {
+          "word": " your",
+          "start": 110.02,
+          "end": 115.14,
+          "probability": 0.7000088095664978
+        },
+        {
+          "word": " breathing",
+          "start": 115.14,
+          "end": 116.1,
+          "probability": 0.9962235689163208
+        },
+        {
+          "word": " or",
+          "start": 116.1,
+          "end": 127.84,
+          "probability": 0.3741486668586731
+        },
+        {
+          "word": " non",
+          "start": 127.84,
+          "end": 128.12,
+          "probability": 0.9402265548706055
+        },
+        {
+          "word": "-breathing.",
+          "start": 128.12,
+          "end": 128.8,
+          "probability": 0.9059725403785706
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "seek": 12880,
+      "start": 142.26,
+      "end": 149.64,
+      "text": " Continue observing your breath.",
+      "tokens": [
+        50364,
+        24472,
+        22107,
+        428,
+        6045,
+        13,
+        51414
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.7484266757965088,
+      "compression_ratio": 0.7948717948717948,
+      "no_speech_prob": 0.04475775733590126,
+      "words": [
+        {
+          "word": " Continue",
+          "start": 142.26,
+          "end": 143.66,
+          "probability": 0.9083788394927979
+        },
+        {
+          "word": " observing",
+          "start": 143.66,
+          "end": 145.06,
+          "probability": 0.9825128316879272
+        },
+        {
+          "word": " your",
+          "start": 145.06,
+          "end": 149.22,
+          "probability": 0.9654873609542847
+        },
+        {
+          "word": " breath.",
+          "start": 149.22,
+          "end": 149.64,
+          "probability": 0.9926878213882446
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "seek": 15880,
+      "start": 171.38,
+      "end": 173.86,
+      "text": " Witness this moment.",
+      "tokens": [
+        50364,
+        41366,
+        341,
+        1623,
+        13,
+        51236
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.8855340480804443,
+      "compression_ratio": 0.7142857142857143,
+      "no_speech_prob": 0.08915062993764877,
+      "words": [
+        {
+          "word": " Witness",
+          "start": 171.38,
+          "end": 172.78,
+          "probability": 0.5887200832366943
+        },
+        {
+          "word": " this",
+          "start": 172.78,
+          "end": 173.4,
+          "probability": 0.9852654337882996
+        },
+        {
+          "word": " moment.",
+          "start": 173.4,
+          "end": 173.86,
+          "probability": 0.9940698146820068
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "seek": 17386,
+      "start": 173.86,
+      "end": 179.96,
+      "text": " www.mooji.org",
+      "tokens": [
+        50364,
+        12520,
+        13,
+        76,
+        1986,
+        4013,
+        13,
+        4646,
+        50496
+      ],
+      "temperature": 1,
+      "avg_logprob": -1.428776168823242,
+      "compression_ratio": 0.6190476190476191,
+      "no_speech_prob": 0.48684585094451904,
+      "words": [
+        {
+          "word": " www",
+          "start": 173.86,
+          "end": 176.08,
+          "probability": 0.0022635546047240496
+        },
+        {
+          "word": ".mooji",
+          "start": 176.08,
+          "end": 179.96,
+          "probability": 0.7022143015637994
+        },
+        {
+          "word": ".org",
+          "start": 179.96,
+          "end": 179.96,
+          "probability": 0.9450815618038177
+        }
+      ]
+    }
+  ],
+  "language": "en"
+}

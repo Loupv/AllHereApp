@@ -43,20 +43,20 @@ yarn-error.*
 # Raw QM audio originals (kept locally for re-segmentation, not shipped)
 assets/audio/excluded/
 
-# Remote audio — served from WordPress, not bundled in the app
-assets/audio/Part0
-assets/audio/Part1
-assets/audio/Part2
-assets/audio/Part3
-assets/audio/QMPart2
-# QMPart1: exclude all except the 3 QM3 home rounds + 2 inters (bundled for offline)
-assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity
-assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round04*
-assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round05*
-assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round06*
-assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round07*
-assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round03_inter*
-assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round04_inter*
-assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round05_inter*
-assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round06_inter*
-assets/audio/QMPart1/Words/QM5_5rounds_Center of Gravity.wjson
+# Remote audio (.mp3) — served from WordPress, not bundled
+# Transcripts (.wjson) and waveforms ARE kept in git/bundle (small, needed offline)
+assets/audio/Part0/*.mp3
+assets/audio/Part1/*.mp3
+assets/audio/Part2/*.mp3
+assets/audio/Part3/*.mp3
+assets/audio/QMPart2/**/*.mp3
+# QMPart1: exclude only non-bundled .mp3 (keep QM3 home rounds 01-03 + inters 01-02)
+assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/*.mp3
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round04.mp3
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round05.mp3
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round06.mp3
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round07.mp3
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round03_inter.mp3
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round04_inter.mp3
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round05_inter.mp3
+assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round06_inter.mp3

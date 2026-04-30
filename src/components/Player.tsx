@@ -47,22 +47,26 @@ function waveformKey(name: string): string {
  */
 function peaksForSource(source: any): number[] | undefined {
   if (source == null) return undefined;
+  let stem: string | undefined;
   try {
-    const asset: any = Asset.fromModule(source);
-    let stem: string | undefined = asset?.name;
-    if (!stem && typeof asset?.uri === 'string') {
-      const last = asset.uri.split('?')[0].split('/').pop() || '';
-      stem = decodeURIComponent(last)
-        // metro sometimes appends a content hash: "file.abc123.mp3" → "file"
-        .replace(/\.[a-f0-9]{6,}\.(mp3|wav|m4a|ogg)$/i, '')
-        .replace(/\.(mp3|wav|m4a|ogg)$/i, '');
+    if (typeof source === 'string') {
+      // Remote URL — derive stem from the last path segment.
+      const last = source.split('?')[0].split('/').pop() || '';
+      stem = decodeURIComponent(last).replace(/\.(mp3|wav|m4a|ogg)$/i, '');
+    } else {
+      const asset: any = Asset.fromModule(source);
+      stem = asset?.name;
+      if (!stem && typeof asset?.uri === 'string') {
+        const last = asset.uri.split('?')[0].split('/').pop() || '';
+        stem = decodeURIComponent(last)
+          .replace(/\.[a-f0-9]{6,}\.(mp3|wav|m4a|ogg)$/i, '')
+          .replace(/\.(mp3|wav|m4a|ogg)$/i, '');
+      }
     }
     if (!stem) return undefined;
     const key = waveformKey(stem);
     const hit = WAVEFORMS[key];
     if (!hit && typeof console !== 'undefined') {
-      // Log once per missing key so we can see which source is unresolved
-      // without spamming on every status tick.
       if (!(globalThis as any).__wfMiss) (globalThis as any).__wfMiss = new Set<string>();
       const miss = (globalThis as any).__wfMiss as Set<string>;
       if (!miss.has(key)) { miss.add(key); console.warn('[waveforms] miss for key:', key, '(stem:', stem, ')'); }
@@ -248,7 +252,10 @@ function PlayerInner() {
     if (inBreak) return r?.roundInters?.[currentRound - 1] ?? undefined;
     if (currentRound === 0) return r?.introSource;
     if (r?.roundSources && r.roundSources[currentRound - 1]) return r.roundSources[currentRound - 1];
-    return track.source;
+    // Fallback to track.source (legacy bundled tracks); when source is missing
+    // (remote tracks resolved by id), use the resolvedUri so peaksForSource can
+    // still derive the filename stem for the waveform lookup.
+    return track.source ?? resolvedUri ?? undefined;
   })();
 
   /**

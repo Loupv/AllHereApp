@@ -23,10 +23,53 @@ export const BUNDLED_AUDIO = {
   qm3Inter2: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02_inter.mp3'),
 } as const;
 
+// All transcripts are bundled (small .wjson files, ~5KB each, total ~250KB).
+// The audio .mp3 stay remote on WordPress, but transcripts must be local for offline playback.
 export const BUNDLED_TRANSCRIPTS = {
   homeOneMin: require('../../assets/audio/Home/Words/One minute meditation.wjson'),
   homeThreeMin: require('../../assets/audio/Home/Words/Three minutes meditation.wjson'),
+  // Part0 (intro)
+  introWelcome: require('../../assets/audio/Part0/Words/1. Welcome.wjson'),
+  introSilentMind: require('../../assets/audio/Part0/Words/2. Silent Mind.wjson'),
+  introPrepareSpace: require('../../assets/audio/Part0/Words/3. Prepare the space.wjson'),
+  introQMFormat: require('../../assets/audio/Part0/Words/4. QM Format.wjson'),
+  // Part1
+  p1_1: require('../../assets/audio/Part1/Words/1 - Turning Inward (Eyes-open, introductory practice).wjson'),
+  p1_2: require('../../assets/audio/Part1/Words/2 - Self-Observation and Breath Following.wjson'),
+  p1_3: require('../../assets/audio/Part1/Words/3 - Center of Gravity.wjson'),
+  // Part2
+  p2_1: require('../../assets/audio/Part2/Words/1 - Follow the Air.wjson'),
+  p2_2: require('../../assets/audio/Part2/Words/2 - Follow and witness the Air.wjson'),
+  p2_3: require('../../assets/audio/Part2/Words/3 - Unfollow and witness the air.wjson'),
+  p3_1: require('../../assets/audio/Part2/Words/4 - Emptiness.wjson'),
+  // QMPart1 — QM3 (overall + per-round)
   qm3: require('../../assets/audio/QMPart1/Words/QM3_7rounds_Breath and Self-Observation.wjson'),
+  qm3_round1: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01.wjson'),
+  qm3_round2: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02.wjson'),
+  qm3_round3: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round03.wjson'),
+  qm3_round4: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round04.wjson'),
+  qm3_round5: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round05.wjson'),
+  qm3_round6: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round06.wjson'),
+  qm3_round7: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round07.wjson'),
+  qm3_inter1: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01_inter.wjson'),
+  qm3_inter2: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02_inter.wjson'),
+  qm3_inter3: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round03_inter.wjson'),
+  qm3_inter4: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round04_inter.wjson'),
+  qm3_inter5: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round05_inter.wjson'),
+  qm3_inter6: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round06_inter.wjson'),
+  // QMPart1 — QM5 (Center of Gravity)
+  qm5: require('../../assets/audio/QMPart1/Words/QM5_5rounds_Center of Gravity.wjson'),
+  qm5_round1: require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round01.wjson'),
+  qm5_round2: require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round02.wjson'),
+  qm5_round3: require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round03.wjson'),
+  qm5_round4: require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round04.wjson'),
+  qm5_round5: require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round05.wjson'),
+  qm5_inter1: require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round01_inter.wjson'),
+  qm5_inter2: require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round02_inter.wjson'),
+  qm5_inter3: require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round03_inter.wjson'),
+  qm5_inter4: require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round04_inter.wjson'),
+  // QMPart2 — QM3 6rounds Unfollow and Witness
+  qm23_unfollow: require('../../assets/audio/QMPart2/Words/QM3_6rounds_ErkinGuided_UnfollowAndWitness.wjson'),
 } as const;
 
 const BASE_URL = 'https://allhere.org/wp-content/uploads/AllHere_NewApp';
@@ -109,57 +152,60 @@ export function getAudioSource(trackId: string, roundIndex?: number): AudioSourc
  * @param trackId - The track identifier
  * @param roundIndex - Optional round index (0-based) for multi-round QM tracks
  */
-export function getTranscriptSource(trackId: string, roundIndex?: number): AudioSource | null {
+export function getTranscriptSource(
+  trackId: string,
+  roundIndex?: number,
+  isInter?: boolean,
+): AudioSource | null {
+  // QM rounds — per-round/per-inter transcripts
+  if (roundIndex !== undefined) {
+    const roundNum = roundIndex + 1;
+    if (trackId === 'qm1-2') {
+      const key = isInter
+        ? `qm3_inter${roundNum}` as keyof typeof BUNDLED_TRANSCRIPTS
+        : `qm3_round${roundNum}` as keyof typeof BUNDLED_TRANSCRIPTS;
+      const t = BUNDLED_TRANSCRIPTS[key];
+      if (t !== undefined) return { bundled: t };
+    }
+    if (trackId === 'qm1-4') {
+      const key = isInter
+        ? `qm5_inter${roundNum}` as keyof typeof BUNDLED_TRANSCRIPTS
+        : `qm5_round${roundNum}` as keyof typeof BUNDLED_TRANSCRIPTS;
+      const t = BUNDLED_TRANSCRIPTS[key];
+      if (t !== undefined) return { bundled: t };
+    }
+    // qm2-3: only the overall transcript is bundled (per-round wjson not present)
+    if (trackId === 'qm2-3') return { bundled: BUNDLED_TRANSCRIPTS.qm23_unfollow };
+  }
+
+  // Single-track transcripts
   const bundledMap: Record<string, number> = {
     'home-1min': BUNDLED_TRANSCRIPTS.homeOneMin,
     'home-3min': BUNDLED_TRANSCRIPTS.homeThreeMin,
     'qm3-home': BUNDLED_TRANSCRIPTS.qm3,
+    // Part0 (intro)
+    'intro-1': BUNDLED_TRANSCRIPTS.introWelcome,
+    'intro-2': BUNDLED_TRANSCRIPTS.introSilentMind,
+    'intro-3': BUNDLED_TRANSCRIPTS.introPrepareSpace,
+    'intro-4': BUNDLED_TRANSCRIPTS.introQMFormat,
+    // Part1
+    'p1-1': BUNDLED_TRANSCRIPTS.p1_1,
+    'p1-2': BUNDLED_TRANSCRIPTS.p1_2,
+    'p1-3': BUNDLED_TRANSCRIPTS.p1_3,
+    // Part2
+    'p2-1': BUNDLED_TRANSCRIPTS.p2_1,
+    'p2-2': BUNDLED_TRANSCRIPTS.p2_2,
+    'p2-3': BUNDLED_TRANSCRIPTS.p2_3,
+    // Part3
+    'p3-1': BUNDLED_TRANSCRIPTS.p3_1,
+    // QM track-level transcripts (overall)
+    'qm1-2': BUNDLED_TRANSCRIPTS.qm3,
+    'qm1-4': BUNDLED_TRANSCRIPTS.qm5,
+    'qm2-3': BUNDLED_TRANSCRIPTS.qm23_unfollow,
   };
 
   if (trackId in bundledMap) {
     return { bundled: bundledMap[trackId] };
-  }
-
-  // Map remote transcripts by explicit filename mapping
-  const remoteMap: Record<string, string> = {
-    // Part0 transcripts (remote)
-    'intro-1': 'Part0/Words/1. Welcome.wjson',
-    'intro-2': 'Part0/Words/2. Silent Mind.wjson',
-    'intro-4': 'Part0/Words/4. QM Format.wjson',
-    'p1-1': 'Part1/Words/1 - Turning Inward (Eyes-open, introductory practice).wjson',
-    'p1-2': 'Part1/Words/2 - Self-Observation and Breath Following.wjson',
-    'p1-3': 'Part1/Words/3 - Center of Gravity.wjson',
-    'p2-1': 'Part2/Words/1 - Follow the Air.wjson',
-    'p2-2': 'Part2/Words/2 - Follow and witness the Air.wjson',
-    'p2-3': 'Part2/Words/3 - Unfollow and witness the air.wjson',
-    'p3-1': 'Part2/Words/4 - Emptiness.wjson',
-  };
-
-  if (trackId in remoteMap) {
-    return { remote: REMOTE_PATTERN(remoteMap[trackId]) };
-  }
-
-  // Handle QM track transcripts with rounds
-  const qmTranscriptMap: Record<string, { folder: string; pattern: string }> = {
-    'qm1-2': {
-      folder: 'QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation',
-      pattern: 'breath7_round',
-    },
-    'qm1-4': {
-      folder: 'QMPart1/Rounds/QM5_5rounds_Center of Gravity',
-      pattern: 'gravity5_round',
-    },
-    'qm2-3': {
-      folder: 'QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness',
-      pattern: 'unfollow6_round',
-    },
-  };
-
-  if (trackId in qmTranscriptMap && roundIndex !== undefined) {
-    const { folder, pattern } = qmTranscriptMap[trackId];
-    const roundNum = String(roundIndex + 1).padStart(2, '0');
-    const fileName = `${pattern}${roundNum}.wjson`;
-    return { remote: REMOTE_PATTERN(`${folder}/${fileName}`) };
   }
 
   return null;
@@ -217,34 +263,20 @@ export function getInterSource(trackId: string, interIndex: number): AudioSource
 }
 
 /**
- * Get inter transcript source for QM tracks
+ * Get inter transcript source for QM tracks (bundled — transcripts are always local)
  */
 export function getInterTranscriptSource(trackId: string, interIndex: number): AudioSource | null {
-  const qmInterMap: Record<string, { folder: string; pattern: string; maxInters: number }> = {
-    'qm1-2': {
-      folder: 'QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation',
-      pattern: 'breath7_round',
-      maxInters: 6,
-    },
-    'qm1-4': {
-      folder: 'QMPart1/Rounds/QM5_5rounds_Center of Gravity',
-      pattern: 'gravity5_round',
-      maxInters: 4,
-    },
-    'qm2-3': {
-      folder: 'QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness',
-      pattern: 'unfollow6_round',
-      maxInters: 5,
-    },
-  };
-
-  if (trackId in qmInterMap) {
-    const config = qmInterMap[trackId];
-    if (interIndex >= config.maxInters) return null;
-    const interNum = String(interIndex + 1).padStart(2, '0');
-    const fileName = `${config.pattern}${interNum}_inter.wjson`;
-    return { remote: REMOTE_PATTERN(`${config.folder}/${fileName}`) };
+  const interNum = interIndex + 1;
+  if (trackId === 'qm1-2') {
+    const t = BUNDLED_TRANSCRIPTS[`qm3_inter${interNum}` as keyof typeof BUNDLED_TRANSCRIPTS];
+    if (t !== undefined) return { bundled: t };
   }
+  if (trackId === 'qm1-4') {
+    const t = BUNDLED_TRANSCRIPTS[`qm5_inter${interNum}` as keyof typeof BUNDLED_TRANSCRIPTS];
+    if (t !== undefined) return { bundled: t };
+  }
+  // qm2-3: per-inter wjson not present, use overall transcript
+  if (trackId === 'qm2-3') return { bundled: BUNDLED_TRANSCRIPTS.qm23_unfollow };
 
   return null;
 }

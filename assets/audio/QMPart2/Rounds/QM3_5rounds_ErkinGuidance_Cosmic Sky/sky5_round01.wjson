@@ -1,0 +1,1109 @@
+{
+  "text": " Welcome to the three-minute guided meditation training by All Here. We will now begin five rounds consisting of three minutes each. One minute pause in between. We shall begin the first round in ten seconds. Round one. Visualize the cosmic sky. Look at the night sky. See the stars. Look at the darkness. See the cosmic sky. Allow the stars to move closer to you and look at the dark space between the stars. Look at the darkness. Allow the stars to shift away as you move towards darkness. Look at the darkness. See the dark space. Look at the darkness. Look at the darkness. Look at the darkness. Look at the darkness. Look at the darkness.",
+  "segments": [
+    {
+      "id": 0,
+      "seek": 0,
+      "start": 3.4200000000000004,
+      "end": 12.4,
+      "text": " Welcome to the three-minute guided meditation training by All Here.",
+      "tokens": [
+        50364,
+        4027,
+        281,
+        264,
+        1045,
+        12,
+        18256,
+        19663,
+        12537,
+        3097,
+        538,
+        439,
+        510,
+        13,
+        51458
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.2652120029225069,
+      "compression_ratio": 0.9852941176470589,
+      "no_speech_prob": 0.07586193084716797,
+      "words": [
+        {
+          "word": " Welcome",
+          "start": 3.4200000000000004,
+          "end": 4.82,
+          "probability": 0.8591771721839905
+        },
+        {
+          "word": " to",
+          "start": 4.82,
+          "end": 5.68,
+          "probability": 0.9565648436546326
+        },
+        {
+          "word": " the",
+          "start": 5.68,
+          "end": 5.82,
+          "probability": 0.9469233155250549
+        },
+        {
+          "word": " three",
+          "start": 5.82,
+          "end": 6.16,
+          "probability": 0.5164310932159424
+        },
+        {
+          "word": "-minute",
+          "start": 6.16,
+          "end": 6.44,
+          "probability": 0.807165116071701
+        },
+        {
+          "word": " guided",
+          "start": 6.44,
+          "end": 8.16,
+          "probability": 0.9665688276290894
+        },
+        {
+          "word": " meditation",
+          "start": 8.16,
+          "end": 9,
+          "probability": 0.8255507946014404
+        },
+        {
+          "word": " training",
+          "start": 9,
+          "end": 9.86,
+          "probability": 0.9911394715309143
+        },
+        {
+          "word": " by",
+          "start": 9.86,
+          "end": 11.08,
+          "probability": 0.5853617787361145
+        },
+        {
+          "word": " All",
+          "start": 11.08,
+          "end": 11.44,
+          "probability": 0.9438208341598511
+        },
+        {
+          "word": " Here.",
+          "start": 11.44,
+          "end": 12.4,
+          "probability": 0.9863888621330261
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "seek": 1240,
+      "start": 20.84,
+      "end": 35.26,
+      "text": " We will now begin five rounds consisting of three minutes each. One minute pause in",
+      "tokens": [
+        50364,
+        492,
+        486,
+        586,
+        1841,
+        1732,
+        13757,
+        33921,
+        295,
+        1045,
+        2077,
+        1184,
+        13,
+        1485,
+        3456,
+        10465,
+        294,
+        51509
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3351090908050537,
+      "compression_ratio": 1.1066666666666667,
+      "no_speech_prob": 0.33648574352264404,
+      "words": [
+        {
+          "word": " We",
+          "start": 20.84,
+          "end": 21.88,
+          "probability": 0.31519967317581177
+        },
+        {
+          "word": " will",
+          "start": 21.88,
+          "end": 22,
+          "probability": 0.9579971432685852
+        },
+        {
+          "word": " now",
+          "start": 22,
+          "end": 22.22,
+          "probability": 0.9374350905418396
+        },
+        {
+          "word": " begin",
+          "start": 22.22,
+          "end": 22.7,
+          "probability": 0.9980756044387817
+        },
+        {
+          "word": " five",
+          "start": 22.7,
+          "end": 25.44,
+          "probability": 0.27911484241485596
+        },
+        {
+          "word": " rounds",
+          "start": 25.44,
+          "end": 25.94,
+          "probability": 0.9877007007598877
+        },
+        {
+          "word": " consisting",
+          "start": 25.94,
+          "end": 28.86,
+          "probability": 0.6895141005516052
+        },
+        {
+          "word": " of",
+          "start": 28.86,
+          "end": 29.4,
+          "probability": 0.9960716962814331
+        },
+        {
+          "word": " three",
+          "start": 29.4,
+          "end": 30.96,
+          "probability": 0.8947018384933472
+        },
+        {
+          "word": " minutes",
+          "start": 30.96,
+          "end": 31.24,
+          "probability": 0.996191143989563
+        },
+        {
+          "word": " each.",
+          "start": 31.24,
+          "end": 31.98,
+          "probability": 0.9872671961784363
+        },
+        {
+          "word": " One",
+          "start": 33.02,
+          "end": 34.06,
+          "probability": 0.59877610206604
+        },
+        {
+          "word": " minute",
+          "start": 34.06,
+          "end": 34.42,
+          "probability": 0.968814492225647
+        },
+        {
+          "word": " pause",
+          "start": 34.42,
+          "end": 34.78,
+          "probability": 0.9958009123802185
+        },
+        {
+          "word": " in",
+          "start": 34.78,
+          "end": 35.26,
+          "probability": 0.9474090337753296
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "seek": 3526,
+      "start": 35.26,
+      "end": 45.14,
+      "text": " between. We shall begin the first round in ten seconds.",
+      "tokens": [
+        50364,
+        1296,
+        13,
+        492,
+        4393,
+        1841,
+        264,
+        700,
+        3098,
+        294,
+        2064,
+        3949,
+        13,
+        51598
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.3474944829940796,
+      "compression_ratio": 0.9166666666666666,
+      "no_speech_prob": 0.49172142148017883,
+      "words": [
+        {
+          "word": " between.",
+          "start": 35.26,
+          "end": 35.58,
+          "probability": 0.4167308211326599
+        },
+        {
+          "word": " We",
+          "start": 40.44,
+          "end": 41.1,
+          "probability": 0.9321196675300598
+        },
+        {
+          "word": " shall",
+          "start": 41.1,
+          "end": 41.28,
+          "probability": 0.9817726016044617
+        },
+        {
+          "word": " begin",
+          "start": 41.28,
+          "end": 41.58,
+          "probability": 0.9969802498817444
+        },
+        {
+          "word": " the",
+          "start": 41.58,
+          "end": 41.84,
+          "probability": 0.9033571481704712
+        },
+        {
+          "word": " first",
+          "start": 41.84,
+          "end": 42.14,
+          "probability": 0.9698832035064697
+        },
+        {
+          "word": " round",
+          "start": 42.14,
+          "end": 42.48,
+          "probability": 0.997490644454956
+        },
+        {
+          "word": " in",
+          "start": 42.48,
+          "end": 44.1,
+          "probability": 0.6864293813705444
+        },
+        {
+          "word": " ten",
+          "start": 44.1,
+          "end": 44.42,
+          "probability": 0.48629480600357056
+        },
+        {
+          "word": " seconds.",
+          "start": 44.42,
+          "end": 45.14,
+          "probability": 0.995235025882721
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "seek": 4514,
+      "start": 58.040000000000006,
+      "end": 69.14,
+      "text": " Round one. Visualize the cosmic sky.",
+      "tokens": [
+        50364,
+        18525,
+        472,
+        13,
+        23187,
+        1125,
+        264,
+        27614,
+        5443,
+        13,
+        51560
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.504910429318746,
+      "compression_ratio": 0.8181818181818182,
+      "no_speech_prob": 0.41739484667778015,
+      "words": [
+        {
+          "word": " Round",
+          "start": 58.040000000000006,
+          "end": 59.440000000000005,
+          "probability": 0.32310912013053894
+        },
+        {
+          "word": " one.",
+          "start": 59.440000000000005,
+          "end": 60.84,
+          "probability": 0.42546308040618896
+        },
+        {
+          "word": " Visualize",
+          "start": 64.6,
+          "end": 66,
+          "probability": 0.9137113094329834
+        },
+        {
+          "word": " the",
+          "start": 66,
+          "end": 67.24,
+          "probability": 0.969303548336029
+        },
+        {
+          "word": " cosmic",
+          "start": 67.24,
+          "end": 67.78,
+          "probability": 0.8444221615791321
+        },
+        {
+          "word": " sky.",
+          "start": 67.78,
+          "end": 69.14,
+          "probability": 0.9961745738983154
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "seek": 7514,
+      "start": 84.08,
+      "end": 92.4,
+      "text": " Look at the night sky. See the stars.",
+      "tokens": [
+        50364,
+        2053,
+        412,
+        264,
+        1818,
+        5443,
+        13,
+        3008,
+        264,
+        6105,
+        13,
+        51410
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.49119523593357634,
+      "compression_ratio": 0.8809523809523809,
+      "no_speech_prob": 0.387617290019989,
+      "words": [
+        {
+          "word": " Look",
+          "start": 84.08,
+          "end": 85.34,
+          "probability": 0.8232935667037964
+        },
+        {
+          "word": " at",
+          "start": 85.34,
+          "end": 85.52,
+          "probability": 0.9979844093322754
+        },
+        {
+          "word": " the",
+          "start": 85.52,
+          "end": 85.62,
+          "probability": 0.938261091709137
+        },
+        {
+          "word": " night",
+          "start": 85.62,
+          "end": 85.92,
+          "probability": 0.885054349899292
+        },
+        {
+          "word": " sky.",
+          "start": 85.92,
+          "end": 86.4,
+          "probability": 0.991777777671814
+        },
+        {
+          "word": " See",
+          "start": 90.18,
+          "end": 91.44,
+          "probability": 0.9170396327972412
+        },
+        {
+          "word": " the",
+          "start": 91.44,
+          "end": 91.62,
+          "probability": 0.9752895832061768
+        },
+        {
+          "word": " stars.",
+          "start": 91.62,
+          "end": 92.4,
+          "probability": 0.9971386194229126
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "seek": 9240,
+      "start": 97.91999999999999,
+      "end": 112.58,
+      "text": " Look at the darkness. See the cosmic sky.",
+      "tokens": [
+        50364,
+        2053,
+        412,
+        264,
+        11262,
+        13,
+        3008,
+        264,
+        27614,
+        5443,
+        13,
+        51360
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.577087952540471,
+      "compression_ratio": 0.8913043478260869,
+      "no_speech_prob": 0.39334672689437866,
+      "words": [
+        {
+          "word": " Look",
+          "start": 97.91999999999999,
+          "end": 99.32,
+          "probability": 0.37197956442832947
+        },
+        {
+          "word": " at",
+          "start": 99.32,
+          "end": 99.46,
+          "probability": 0.9935698509216309
+        },
+        {
+          "word": " the",
+          "start": 99.46,
+          "end": 99.62,
+          "probability": 0.8154225945472717
+        },
+        {
+          "word": " darkness.",
+          "start": 99.62,
+          "end": 100.02,
+          "probability": 0.9624002575874329
+        },
+        {
+          "word": " See",
+          "start": 108.44,
+          "end": 109.84,
+          "probability": 0.3779292404651642
+        },
+        {
+          "word": " the",
+          "start": 109.84,
+          "end": 110.06,
+          "probability": 0.9656128287315369
+        },
+        {
+          "word": " cosmic",
+          "start": 110.06,
+          "end": 110.72,
+          "probability": 0.9521328210830688
+        },
+        {
+          "word": " sky.",
+          "start": 110.72,
+          "end": 112.58,
+          "probability": 0.9930427074432373
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "seek": 12240,
+      "start": 122.4,
+      "end": 140.2,
+      "text": " Allow the stars to move closer to you and look at the dark space between the",
+      "tokens": [
+        50364,
+        32225,
+        264,
+        6105,
+        281,
+        1286,
+        4966,
+        281,
+        291,
+        293,
+        574,
+        412,
+        264,
+        2877,
+        1901,
+        1296,
+        264,
+        51254
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.33792843818664553,
+      "compression_ratio": 1.0857142857142856,
+      "no_speech_prob": 0.3355088531970978,
+      "words": [
+        {
+          "word": " Allow",
+          "start": 122.4,
+          "end": 123.36,
+          "probability": 0.8836061954498291
+        },
+        {
+          "word": " the",
+          "start": 123.36,
+          "end": 123.64,
+          "probability": 0.995353102684021
+        },
+        {
+          "word": " stars",
+          "start": 123.64,
+          "end": 124.3,
+          "probability": 0.973653256893158
+        },
+        {
+          "word": " to",
+          "start": 124.3,
+          "end": 128.58,
+          "probability": 0.9722528457641602
+        },
+        {
+          "word": " move",
+          "start": 128.58,
+          "end": 128.82,
+          "probability": 0.9955171942710876
+        },
+        {
+          "word": " closer",
+          "start": 128.82,
+          "end": 129.66,
+          "probability": 0.9970346689224243
+        },
+        {
+          "word": " to",
+          "start": 129.66,
+          "end": 130.04,
+          "probability": 0.9982012510299683
+        },
+        {
+          "word": " you",
+          "start": 130.04,
+          "end": 130.78,
+          "probability": 0.9904494881629944
+        },
+        {
+          "word": " and",
+          "start": 130.78,
+          "end": 136.38,
+          "probability": 0.5108780264854431
+        },
+        {
+          "word": " look",
+          "start": 136.38,
+          "end": 136.56,
+          "probability": 0.992508590221405
+        },
+        {
+          "word": " at",
+          "start": 136.56,
+          "end": 137.02,
+          "probability": 0.9975428581237793
+        },
+        {
+          "word": " the",
+          "start": 137.02,
+          "end": 137.14,
+          "probability": 0.9910534024238586
+        },
+        {
+          "word": " dark",
+          "start": 137.14,
+          "end": 137.46,
+          "probability": 0.994274914264679
+        },
+        {
+          "word": " space",
+          "start": 137.46,
+          "end": 137.9,
+          "probability": 0.9943729639053345
+        },
+        {
+          "word": " between",
+          "start": 137.9,
+          "end": 139.04,
+          "probability": 0.988431990146637
+        },
+        {
+          "word": " the",
+          "start": 139.04,
+          "end": 140.2,
+          "probability": 0.997829020023346
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "seek": 14020,
+      "start": 140.2,
+      "end": 146.74,
+      "text": " stars. Look at the darkness.",
+      "tokens": [
+        50364,
+        6105,
+        13,
+        2053,
+        412,
+        264,
+        11262,
+        13,
+        50896
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.4936475320295854,
+      "compression_ratio": 0.7777777777777778,
+      "no_speech_prob": 0.3401506841182709,
+      "words": [
+        {
+          "word": " stars.",
+          "start": 140.2,
+          "end": 140.74,
+          "probability": 0.19686858355998993
+        },
+        {
+          "word": " Look",
+          "start": 144.42,
+          "end": 145.62,
+          "probability": 0.943720817565918
+        },
+        {
+          "word": " at",
+          "start": 145.62,
+          "end": 146.22,
+          "probability": 0.9965357780456543
+        },
+        {
+          "word": " the",
+          "start": 146.22,
+          "end": 146.36,
+          "probability": 0.9906124472618103
+        },
+        {
+          "word": " darkness.",
+          "start": 146.36,
+          "end": 146.74,
+          "probability": 0.8919766545295715
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "seek": 14674,
+      "start": 151.94,
+      "end": 161.84,
+      "text": " Allow the stars to shift away as you move towards darkness.",
+      "tokens": [
+        50364,
+        32225,
+        264,
+        6105,
+        281,
+        5513,
+        1314,
+        382,
+        291,
+        1286,
+        3030,
+        11262,
+        13,
+        51460
+      ],
+      "temperature": 0.2,
+      "avg_logprob": -0.46755021810531616,
+      "compression_ratio": 0.921875,
+      "no_speech_prob": 0.5553029775619507,
+      "words": [
+        {
+          "word": " Allow",
+          "start": 151.94,
+          "end": 153.34,
+          "probability": 0.0993293896317482
+        },
+        {
+          "word": " the",
+          "start": 153.34,
+          "end": 153.62,
+          "probability": 0.9548935294151306
+        },
+        {
+          "word": " stars",
+          "start": 153.62,
+          "end": 154.2,
+          "probability": 0.9904590845108032
+        },
+        {
+          "word": " to",
+          "start": 154.2,
+          "end": 155.2,
+          "probability": 0.9847027659416199
+        },
+        {
+          "word": " shift",
+          "start": 155.2,
+          "end": 155.68,
+          "probability": 0.9857136011123657
+        },
+        {
+          "word": " away",
+          "start": 155.68,
+          "end": 157.08,
+          "probability": 0.9721848964691162
+        },
+        {
+          "word": " as",
+          "start": 157.08,
+          "end": 159.6,
+          "probability": 0.7895566821098328
+        },
+        {
+          "word": " you",
+          "start": 159.6,
+          "end": 159.76,
+          "probability": 0.9950910806655884
+        },
+        {
+          "word": " move",
+          "start": 159.76,
+          "end": 160.14,
+          "probability": 0.9975079298019409
+        },
+        {
+          "word": " towards",
+          "start": 160.14,
+          "end": 160.7,
+          "probability": 0.9416825771331787
+        },
+        {
+          "word": " darkness.",
+          "start": 160.7,
+          "end": 161.84,
+          "probability": 0.9368383288383484
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "seek": 16184,
+      "start": 167.98,
+      "end": 182,
+      "text": " Look at the darkness. See the dark space.",
+      "tokens": [
+        50364,
+        2053,
+        412,
+        264,
+        11262,
+        13,
+        3008,
+        264,
+        2877,
+        1901,
+        13,
+        51810
+      ],
+      "temperature": 0.2,
+      "avg_logprob": -0.6622014045715332,
+      "compression_ratio": 0.9761904761904762,
+      "no_speech_prob": 0.5649185180664062,
+      "words": [
+        {
+          "word": " Look",
+          "start": 167.98,
+          "end": 169.38,
+          "probability": 0.3415619432926178
+        },
+        {
+          "word": " at",
+          "start": 169.38,
+          "end": 170.78,
+          "probability": 0.9813108444213867
+        },
+        {
+          "word": " the",
+          "start": 170.78,
+          "end": 170.94,
+          "probability": 0.9967676401138306
+        },
+        {
+          "word": " darkness.",
+          "start": 170.94,
+          "end": 171.32,
+          "probability": 0.9578808546066284
+        },
+        {
+          "word": " See",
+          "start": 178.3,
+          "end": 179.7,
+          "probability": 0.9228420853614807
+        },
+        {
+          "word": " the",
+          "start": 179.7,
+          "end": 180.52,
+          "probability": 0.979555070400238
+        },
+        {
+          "word": " dark",
+          "start": 180.52,
+          "end": 180.98,
+          "probability": 0.9907455444335938
+        },
+        {
+          "word": " space.",
+          "start": 180.98,
+          "end": 182,
+          "probability": 0.9853236675262451
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "seek": 18200,
+      "start": 198.66,
+      "end": 200.36,
+      "text": " Look at the darkness.",
+      "tokens": [
+        50364,
+        2053,
+        412,
+        264,
+        11262,
+        13,
+        51360
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.6673460536532931,
+      "compression_ratio": 0.7241379310344828,
+      "no_speech_prob": 0.3179358243942261,
+      "words": [
+        {
+          "word": " Look",
+          "start": 198.66,
+          "end": 199.54,
+          "probability": 0.30984920263290405
+        },
+        {
+          "word": " at",
+          "start": 199.54,
+          "end": 199.8,
+          "probability": 0.990592896938324
+        },
+        {
+          "word": " the",
+          "start": 199.8,
+          "end": 199.92,
+          "probability": 0.9942523837089539
+        },
+        {
+          "word": " darkness.",
+          "start": 199.92,
+          "end": 200.36,
+          "probability": 0.9424152970314026
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "seek": 20036,
+      "start": 215.38,
+      "end": 218.84,
+      "text": " Look at the darkness.",
+      "tokens": [
+        50364,
+        2053,
+        412,
+        264,
+        11262,
+        13,
+        51210
+      ],
+      "temperature": 0.2,
+      "avg_logprob": -0.8129309018452963,
+      "compression_ratio": 0.7241379310344828,
+      "no_speech_prob": 0.5229993462562561,
+      "words": [
+        {
+          "word": " Look",
+          "start": 215.38,
+          "end": 216.78,
+          "probability": 0.013128232210874557
+        },
+        {
+          "word": " at",
+          "start": 216.78,
+          "end": 218.18,
+          "probability": 0.9324138164520264
+        },
+        {
+          "word": " the",
+          "start": 218.18,
+          "end": 218.36,
+          "probability": 0.9707995653152466
+        },
+        {
+          "word": " darkness.",
+          "start": 218.36,
+          "end": 218.84,
+          "probability": 0.005821093451231718
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "seek": 21884,
+      "start": 218.84,
+      "end": 220.2,
+      "text": " Look at the darkness.",
+      "tokens": [
+        50364,
+        2053,
+        412,
+        264,
+        11262,
+        13,
+        51162
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.68532927831014,
+      "compression_ratio": 0.7241379310344828,
+      "no_speech_prob": 0.7349734902381897,
+      "words": [
+        {
+          "word": " Look",
+          "start": 218.84,
+          "end": 218.94,
+          "probability": 0.0007083454402163625
+        },
+        {
+          "word": " at",
+          "start": 218.94,
+          "end": 220.14,
+          "probability": 0.01904025487601757
+        },
+        {
+          "word": " the",
+          "start": 220.14,
+          "end": 220.2,
+          "probability": 0.14898109436035156
+        },
+        {
+          "word": " darkness.",
+          "start": 220.2,
+          "end": 220.2,
+          "probability": 0.0004083014209754765
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "seek": 22020,
+      "start": 247.38,
+      "end": 250.18,
+      "text": " Look at the darkness.",
+      "tokens": [
+        50364,
+        2053,
+        412,
+        264,
+        11262,
+        13,
+        51162
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.7028631104363335,
+      "compression_ratio": 0.7241379310344828,
+      "no_speech_prob": 0.7890269756317139,
+      "words": [
+        {
+          "word": " Look",
+          "start": 247.38,
+          "end": 248.78,
+          "probability": 0.000018512810129323043
+        },
+        {
+          "word": " at",
+          "start": 248.78,
+          "end": 250.18,
+          "probability": 0.2716399133205414
+        },
+        {
+          "word": " the",
+          "start": 250.18,
+          "end": 250.18,
+          "probability": 0.2577158808708191
+        },
+        {
+          "word": " darkness.",
+          "start": 250.18,
+          "end": 250.18,
+          "probability": 0.0006672564777545631
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "seek": 25018,
+      "start": 277.36000000000007,
+      "end": 280.16,
+      "text": " Look at the darkness.",
+      "tokens": [
+        50364,
+        2053,
+        412,
+        264,
+        11262,
+        13,
+        51362
+      ],
+      "temperature": 0,
+      "avg_logprob": -0.570098082224528,
+      "compression_ratio": 0.7241379310344828,
+      "no_speech_prob": 0.9459824562072754,
+      "words": [
+        {
+          "word": " Look",
+          "start": 277.36000000000007,
+          "end": 278.76000000000005,
+          "probability": 0.00033713539596647024
+        },
+        {
+          "word": " at",
+          "start": 278.76000000000005,
+          "end": 280.16,
+          "probability": 0.3168911933898926
+        },
+        {
+          "word": " the",
+          "start": 280.16,
+          "end": 280.16,
+          "probability": 0.24470937252044678
+        },
+        {
+          "word": " darkness.",
+          "start": 280.16,
+          "end": 280.16,
+          "probability": 0.00032269523944705725
+        }
+      ]
+    }
+  ],
+  "language": "en"
+}
