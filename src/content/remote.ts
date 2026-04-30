@@ -81,12 +81,34 @@ async function scrapeEmbed(pageUrl: string): Promise<string | null> {
  * clean (no duplicated iframe below). */
 function extractEmbedFromHtml(html: string | undefined): { embedUrl?: string; contentHtml?: string } {
   if (!html) return { contentHtml: html };
-  const re = /<(?:p|figure)[^>]*>\s*<iframe[^>]*src=["']([^"']*(?:youtube\.com\/embed|youtube-nocookie\.com\/embed|player\.vimeo\.com\/video)[^"']*)["'][^>]*><\/iframe>\s*<\/(?:p|figure)>|<iframe[^>]*src=["']([^"']*(?:youtube\.com\/embed|youtube-nocookie\.com\/embed|player\.vimeo\.com\/video)[^"']*)["'][^>]*><\/iframe>/i;
-  const m = html.match(re);
+  // Match the iframe by src first, then expand to its closing tag and any
+  // wrapping <p>/<figure>/<div class="video-wrap">. The previous strict
+  // regex broke when the iframe contained inner content (e.g. <br/>),
+  // which WordPress's editor sometimes injects.
+  const srcRe = /<iframe[^>]*src=["']([^"']*(?:youtube\.com\/embed|youtube-nocookie\.com\/embed|player\.vimeo\.com\/video)[^"']*)["'][^>]*>[\s\S]*?<\/iframe>/i;
+  const m = html.match(srcRe);
   if (!m) return { contentHtml: html };
-  const url = m[1] || m[2];
+  const url = m[1];
   if (!url) return { contentHtml: html };
-  return { embedUrl: url, contentHtml: html.replace(m[0], '') };
+  // Strip the iframe AND its tight wrapper (p/figure/video-wrap div) so we
+  // don't leave an empty container in the body.
+  const start = m.index ?? 0;
+  const end = start + m[0].length;
+  let stripStart = start;
+  let stripEnd = end;
+  const wrapperOpen = html.slice(0, start).match(/<(p|figure|div)[^>]*>\s*$/i);
+  if (wrapperOpen) {
+    const tag = wrapperOpen[1].toLowerCase();
+    const closeRe = new RegExp(`^\\s*<\\/${tag}>`, 'i');
+    const after = html.slice(end);
+    const closeMatch = after.match(closeRe);
+    if (closeMatch) {
+      stripStart = start - wrapperOpen[0].length;
+      stripEnd = end + (closeMatch.index ?? 0) + closeMatch[0].length;
+    }
+  }
+  const contentHtml = html.slice(0, stripStart) + html.slice(stripEnd);
+  return { embedUrl: url, contentHtml };
 }
 
 async function enrichWithScrapedEmbed<T extends { contentHtml?: string; link?: string; embedUrl?: string }>(item: T): Promise<T> {
