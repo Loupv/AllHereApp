@@ -176,10 +176,22 @@ const featuredUrl = (p: any): string | undefined => {
   const fm = p?._embedded?.['wp:featuredmedia']?.[0];
   if (!fm) return undefined;
   const sizes = fm.media_details?.sizes ?? {};
+  // Prefer the smallest size that's still crisp at ~300-600 px display
+  // (1×–2× retina on phone). The allhere.org WP theme doesn't generate
+  // medium / medium_large / large for in-the-headlines posts — they
+  // only have thumbnail (~150 px), custom_image_900 (~900 px),
+  // woocommerce_single (~600 px) and full (HD original). Falling
+  // straight through to `full` was downloading multi-MB hero PNGs for
+  // every Media-tab card; clipped half-loaded thumbnails were what the
+  // user reported. Order: medium → woocommerce_single (~600) →
+  // medium_large → custom_image_900 → large → original.
   return (
     sizes.medium?.source_url ??
+    sizes.woocommerce_single?.source_url ??
     sizes.medium_large?.source_url ??
+    sizes.custom_image_900?.source_url ??
     sizes.large?.source_url ??
+    sizes.thumbnail?.source_url ??
     fm.source_url
   );
 };

@@ -426,16 +426,33 @@ function PlayerInner() {
   //   ended     — track finished
   //   error     — resolveAudioSource threw
   // ---------------------------------------------------------------
+  // Cross-platform buffering detection. iOS sets timeControlStatus to
+  // "waiting" while AVPlayer rebuffers. Web HTMLAudioElement sets
+  // status.isBuffering. We trust either signal.
   const isBuffering =
     (status as any).timeControlStatus === 'waiting' ||
+    (status as any).isBuffering === true ||
     (player as any)?.isBuffering === true;
+  // Treat the source as ready-to-play once expo-audio has decoded
+  // metadata. Web (HTMLAudioElement) doesn't always populate
+  // status.duration even when the audio is fully streamable — large
+  // CBR MP3s like "3 - Center of Gravity.mp3" (57 MB / 23 min) were
+  // playable from a few seconds in but our state machine kept
+  // reporting 'loading' indefinitely because we only checked
+  // duration<=0. Use isLoaded OR a positive currentTime as additional
+  // ready signals so the user can actually start the track.
+  const isReady =
+    (status as any).isLoaded === true ||
+    (Number.isFinite(status.duration) && status.duration > 0) ||
+    (Number.isFinite(status.currentTime) && status.currentTime > 0) ||
+    status.playing === true;
   type EngineState =
     | 'preplay' | 'loading' | 'buffering' | 'playing' | 'paused' | 'ended' | 'error';
   const engineState: EngineState = (() => {
     if (resolveError) return 'error';
     if (!hasStarted) return 'preplay';
     if (finished) return 'ended';
-    if (!Number.isFinite(status.duration) || status.duration <= 0) return 'loading';
+    if (!isReady) return 'loading';
     if (isBuffering) return 'buffering';
     if (status.playing) return 'playing';
     return 'paused';

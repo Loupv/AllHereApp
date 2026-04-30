@@ -44,7 +44,19 @@ const sanitize = (html: string) =>
   html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/ on[a-z]+="[^"]*"/gi, '') // strip inline event handlers
-    .replace(/ on[a-z]+='[^']*'/gi, '');
+    .replace(/ on[a-z]+='[^']*'/gi, '')
+    // Strip srcset / sizes / lazy-loading attributes on <img>: WP
+    // generates srcset entries for tiny variants (e.g. 18w) that the
+    // browser may pick when our CSS forces width:100%, leaving the
+    // image effectively invisible — and rocket-lazyload's
+    // loading="lazy" + data-lazy-src kept podcast-platform badges
+    // (Apple/Spotify/Deezer/Buzzsprout) from ever loading on the
+    // detail page. Force browsers to use just the canonical `src`.
+    .replace(/\s+srcset=("[^"]*"|'[^']*')/gi, '')
+    .replace(/\s+sizes=("[^"]*"|'[^']*')/gi, '')
+    .replace(/\s+loading=("[^"]*"|'[^']*')/gi, '')
+    .replace(/\s+data-lazy-src=("[^"]*"|'[^']*')/gi, '')
+    .replace(/\s+data-lazy-srcset=("[^"]*"|'[^']*')/gi, '');
 
 // ---- component ---------------------------------------------------------
 
@@ -111,6 +123,15 @@ const SCOPED_CSS = `
   max-width: 100%; width: 100%; height: auto; border-radius: 10px; display: block; margin: 16px 0; border: 0;
 }
 .ah-html iframe { aspect-ratio: 16 / 9; height: auto; }
+/* Podcast-platform badges (Apple Podcasts / Spotify / Buzzsprout /
+   Deezer) live inside <div class="podcast-img"> on allhere.org. They're
+   icon-sized (175×75) — letting our generic img rule stretch them to
+   100% looks ridiculous and hides them entirely on some browsers when
+   the srcset 18w variant is picked. Render them at natural size,
+   inline, with a small gap. */
+.ah-html .podcast-img { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; align-items: center; }
+.ah-html .podcast-img a { display: inline-block; line-height: 0; }
+.ah-html .podcast-img img { width: auto; max-width: 175px; height: auto; margin: 0; border-radius: 6px; display: inline-block; }
 .ah-html ul, .ah-html ol { padding-left: 20px; }
 .ah-html figure { margin: 16px 0; }
 .ah-html figcaption { font-size: 12px; color: #8a93a6; text-align: center; margin-top: 6px; }
