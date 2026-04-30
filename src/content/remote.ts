@@ -42,6 +42,11 @@ const pageFetchUrl = (pageUrl: string) =>
     ? `https://corsproxy.io/?${encodeURIComponent(pageUrl)}`
     : pageUrl;
 
+// Patterns for any kind of media iframe we know how to render via EmbedPlayer:
+// video (YouTube/Vimeo) plus audio (SoundCloud, Spotify, Anchor, Buzzsprout).
+const EMBED_HOST_RE =
+  /(?:youtube\.com\/embed|youtube-nocookie\.com\/embed|player\.vimeo\.com\/video|w\.soundcloud\.com\/player|open\.spotify\.com\/embed|anchor\.fm\/[^/]+\/embed|podcasters\.spotify\.com\/[^/]+\/embed|buzzsprout\.com\/[^/]+\/embed|simplecast\.com\/embed)/;
+
 async function scrapeEmbed(pageUrl: string): Promise<string | null> {
   const cacheKey = EMBED_CACHE_PREFIX + pageUrl;
   const cached = kv.get<string | null>(cacheKey);
@@ -54,11 +59,9 @@ async function scrapeEmbed(pageUrl: string): Promise<string | null> {
     // 'data-lazy-src' (rocket-lazyload) before the raw src since the
     // latter sometimes points at 'about:blank' while the real URL
     // sits in data-lazy-src.
-    const patterns = [
-      /data-lazy-src=["']([^"']*(?:youtube\.com\/embed|youtube-nocookie\.com\/embed|player\.vimeo\.com\/video)[^"']*)/i,
-      /src=["']([^"']*(?:youtube\.com\/embed|youtube-nocookie\.com\/embed|player\.vimeo\.com\/video)[^"']*)/i,
-    ];
-    for (const re of patterns) {
+    const lazyRe = new RegExp(`data-lazy-src=["']([^"']*${EMBED_HOST_RE.source}[^"']*)`, 'i');
+    const srcRe = new RegExp(`src=["']([^"']*${EMBED_HOST_RE.source}[^"']*)`, 'i');
+    for (const re of [lazyRe, srcRe]) {
       const m = html.match(re);
       if (m) {
         const url = m[1];
@@ -84,8 +87,9 @@ function extractEmbedFromHtml(html: string | undefined): { embedUrl?: string; co
   // Match the iframe by src first, then expand to its closing tag and any
   // wrapping <p>/<figure>/<div class="video-wrap">. The previous strict
   // regex broke when the iframe contained inner content (e.g. <br/>),
-  // which WordPress's editor sometimes injects.
-  const srcRe = /<iframe[^>]*src=["']([^"']*(?:youtube\.com\/embed|youtube-nocookie\.com\/embed|player\.vimeo\.com\/video)[^"']*)["'][^>]*>[\s\S]*?<\/iframe>/i;
+  // which WordPress's editor sometimes injects. Covers video (YT/Vimeo)
+  // AND audio podcast embeds (SoundCloud/Spotify/Anchor/Buzzsprout).
+  const srcRe = new RegExp(`<iframe[^>]*src=["']([^"']*${EMBED_HOST_RE.source}[^"']*)["'][^>]*>[\\s\\S]*?<\\/iframe>`, 'i');
   const m = html.match(srcRe);
   if (!m) return { contentHtml: html };
   const url = m[1];
@@ -288,8 +292,12 @@ export async function fetchVideos(): Promise<VideoItem[]> {
   // updates `kind` from 'article' → 'video' when a scrape succeeds so the
   // Media tab filters treat them correctly.
   const enriched = await Promise.all(filtered.map(enrichWithScrapedEmbed));
+  // Only re-tag as 'video' when the embed URL is from a video host —
+  // SoundCloud / Spotify / etc. embeds keep their 'audio' kind so the
+  // Media tab filters work correctly.
+  const VIDEO_HOST_RE = /(?:youtube\.com|youtube-nocookie\.com|player\.vimeo\.com|fod\.fujitv\.co\.jp)/i;
   const wpItems = enriched.map((it) =>
-    it.embedUrl && it.kind !== 'video'
+    it.embedUrl && it.kind !== 'video' && VIDEO_HOST_RE.test(it.embedUrl)
       ? { ...it, kind: 'video' as const }
       : it,
   );
