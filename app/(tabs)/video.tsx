@@ -67,13 +67,19 @@ const toVideoRow = (v: VideoItem): MediaRow => ({
     : { type: 'video-inline', video: v },
 });
 
+// Hosts whose embed URL means "this news article actually carries a
+// playable video" — auto-promote those rows from kind:'article' to
+// kind:'video' so the Media-tab filter and the ▶ overlay behave like
+// the user expects when they see a YouTube/Vimeo/Fuji embed inside a
+// news post.
+const VIDEO_EMBED_HOST = /(?:youtube\.com|youtube-nocookie\.com|player\.vimeo\.com|fod\.fujitv\.co\.jp)/i;
 const toNewsRow = (a: NewsArticle): MediaRow => ({
   id: a.id,
   title: a.title,
   subtitle: a.excerpt,
   duration: a.date,
   poster: a.image,
-  kind: 'article',
+  kind: a.embedUrl && VIDEO_EMBED_HOST.test(a.embedUrl) ? 'video' : 'article',
   date: a.date,
   href: { type: 'news-detail', id: a.id },
 });
