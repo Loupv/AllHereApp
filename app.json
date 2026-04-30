@@ -27,7 +27,6 @@
       "supportsTablet": true,
       "infoPlist": {
         "UIBackgroundModes": [
-          "audio",
           "audio"
         ],
         "ITSAppUsesNonExemptEncryption": false
@@ -58,7 +57,6 @@
     "plugins": [
       "expo-router",
       "expo-audio",
-      "expo-asset",
       "expo-font",
       "expo-video"
     ],
