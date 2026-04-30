@@ -87,7 +87,8 @@ export async function resolveAudioSource(
   // Use trackId with round/inter suffix for caching
   const cacheKey = actualRoundIndex !== undefined ? `${trackId}-${actualIsInter ? 'inter' : 'round'}-${actualRoundIndex}` : trackId;
 
-  // Check cache first
+  // Check cache first — if the file is already on disk, prefer it
+  // (no network, instant start, works offline)
   const cachedUri = await audioCacheManager.getCachedUri(cacheKey);
   if (cachedUri) {
     return {
@@ -97,21 +98,21 @@ export async function resolveAudioSource(
     };
   }
 
-  // Download from remote
-  try {
-    const downloadedUri = await audioDownloader.downloadAudio(
-      cacheKey,
-      source.remote,
-      actualOnProgress,
-    );
-    return {
-      uri: downloadedUri,
-      isCached: false,
-      isRemote: true,
-    };
-  } catch (err) {
-    throw new Error(`Failed to download audio for "${trackId}": ${err}`);
-  }
+  // Not cached: hand the remote URL to the player for streaming playback
+  // (expo-audio buffers as it goes — playback can start within a few
+  // seconds instead of waiting for the full file). In parallel, fire off
+  // a background download so the next play of this track is instant + offline.
+  audioDownloader
+    .downloadAudio(cacheKey, source.remote, actualOnProgress)
+    .catch((err) => {
+      console.warn(`[audioResolver] background cache failed for ${cacheKey}:`, err);
+    });
+
+  return {
+    uri: source.remote,
+    isCached: false,
+    isRemote: true,
+  };
 }
 
 /**
