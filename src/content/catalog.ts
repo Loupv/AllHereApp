@@ -65,6 +65,11 @@ export function trackLocation(
   id: string,
 ): { label: string; position: number; total: number } | undefined {
   type Section = { label: string; tracks: AudioTrack[] };
+  // Each volet contributes ONE section with only its SM tracks. The
+  // qmTracks were previously merged into the SM section, which made
+  // "Part 1 · 5" instead of "Part 1 · 3" (the SM detail page only
+  // shows 3, hence user confusion). qmVolets below provide the QM
+  // counterparts under their own "QM · …" label.
   const sections: Section[] = [
     ...silentMindVolets.map(v => ({
       // Fall back to subtitle when title is empty — the intro volet
@@ -72,7 +77,7 @@ export function trackLocation(
       // eyebrow) but we still want a meaningful label here, e.g.
       // "INTRODUCTION · 1 / 3" instead of " · 1 / 3".
       label: v.title || v.subtitle || '',
-      tracks: [...v.tracks, ...(v.qmTracks ?? [])].filter(t => !t.comingSoon),
+      tracks: v.tracks.filter(t => !t.comingSoon),
     })),
     ...qmVolets.map(v => ({
       label: `QM · ${v.title || v.subtitle || ''}`,
