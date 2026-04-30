@@ -38,18 +38,48 @@ const PEAKS_PER_SECOND = 20;
 const SAMPLE_RATE = 8000;               // plenty for peak extraction
 const BYTES_PER_SAMPLE = 2;             // s16le
 
-/** Walks dir and returns all .mp3 paths (absolute), skipping `excluded/`. */
+/** Walks dir and returns all .mp3 paths (absolute), only from bundled folders:
+ *  - assets/audio/Home/ (home meditations)
+ *  - assets/audio/QMPart1/Rounds/QM3_7rounds_Breath\ and\ Self-Observation/ (QM3 home)
+ *  - assets/audio/*.mp3 (UI sounds: bell, tick)
+ *  Skips Part0, Part1, Part2, Part3, QMPart1 (except QM3), QMPart2 (moved to WordPress)
+ */
 function findMp3s(dir, acc = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+  const bundledFolders = [
+    path.join(AUDIO_ROOT, 'Home'),
+    path.join(AUDIO_ROOT, 'QMPart1', 'Rounds', 'QM3_7rounds_Breath and Self-Observation'),
+  ];
+
+  // Add UI sounds at root level
+  const entries = fs.readdirSync(AUDIO_ROOT, { withFileTypes: true });
+  for (const entry of entries) {
+    const full = path.join(AUDIO_ROOT, entry.name);
+    if (entry.isFile() && entry.name.toLowerCase().endsWith('.mp3')) {
+      acc.push(full);
+    }
+  }
+
+  // Add bundled folder contents
+  for (const bundledFolder of bundledFolders) {
+    if (fs.existsSync(bundledFolder)) {
+      walkDir(bundledFolder, acc);
+    }
+  }
+
+  return acc;
+}
+
+/** Recursively walk a directory and collect all .mp3 files */
+function walkDir(dir, acc) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (entry.name === 'excluded') continue;
-      findMp3s(full, acc);
+      walkDir(full, acc);
     } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.mp3')) {
       acc.push(full);
     }
   }
-  return acc;
 }
 
 /**
@@ -122,7 +152,7 @@ function main() {
     process.exit(1);
   }
   const mp3s = findMp3s(AUDIO_ROOT).sort();
-  console.log(`Found ${mp3s.length} mp3 files (excluding excluded/).`);
+  console.log(`Found ${mp3s.length} mp3 files in bundled audio folders (Home, QM3 home rounds, UI sounds).`);
 
   const out = {};
   const collisions = [];

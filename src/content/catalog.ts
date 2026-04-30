@@ -1,16 +1,18 @@
+import { getAudioSource, getTranscriptSource, BUNDLED_AUDIO, BUNDLED_TRANSCRIPTS } from './audioRegistry';
+
 export type RoundsConfig = {
   max: number;
   roundLengthMinutes: number;
   defaultRounds?: number;
   breakSeconds: number;
-  roundSources?: number[];
-  roundTranscripts?: number[];
+  roundSources?: (number | string)[]; // number = bundled, string = remote URL
+  roundTranscripts?: (number | string)[];
   // Interstitial audio played during the break between rounds (optional).
   // If present at index i, plays between round i+1 and round i+2.
-  roundInters?: (number | null)[];
-  roundInterTranscripts?: (number | null)[];
-  introSource?: number;
-  introTranscript?: number;
+  roundInters?: (number | string | null)[];
+  roundInterTranscripts?: (number | string | null)[];
+  introSource?: number | string;
+  introTranscript?: number | string;
 };
 
 /**
@@ -27,8 +29,8 @@ export type DescriptionLine = {
 export type AudioTrack = {
   id: string;
   title: string;
-  source?: number;
-  transcript?: number;
+  source?: number | string; // number = bundled, string = remote URL
+  transcript?: number | string;
   durationHint?: string;
   artwork?: number;
   description?: string | DescriptionLine[];
@@ -133,8 +135,8 @@ export const silentMindProgram = {
 export const introAudios: AudioTrack[] = [
   {
     id: 'intro-1', title: 'Welcome',
-    source: require('../../assets/audio/Part0/1. Welcome.mp3'),
-    transcript: require('../../assets/audio/Part0/Words/1. Welcome.wjson'),
+    source: BUNDLED_AUDIO.introWelcome,
+    transcript: BUNDLED_TRANSCRIPTS.introWelcome,
     durationHint: '2:30',
     description: "Welcome to the Silent Mind program, All Here's journey into a quiet and attentive way of being. A vertical progression toward advanced meditation practice.",
   },
@@ -143,15 +145,15 @@ export const introAudios: AudioTrack[] = [
   // still exist under assets/audio/Part0/, just unreferenced.
   {
     id: 'intro-2', title: 'Silent Mind',
-    source: require('../../assets/audio/Part0/2. Silent Mind.mp3'),
-    transcript: require('../../assets/audio/Part0/Words/2. Silent Mind.wjson'),
+    source: BUNDLED_AUDIO.introSilentMind,
+    transcript: BUNDLED_TRANSCRIPTS.introSilentMind,
     durationHint: '2:17',
     description: "At the heart of our practice is the development of the Silent Mind — a practical method to reduce fluctuations of consciousness and cultivate a profound inner presence.",
   },
   {
     id: 'intro-4', title: 'QM Training',
-    source: require('../../assets/audio/Part0/4. QM Format.mp3'),
-    transcript: require('../../assets/audio/Part0/Words/4. QM Format.wjson'),
+    source: BUNDLED_AUDIO.introQMFormat,
+    transcript: BUNDLED_TRANSCRIPTS.introQMFormat,
     durationHint: '1:13',
     description: [
       { text: 'An introduction to the\nQuantified Meditation format', style: 'bold' },
@@ -189,22 +191,16 @@ export const silentMindVolets: Volet[] = [
     tracks: [
       {
         id: 'p1-1', title: 'Turning Inward',
-        source: require('../../assets/audio/Part1/1 - Turning Inward (Eyes-open, introductory practice).mp3'),
-        transcript: require('../../assets/audio/Part1/Words/1 - Turning Inward (Eyes-open, introductory practice).wjson'),
         durationHint: '19:24',
         description: 'An introductory eyes-open practice. Find a suitable, comfortable location away from disturbance, then turn the attention of the mind gently inward.',
       },
       {
         id: 'p1-2', title: 'Breath and Self-Observation',
-        source: require('../../assets/audio/Part1/2 - Self-Observation and Breath Following.mp3'),
-        transcript: require('../../assets/audio/Part1/Words/2 - Self-Observation and Breath Following.wjson'),
         durationHint: '20:54',
         description: 'Turn the attention of the mind towards the breathing body — moving from thoughts to the breath, then to observing the breath itself.',
       },
       {
         id: 'p1-3', title: 'Center of Gravity',
-        source: require('../../assets/audio/Part1/3 - Center of Gravity.mp3'),
-        transcript: require('../../assets/audio/Part1/Words/3 - Center of Gravity.wjson'),
         durationHint: '23:48',
         description: 'The Center of Gravity practice — strongly related to the sense of self, developing internal presence and stable anchoring of attention.',
       },
@@ -212,78 +208,16 @@ export const silentMindVolets: Volet[] = [
     qmTracks: [
       {
         id: 'qm1-2', title: 'Breath and Self-Observation',
-        transcript: require('../../assets/audio/QMPart1/Words/QM3_7rounds_Breath and Self-Observation.wjson'),
         description: 'Turn the mind towards the breathing process — notice the body exhaling, inhaling, then resting attention on the natural breath.',
         rounds: {
           max: 7, roundLengthMinutes: 3, breakSeconds: 60,
-          roundSources: [
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round03.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round04.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round05.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round06.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round07.mp3'),
-          ],
-          roundTranscripts: [
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round03.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round04.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round05.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round06.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round07.wjson'),
-          ],
-          roundInters: [
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01_inter.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02_inter.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round03_inter.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round04_inter.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round05_inter.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round06_inter.mp3'),
-          ],
-          roundInterTranscripts: [
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01_inter.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02_inter.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round03_inter.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round04_inter.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round05_inter.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round06_inter.wjson'),
-          ],
         },
       },
       {
         id: 'qm1-4', title: 'Center of Gravity',
-        transcript: require('../../assets/audio/QMPart1/Words/QM5_5rounds_Center of Gravity.wjson'),
         description: 'Start with a long exhalation — empty yourself of air, then let the body inhale freely. Deepen into the Center of Gravity practice.',
         rounds: {
           max: 5, roundLengthMinutes: 5, breakSeconds: 60,
-          roundSources: [
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round01.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round02.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round03.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round04.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round05.mp3'),
-          ],
-          roundTranscripts: [
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round01.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round02.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round03.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round04.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round05.wjson'),
-          ],
-          roundInters: [
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round01_inter.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round02_inter.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round03_inter.mp3'),
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round04_inter.mp3'),
-          ],
-          roundInterTranscripts: [
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round01_inter.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round02_inter.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round03_inter.wjson'),
-            require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round04_inter.wjson'),
-          ],
         },
       },
     ],
@@ -299,22 +233,16 @@ export const silentMindVolets: Volet[] = [
     tracks: [
       {
         id: 'p2-1', title: 'Follow the Air',
-        source: require('../../assets/audio/Part2/1 - Follow the Air.mp3'),
-        transcript: require('../../assets/audio/Part2/Words/1 - Follow the Air.wjson'),
         durationHint: '13:42',
         description: 'Follow the air coming in and going out of your body. Feel the flow and settle into the natural rhythm of breathing.',
       },
       {
         id: 'p2-2', title: 'Follow and witness the Air',
-        source: require('../../assets/audio/Part2/2 - Follow and witness the Air.mp3'),
-        transcript: require('../../assets/audio/Part2/Words/2 - Follow and witness the Air.wjson'),
         durationHint: '26:35',
         description: 'Follow the airflow, then step back and witness its movement. A transition from active following to quiet observation.',
       },
       {
         id: 'p2-3', title: 'Unfollow and witness the air',
-        source: require('../../assets/audio/Part2/3 - Unfollow and witness the air.mp3'),
-        transcript: require('../../assets/audio/Part2/Words/3 - Unfollow and witness the air.wjson'),
         durationHint: '21:00',
         description: 'Stabilize the mind and its attention on a single, very subtle object: the air. Observe the airflow without trying to follow it.',
       },
@@ -327,42 +255,9 @@ export const silentMindVolets: Volet[] = [
       // unreferenced; flip back when an SM "Cosmic Sky" lands.
       {
         id: 'qm2-3', title: 'Unfollow and Witness the Air',
-        transcript: require('../../assets/audio/QMPart2/Words/QM3_6rounds_ErkinGuided_UnfollowAndWitness.wjson'),
         description: "QM3 training by All Here — designed to train the ability to quickly mobilize presence. Six rounds of three minutes each with one-minute breaks in between.",
         rounds: {
           max: 6, roundLengthMinutes: 3, breakSeconds: 60,
-          introSource: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_intro.mp3'),
-          introTranscript: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_intro.wjson'),
-          roundSources: [
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round01.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round02.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round03.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round04.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round05.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round06.mp3'),
-          ],
-          roundTranscripts: [
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round01.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round02.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round03.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round04.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round05.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round06.wjson'),
-          ],
-          roundInters: [
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round01_inter.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round02_inter.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round03_inter.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round04_inter.mp3'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round05_inter.mp3'),
-          ],
-          roundInterTranscripts: [
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round01_inter.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round02_inter.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round03_inter.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round04_inter.wjson'),
-            require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round05_inter.wjson'),
-          ],
         },
       },
     ],
@@ -378,8 +273,6 @@ export const silentMindVolets: Volet[] = [
     tracks: [
       {
         id: 'p3-1', title: 'Emptiness',
-        source: require('../../assets/audio/Part2/4 - Emptiness.mp3'),
-        transcript: require('../../assets/audio/Part2/Words/4 - Emptiness.wjson'),
         durationHint: '20:58',
         description: 'Building on the breathing body and presence of air, open to the practice of emptiness — witnessing the space between and behind experience.',
       },
@@ -394,8 +287,8 @@ export const silentMindVolets: Volet[] = [
 const oneMinute: AudioTrack = {
   id: 'home-1min',
   title: 'One minute meditation',
-  source: require('../../assets/audio/Home/One minute meditation.mp3'),
-  transcript: require('../../assets/audio/Home/Words/One minute meditation.wjson'),
+  source: BUNDLED_AUDIO.homeOneMin,
+  transcript: BUNDLED_TRANSCRIPTS.homeOneMin,
   durationHint: '1:50',
   description: 'One minute to arrive. A single breath, a moment of attention — your first taste of the practice.',
 };
@@ -403,8 +296,8 @@ const oneMinute: AudioTrack = {
 const threeMinutes: AudioTrack = {
   id: 'home-3min',
   title: 'Three minutes meditation',
-  source: require('../../assets/audio/Home/Three minutes meditation.mp3'),
-  transcript: require('../../assets/audio/Home/Words/Three minutes meditation.wjson'),
+  source: BUNDLED_AUDIO.homeThreeMin,
+  transcript: BUNDLED_TRANSCRIPTS.homeThreeMin,
   durationHint: '3:07',
   description: 'Three minutes of guided attention. Settle a little deeper — a steadier taste of the practice.',
 };
@@ -426,22 +319,22 @@ const qm3RoundsHome: AudioTrack = {
     // Training" intro audio is still surfaced in the Home intro list
     // (the volet) for users who want the framing.
     roundSources: [
-      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01.mp3'),
-      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02.mp3'),
-      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round03.mp3'),
+      BUNDLED_AUDIO.qm3Br1,
+      BUNDLED_AUDIO.qm3Br2,
+      BUNDLED_AUDIO.qm3Br3,
     ],
     roundTranscripts: [
-      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01.wjson'),
-      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02.wjson'),
-      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round03.wjson'),
+      BUNDLED_TRANSCRIPTS.qm3,
+      BUNDLED_TRANSCRIPTS.qm3,
+      BUNDLED_TRANSCRIPTS.qm3,
     ],
     roundInters: [
-      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01_inter.mp3'),
-      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02_inter.mp3'),
+      BUNDLED_AUDIO.qm3Inter1,
+      BUNDLED_AUDIO.qm3Inter2,
     ],
     roundInterTranscripts: [
-      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01_inter.wjson'),
-      require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02_inter.wjson'),
+      BUNDLED_TRANSCRIPTS.qm3,
+      BUNDLED_TRANSCRIPTS.qm3,
     ],
   },
 };
@@ -561,27 +454,33 @@ export type VideoItem = {
 export const videoItems: VideoItem[] = [
   {
     id: 'v1',
-    title: 'Introduction to the Silent Mind',
-    subtitle: 'Placeholder — replace with final cut',
-    duration: '9:56',
-    source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    poster: require('../../assets/images/hero/thepractice.jpg'),
+    title: 'The Quantified Meditation System™',
+    subtitle: 'Real-time window into the meditative mind',
+    duration: '4:32',
+    embedUrl: 'https://www.youtube.com/embed/GkLzaHzdtoc',
+    poster: require('../../assets/images/hero/space.jpg'),
+    kind: 'video',
+    remote: true,
   },
   {
     id: 'v2',
-    title: 'Inside the XR Meditation Room',
-    subtitle: 'Placeholder — replace with final cut',
-    duration: '4:30',
-    source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    title: 'Zenbu Koko Installation',
+    subtitle: 'Extended-reality meditation capsule demonstration',
+    duration: '3:45',
+    embedUrl: 'https://www.youtube.com/embed/HmEGX0_Dh9U',
     poster: require('../../assets/images/xr-platform.png'),
+    kind: 'video',
+    remote: true,
   },
   {
     id: 'v3',
-    title: 'The Science Behind',
-    subtitle: 'Placeholder — replace with final cut',
-    duration: '6:12',
-    source: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-    poster: require('../../assets/images/eeg-solution.png'),
+    title: 'The Silent Mind Platform',
+    subtitle: 'Where meditation meets science & technology',
+    duration: '5:20',
+    embedUrl: 'https://www.youtube.com/embed/HghfgUIleBQ',
+    poster: require('../../assets/images/hero/sky.jpg'),
+    kind: 'video',
+    remote: true,
   },
 ];
 

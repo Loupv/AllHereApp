@@ -1,0 +1,164 @@
+/**
+ * Audio resolver: resolves audio sources to playable URIs.
+ * Handles bundled → cache → download fallback strategy.
+ */
+
+import { Asset } from 'expo-asset';
+import * as audioDownloader from '../services/audioDownloader';
+import * as audioCacheManager from '../services/audioCacheManager';
+import { getAudioSource, getInterSource, isBundled } from './audioRegistry';
+
+export type ResolvedAudio = {
+  uri: string;
+  isCached: boolean;
+  isRemote: boolean;
+};
+
+/**
+ * Resolve an audio source to a playable URI
+ * @param trackId - Track identifier
+ * @param roundIndex - Optional round index (0-based) for multi-round QM tracks
+ * @param isInter - Whether this is an inter/break audio (default: false)
+ * @param onProgress - Progress callback for downloads (bytesDownloaded, totalBytes)
+ * @returns Resolved audio with URI and metadata
+ * @throws Error if resolution fails
+ */
+export async function resolveAudioSource(
+  trackId: string,
+  roundIndex?: number | boolean | ((bytes: number, total: number) => void),
+  isInterOrOnProgress?: boolean | ((bytes: number, total: number) => void),
+  onProgress?: (bytes: number, total: number) => void,
+): Promise<ResolvedAudio> {
+  // Handle overloads:
+  // resolveAudioSource(trackId, onProgress)
+  // resolveAudioSource(trackId, roundIndex, onProgress)
+  // resolveAudioSource(trackId, roundIndex, isInter, onProgress)
+  let actualRoundIndex: number | undefined;
+  let actualIsInter = false;
+  let actualOnProgress: ((bytes: number, total: number) => void) | undefined;
+
+  if (typeof roundIndex === 'function') {
+    // Overload 1: (trackId, onProgress)
+    actualOnProgress = roundIndex;
+  } else if (typeof isInterOrOnProgress === 'function') {
+    // Overload 2: (trackId, roundIndex, onProgress) or (trackId, roundIndex, isInter, onProgress) with isInter boolean
+    if (typeof isInterOrOnProgress === 'boolean') {
+      // (trackId, roundIndex, isInter, onProgress) - isInter is bool, onProgress is last param
+      actualRoundIndex = roundIndex as number | undefined;
+      actualIsInter = isInterOrOnProgress;
+      actualOnProgress = onProgress;
+    } else {
+      // (trackId, roundIndex, onProgress)
+      actualRoundIndex = roundIndex as number | undefined;
+      actualOnProgress = isInterOrOnProgress;
+    }
+  }
+
+  // Get the appropriate source based on whether this is an inter or regular round
+  const source = actualIsInter && actualRoundIndex !== undefined
+    ? getInterSource(trackId, actualRoundIndex)
+    : getAudioSource(trackId, actualRoundIndex);
+
+  if (!source) {
+    throw new Error(`Audio source not found for track "${trackId}"${actualRoundIndex !== undefined ? ` round ${actualRoundIndex}` : ''}${actualIsInter ? ' (inter)' : ''}`);
+  }
+
+  // Case 1: Bundled asset
+  if (source.bundled) {
+    try {
+      const asset = Asset.fromModule(source.bundled);
+      await asset.downloadAsync();
+      const uri = asset.localUri ?? asset.uri;
+      return {
+        uri,
+        isCached: true,
+        isRemote: false,
+      };
+    } catch (err) {
+      throw new Error(`Failed to load bundled audio for "${trackId}": ${err}`);
+    }
+  }
+
+  // Case 2: Remote audio
+  if (!source.remote) {
+    throw new Error(`No audio source configured for track "${trackId}"`);
+  }
+
+  // Use trackId with round/inter suffix for caching
+  const cacheKey = actualRoundIndex !== undefined ? `${trackId}-${actualIsInter ? 'inter' : 'round'}-${actualRoundIndex}` : trackId;
+
+  // Check cache first
+  const cachedUri = await audioCacheManager.getCachedUri(cacheKey);
+  if (cachedUri) {
+    return {
+      uri: cachedUri,
+      isCached: true,
+      isRemote: true,
+    };
+  }
+
+  // Download from remote
+  try {
+    const downloadedUri = await audioDownloader.downloadAudio(
+      cacheKey,
+      source.remote,
+      actualOnProgress,
+    );
+    return {
+      uri: downloadedUri,
+      isCached: false,
+      isRemote: true,
+    };
+  } catch (err) {
+    throw new Error(`Failed to download audio for "${trackId}": ${err}`);
+  }
+}
+
+/**
+ * Batch resolve multiple audio sources (for prefetching)
+ */
+export async function resolveAudioSourceBatch(
+  trackIds: string[],
+): Promise<Map<string, ResolvedAudio>> {
+  const results = new Map<string, ResolvedAudio>();
+
+  for (const trackId of trackIds) {
+    try {
+      const resolved = await resolveAudioSource(trackId);
+      results.set(trackId, resolved);
+    } catch (err) {
+      console.warn(`Failed to resolve audio for "${trackId}":`, err);
+      // Continue with next track instead of failing batch
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Prefetch audio in background (for better UX during playback)
+ */
+export async function prefetchAudio(trackId: string): Promise<void> {
+  try {
+    if (isBundled(trackId)) {
+      // Bundled audio already available, no prefetch needed
+      return;
+    }
+
+    // Check if already cached
+    const isCached = await audioCacheManager.isCached(trackId);
+    if (isCached) {
+      return;
+    }
+
+    // Start download in background (don't await, fire-and-forget)
+    const source = getAudioSource(trackId);
+    if (source?.remote) {
+      audioDownloader.downloadAudio(trackId, source.remote).catch((err) => {
+        console.warn(`Background prefetch failed for "${trackId}":`, err);
+      });
+    }
+  } catch (err) {
+    console.warn(`Prefetch setup failed for "${trackId}":`, err);
+  }
+}

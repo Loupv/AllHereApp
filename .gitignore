@@ -42,3 +42,11 @@ yarn-error.*
 
 # Raw QM audio originals (kept locally for re-segmentation, not shipped)
 assets/audio/excluded/
+
+# Remote audio — served from WordPress, not bundled in the app
+assets/audio/Part0
+assets/audio/Part1
+assets/audio/Part2
+assets/audio/Part3
+assets/audio/QMPart1
+assets/audio/QMPart2

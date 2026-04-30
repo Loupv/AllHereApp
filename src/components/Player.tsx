@@ -13,6 +13,7 @@ import { useProgress } from '../player/progressStore';
 import { loadTranscript } from '../content/loadTranscript';
 import { findCueIndex, TranscriptCue } from '../content/transcript';
 import { trackProgram, trackLocation } from '../content/catalog';
+import { resolveAudioSource, prefetchAudio } from '../content/audioResolver';
 import { WAVEFORMS } from '../content/waveforms.generated';
 import { colors, radius, spacing, type } from '../theme';
 import { noOrphan } from '../utils/noOrphan';
@@ -231,6 +232,13 @@ function PlayerInner() {
   );
   const [inBreak, setInBreak] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [resolvedUri, setResolvedUri] = useState<string | null>(null);
+  const [isResolving, setIsResolving] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+  const [isDownloadingForOffline, setIsDownloadingForOffline] = useState(false);
+  const [offlineDownloadProgress, setOfflineDownloadProgress] = useState(0);
+  const [offlineDownloadError, setOfflineDownloadError] = useState<string | null>(null);
   const endedHandled = useRef(false);
   const roundChangedAt = useRef(0);
 
@@ -262,7 +270,8 @@ function PlayerInner() {
     return undefined;
   })();
 
-  const player = useAudioPlayer(roundSource);
+  // Only create player once we have a resolved URI
+  const player = useAudioPlayer(resolvedUri ?? undefined);
   const status = useAudioPlayerStatus(player);
 
   const [cues, setCues] = useState<TranscriptCue[]>([]);
@@ -280,6 +289,100 @@ function PlayerInner() {
   const userScrollingUntil = useRef(0);
   const expectedScrollY = useRef(0);
   const nextScrollAnimated = useRef(false);
+
+  // Resolve audio source (bundled or remote with download)
+  useEffect(() => {
+    if (!track?.id) {
+      setResolvedUri(null);
+      setResolveError(null);
+      return;
+    }
+
+    // Determine round index for resolution
+    let roundIndex: number | undefined;
+    if (track.rounds) {
+      if (currentRound === 0) {
+        roundIndex = undefined; // Intro (no round index)
+      } else if (inBreak) {
+        roundIndex = currentRound - 1; // Inter is between rounds
+      } else {
+        roundIndex = currentRound - 1; // Regular round
+      }
+    }
+
+    const resolve = async () => {
+      setIsResolving(true);
+      setResolveError(null);
+      try {
+        const resolved = await resolveAudioSource(
+          track.id,
+          roundIndex,
+          inBreak,
+          (bytes, total) => {
+            if (total > 0) setDownloadProgress(Math.round((bytes / total) * 100));
+          },
+        );
+        setResolvedUri(resolved.uri);
+        setDownloadProgress(0);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to resolve audio';
+        setResolveError(msg);
+        console.error('Audio resolution error:', err);
+      } finally {
+        setIsResolving(false);
+      }
+    };
+
+    resolve();
+  }, [track?.id, currentRound, inBreak]);
+
+  // Prefetch next round while current is playing
+  useEffect(() => {
+    if (status.playing && track?.id) {
+      prefetchAudio(`${track.id}-next-${currentRound + 1}`).catch(() => {
+        // Background prefetch errors are not fatal
+      });
+    }
+  }, [status.playing, track?.id, currentRound]);
+
+  // Download audio for offline listening
+  const handleDownloadForOffline = async () => {
+    if (!track?.id || isDownloadingForOffline) return;
+
+    // Use same resolution logic as main audio playback
+    let roundIndex: number | undefined;
+    if (track.rounds) {
+      if (currentRound === 0) {
+        roundIndex = undefined;
+      } else if (inBreak) {
+        roundIndex = currentRound - 1;
+      } else {
+        roundIndex = currentRound - 1;
+      }
+    }
+
+    setIsDownloadingForOffline(true);
+    setOfflineDownloadError(null);
+    setOfflineDownloadProgress(0);
+    try {
+      await resolveAudioSource(
+        track.id,
+        roundIndex,
+        inBreak,
+        (bytes, total) => {
+          if (total > 0) setOfflineDownloadProgress(Math.round((bytes / total) * 100));
+        },
+      );
+      setOfflineDownloadProgress(100);
+      // Keep the success state visible for 2 seconds
+      setTimeout(() => setOfflineDownloadProgress(0), 2000);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Download failed';
+      setOfflineDownloadError(msg);
+    } finally {
+      setIsDownloadingForOffline(false);
+    }
+  };
 
   // Reset smooth time whenever the audio source identity changes (new track, round, or break)
   const sourceKey = `${track?.id ?? 'none'}|${inBreak ? 'b' : 'r'}|${currentRound}`;
@@ -813,7 +916,19 @@ function PlayerInner() {
           />
         )}
 
-        {hasStarted && !finished && canSeek ? (
+        {offlineDownloadProgress > 0 ? (
+          <View style={styles.sideBtn}>
+            <Text style={styles.sideBtnText}>{offlineDownloadProgress}%</Text>
+          </View>
+        ) : offlineDownloadError ? (
+          <Pressable onPress={handleDownloadForOffline} style={styles.sideBtn}>
+            <Text style={styles.sideBtnText}>⟳</Text>
+          </Pressable>
+        ) : !hasStarted && !isDownloadingForOffline ? (
+          <Pressable onPress={handleDownloadForOffline} style={styles.sideBtn}>
+            <Text style={styles.sideBtnText}>⬇</Text>
+          </Pressable>
+        ) : hasStarted && !finished && canSeek ? (
           <Pressable onPress={() => player.seekTo(Math.min(duration, t + 15))} style={styles.sideBtn}>
             <Text style={styles.sideBtnText}>+15s</Text>
           </Pressable>
