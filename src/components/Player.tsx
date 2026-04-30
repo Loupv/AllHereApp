@@ -408,7 +408,43 @@ function PlayerInner() {
 
   // Reset smooth time whenever the audio source identity changes (new track, round, or break)
   const sourceKey = `${track?.id ?? 'none'}|${inBreak ? 'b' : 'r'}|${currentRound}`;
-  const liveT = useSmoothTime(status.currentTime, status.playing, sourceKey);
+
+  // ---------------------------------------------------------------
+  // Engine state machine — derived from expo-audio's status fields.
+  // The Player UI was originally built for fully-bundled audio where
+  // duration is known instantly and seek is free; streaming from
+  // WordPress added a 'buffering' phase that the old code conflated
+  // with 'playing' (status.playing stays true while AVPlayer waits
+  // for bytes to arrive). The fix is a single derived state that
+  // every UI / timeline rule keys off:
+  //
+  //   preplay   — user hasn't tapped Begin yet
+  //   loading   — initial decode (duration not yet known)
+  //   buffering — mid-playback wait for more bytes (post-seek rebuffer)
+  //   playing   — actually emitting audio
+  //   paused    — user paused; source loaded
+  //   ended     — track finished
+  //   error     — resolveAudioSource threw
+  // ---------------------------------------------------------------
+  const isBuffering =
+    (status as any).timeControlStatus === 'waiting' ||
+    (player as any)?.isBuffering === true;
+  type EngineState =
+    | 'preplay' | 'loading' | 'buffering' | 'playing' | 'paused' | 'ended' | 'error';
+  const engineState: EngineState = (() => {
+    if (resolveError) return 'error';
+    if (!hasStarted) return 'preplay';
+    if (finished) return 'ended';
+    if (!Number.isFinite(status.duration) || status.duration <= 0) return 'loading';
+    if (isBuffering) return 'buffering';
+    if (status.playing) return 'playing';
+    return 'paused';
+  })();
+  // Treat ONLY the true-playing state as "audio actually advancing".
+  // useSmoothTime extrapolates when its `playing` arg is true; without
+  // this gate the timeline kept walking forward during buffering.
+  const actuallyPlaying = engineState === 'playing';
+  const liveT = useSmoothTime(status.currentTime, actuallyPlaying, sourceKey);
   // Pin `t` to the user's drag while scrubbing, then to the seek
   // target while expo-audio catches up — *only* fall back to the live
   // current-time once the catch-up has converged. This kills the
@@ -661,23 +697,25 @@ function PlayerInner() {
     setScrubbing(false);
   };
 
-  // Clear the post-seek hold once the player's reported time lands
-  // close to the target (within 0.5 s — generous because expo-audio
-  // emits status updates at ~10 Hz). Safety timeout after 3 s for
-  // streamed remote audio: a Range-request rebuffer can take >1 s on a
-  // slow network, and a 600 ms safety previously released the pin too
-  // early — the visual then flashed back to status.currentTime (still
-  // the old position) before the audio caught up, producing a visible
-  // tremble.
+  // Release the post-seek pin only once playback ACTUALLY resumes at
+  // the target — i.e. engineState transitioned out of 'buffering' AND
+  // currentTime landed near the target. The earlier check (just
+  // |currentTime - target| < 0.5) cleared the pin while the engine
+  // was still rebuffering, so the timeline briefly snapped back to a
+  // stale currentTime before jumping to the new position. Safety
+  // timeout 4s for slow networks; the user can scrub again to retry.
   useEffect(() => {
     if (pendingSeekTo == null) return;
-    if (Math.abs(status.currentTime - pendingSeekTo) < 0.5) {
+    const converged =
+      engineState === 'playing' &&
+      Math.abs(status.currentTime - pendingSeekTo) < 0.5;
+    if (converged) {
       setPendingSeekTo(null);
       return;
     }
-    const id = setTimeout(() => setPendingSeekTo(null), 3000);
+    const id = setTimeout(() => setPendingSeekTo(null), 4000);
     return () => clearTimeout(id);
-  }, [pendingSeekTo, status.currentTime]);
+  }, [pendingSeekTo, status.currentTime, engineState]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -775,7 +813,12 @@ function PlayerInner() {
   // On slower networks / iOS Safari that can take a moment; guard the UI so
   // the user sees a clear loading state instead of an apparently-broken
   // controls row.
-  const isLoading = hasStarted && !finished && (!Number.isFinite(duration) || duration <= 0);
+  // Loading UI fires for BOTH the initial decode and a mid-playback
+  // rebuffer (e.g. after a seek into unbuffered territory) — the
+  // engineState machine collapses both into "user pressed play but no
+  // audio is coming out yet", which is exactly the state where the
+  // spinner belongs.
+  const isLoading = engineState === 'loading' || engineState === 'buffering';
   const canSeek = duration > 0;
   const description = track.description ?? (track.rounds ? QM_DESCRIPTION : DEFAULT_DESCRIPTION);
   const rounds = track.rounds;
@@ -949,7 +992,9 @@ function PlayerInner() {
         ) : isLoading ? (
           <View style={[styles.loadingCircle, { width: circleSize, height: circleSize, borderRadius: circleSize / 2 }]}>
             <ActivityIndicator size="large" color={accent} style={{ marginBottom: spacing.xs }} />
-            <Text style={styles.loadingText}>Buffering…</Text>
+            <Text style={styles.loadingText}>
+              {engineState === 'loading' ? 'Loading…' : 'Buffering…'}
+            </Text>
           </View>
         ) : !hasStarted ? (
           <CircleButton
