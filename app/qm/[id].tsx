@@ -5,6 +5,7 @@ import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrol
 import { Background } from '../../src/components/Background';
 import { ContentCard } from '../../src/components/ContentCard';
 import { ProgramHeader } from '../../src/components/ProgramHeader';
+import { SubPageSwipeNav } from '../../src/components/SubPageSwipeNav';
 import { qmVolets, qmProgram, silentMindVolets, trackDuration } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { useProgress, isTrackUnlocked } from '../../src/player/progressStore';
@@ -40,6 +41,7 @@ export default function QMVoletScreen() {
       {/* Native stack already animates the push (slide_from_right in
           app/_layout.tsx) — running another Animated.View entering
           here doubled up and made the screen visibly stutter. */}
+      <SubPageSwipeNav>
       <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center' }]}>
         <View style={[styles.column, { maxWidth: columnMax }]}>
           <ProgramHeader
@@ -121,6 +123,7 @@ export default function QMVoletScreen() {
           ) : null}
         </View>
       </ScrollView>
+      </SubPageSwipeNav>
     </Background>
   );
 }
