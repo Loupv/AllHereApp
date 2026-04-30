@@ -36,10 +36,15 @@ const EMBED_CACHE_PREFIX = 'ah_embed_v2_'; // per-link embed URL cache (bumped a
  */
 /** allhere.org doesn't set CORS on plain HTML pages (only on /wp-json).
  * On web we go through a public CORS proxy; on native there's no CORS
- * so we fetch the page directly. */
+ * so we fetch the page directly. corsproxy.io started returning 403 for
+ * allhere.org so the scrape silently failed and news posts with
+ * lazy-loaded YouTube/Vimeo embeds (Zenbu Koko Public Unveiling, etc.)
+ * stayed tagged kind:'article'. codetabs proxies the same content with
+ * proper Access-Control-Allow-Origin: *.
+ */
 const pageFetchUrl = (pageUrl: string) =>
   Platform.OS === 'web'
-    ? `https://corsproxy.io/?${encodeURIComponent(pageUrl)}`
+    ? `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(pageUrl)}`
     : pageUrl;
 
 // Patterns for any kind of media iframe we know how to render via EmbedPlayer:
