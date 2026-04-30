@@ -433,27 +433,33 @@ function PlayerInner() {
     (status as any).timeControlStatus === 'waiting' ||
     (status as any).isBuffering === true ||
     (player as any)?.isBuffering === true;
-  // Treat the source as ready-to-play once expo-audio has decoded
-  // metadata. Web (HTMLAudioElement) doesn't always populate
-  // status.duration even when the audio is fully streamable — large
-  // CBR MP3s like "3 - Center of Gravity.mp3" (57 MB / 23 min) were
-  // playable from a few seconds in but our state machine kept
-  // reporting 'loading' indefinitely because we only checked
-  // duration<=0. Use isLoaded OR a positive currentTime as additional
-  // ready signals so the user can actually start the track.
-  const isReady =
+  // Source has been decoded enough to compute duration / metadata.
+  const isDecoded =
     (status as any).isLoaded === true ||
-    (Number.isFinite(status.duration) && status.duration > 0) ||
-    (Number.isFinite(status.currentTime) && status.currentTime > 0) ||
-    status.playing === true;
+    (Number.isFinite(status.duration) && status.duration > 0);
+  // Audio playhead is actually advancing (proof real audio is coming
+  // out, not just that the engine accepted a play command). Without
+  // this gate, status.playing flipped true the instant we sent
+  // player.play() — even if buffering wasn't done — and the play
+  // button briefly showed "playing", flickered to "paused" while the
+  // browser actually buffered, then back to "playing". Now we stay in
+  // 'buffering' until currentTime is past the seek/start position.
+  const advancing =
+    Number.isFinite(status.currentTime) && status.currentTime > 0.05;
   type EngineState =
     | 'preplay' | 'loading' | 'buffering' | 'playing' | 'paused' | 'ended' | 'error';
   const engineState: EngineState = (() => {
     if (resolveError) return 'error';
     if (!hasStarted) return 'preplay';
     if (finished) return 'ended';
-    if (!isReady) return 'loading';
+    // No metadata AND nothing's playing yet → initial decode in progress
+    if (!isDecoded && !advancing) return 'loading';
+    // Engine is waiting for bytes (mid-stream rebuffer or, after the
+    // user pressed play, still pre-rolling). status.playing is a poor
+    // signal here — treat it as buffering until we see currentTime
+    // actually move forward.
     if (isBuffering) return 'buffering';
+    if (status.playing && !advancing) return 'buffering';
     if (status.playing) return 'playing';
     return 'paused';
   })();
@@ -492,12 +498,12 @@ function PlayerInner() {
     setFinished(false);
     endedHandled.current = false;
     roundChangedAt.current = 0;
-    // Drop the previous track's URI so useAudioPlayer releases the
-    // outgoing source. Without this, opening a different track from a
-    // playlist sometimes left the old audio engine playing because
-    // expo-audio didn't observe a meaningful source change before the
-    // resolve effect produced the new URI a tick later.
-    setResolvedUri(null);
+    // Don't null resolvedUri here. On web, useAudioPlayer with a null
+    // source then a fresh URL sometimes left the AudioPlayer instance
+    // in a state where the new source never started — QM Center of
+    // Gravity (qm1-4 round 1) was the canary. The cleanup below
+    // already pauses the outgoing player; once the resolve effect
+    // produces the new URI, expo-audio swaps cleanly.
     setPendingSeekTo(null);
     return () => { try { player.pause(); } catch {} };
   }, [track?.id]);
