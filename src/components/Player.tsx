@@ -691,11 +691,21 @@ function PlayerInner() {
    * this we observed a trembling loop where stale resume calls played
    * briefly from the old position before the next seek landed.
    */
+  // Intent flag: true when the user was playing right before a seek,
+  // meaning "I want playback to resume as soon as the audio at the
+  // new offset is ready". The seek-then-play sequence sometimes loses
+  // the play() call (engine in a transient state, web's seekTo
+  // resolving before the audio is buffered), leaving the user staring
+  // at a paused engine even though they never pressed pause. The
+  // engineState effect below retries play() until 'playing' lands or
+  // the user takes manual control.
+  const intentToPlay = useRef(false);
   const seekInFlight = useRef(0);
   const seekAndResume = (target: number) => {
     if (!Number.isFinite(target) || target < 0) return;
     const id = ++seekInFlight.current;
     const wasPlaying = !!status.playing;
+    if (wasPlaying) intentToPlay.current = true;
     try { player.pause(); } catch {}
     const resume = () => {
       if (id !== seekInFlight.current) return; // superseded by a newer seek
@@ -708,6 +718,21 @@ function PlayerInner() {
     }
     setPendingSeekTo(target);
   };
+
+  // Retry play() while the user's intent is "should be playing" but
+  // the engine settled into 'paused' after a seek/rebuffer cycle.
+  // Only kicks during 'paused' state; 'buffering' / 'loading' are
+  // transient and don't need a nudge — wait them out.
+  useEffect(() => {
+    if (!intentToPlay.current) return;
+    if (engineState === 'playing') {
+      intentToPlay.current = false;
+      return;
+    }
+    if (engineState === 'paused') {
+      try { player.play(); } catch {}
+    }
+  }, [engineState, player]);
 
   const commitSeek = () => {
     seekAndResume(scrubValue.current);
@@ -1034,7 +1059,14 @@ function PlayerInner() {
             // glow boost on the play button felt twitchy on long form
             // meditation tracks. The mode-driven breath alone is plenty
             // of "the button is alive" cue without chasing every peak.
-            onPress={() => { playing ? player.pause() : player.play(); }}
+            onPress={() => {
+              // Manual toggle takes priority over the post-seek
+              // auto-resume — clearing the intent ref stops the
+              // engineState effect from immediately re-firing play()
+              // after the user just pressed pause.
+              intentToPlay.current = !playing;
+              playing ? player.pause() : player.play();
+            }}
           />
         )}
 
