@@ -621,15 +621,39 @@ function PlayerInner() {
     roundChangedAt.current = Date.now();
   };
 
-  // When the audio source changes (round change or entering/leaving break), start playback.
+  // When the audio source URL changes (initial resolve, round change,
+  // entering/leaving break), kick off playback. Critically depends on
+  // `resolvedUri` rather than `player` — useAudioPlayer reuses the
+  // same JS object reference across source changes on web, so an
+  // effect keyed on `player` never re-fired after the resolve effect
+  // populated the URL. QM Center of Gravity (qm1-4) was the canary:
+  // mount → effect fires with no source → no-op → resolve completes
+  // → useAudioPlayer updates source → player ref unchanged → effect
+  // never re-fires → audio never starts. Now the effect fires every
+  // time resolvedUri actually changes.
   useEffect(() => {
-    if (!hasStarted || finished) return;
+    if (!resolvedUri || !hasStarted || finished) return;
     roundChangedAt.current = Date.now();
     endedHandled.current = false;
-    try { player.seekTo(0); player.play(); } catch {}
-    const t1 = setTimeout(() => { try { player.play(); } catch {} }, 400);
+    const kick = () => {
+      try {
+        player.seekTo(0);
+        const p = player.play();
+        // play() returns a Promise on web; surface autoplay /
+        // policy rejections instead of swallowing them silently.
+        if (p && typeof (p as any).then === 'function') {
+          (p as Promise<void>).catch((err) =>
+            console.warn('[Player] play() rejected:', err),
+          );
+        }
+      } catch (err) {
+        console.warn('[Player] play() threw:', err);
+      }
+    };
+    kick();
+    const t1 = setTimeout(kick, 400);
     return () => clearTimeout(t1);
-  }, [currentRound, inBreak, player, hasStarted]);
+  }, [resolvedUri, hasStarted, finished, player]);
 
   useEffect(() => {
     if (finished) { try { player.pause(); } catch {} }
