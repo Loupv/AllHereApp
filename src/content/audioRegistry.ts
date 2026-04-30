@@ -72,10 +72,19 @@ export const BUNDLED_TRANSCRIPTS = {
   qm23_unfollow: require('../../assets/audio/QMPart2/Words/QM3_6rounds_ErkinGuided_UnfollowAndWitness.wjson'),
 } as const;
 
-const BASE_URL = 'https://allhere.org/wp-content/uploads/AllHere_NewApp';
+import { WP_AUDIO_MAP } from './wpAudioMap.generated';
 
-// Remote audio sources (served from WordPress)
-const REMOTE_PATTERN = (path: string) => `${BASE_URL}/${path}`;
+/**
+ * Resolve a remote audio path to its public WordPress URL. We pass paths in
+ * the legacy `Folder/Original Name.mp3` shape (which mirrors how the assets
+ * are organized on disk); the WP_AUDIO_MAP keys are the basenames, so we
+ * strip the folder. WP flattens uploads to /YYYY/MM/<sanitized>.mp3 and
+ * gen-wp-audio-map.mjs is the source of truth for that translation.
+ */
+const REMOTE_PATTERN = (path: string): string | null => {
+  const filename = path.split('/').pop()!;
+  return WP_AUDIO_MAP[filename] ?? null;
+};
 
 /**
  * Get audio source for a track ID (and optional round number for QM tracks)
@@ -118,7 +127,8 @@ export function getAudioSource(trackId: string, roundIndex?: number): AudioSourc
   };
 
   if (trackId in remoteMap) {
-    return { remote: REMOTE_PATTERN(remoteMap[trackId]) };
+    const url = REMOTE_PATTERN(remoteMap[trackId]);
+    return url ? { remote: url } : null;
   }
 
   // Handle QM tracks with rounds
@@ -141,7 +151,8 @@ export function getAudioSource(trackId: string, roundIndex?: number): AudioSourc
     const { folder, pattern } = qmRoundMap[trackId];
     const roundNum = String(roundIndex + 1).padStart(2, '0');
     const fileName = `${pattern}${roundNum}.mp3`;
-    return { remote: REMOTE_PATTERN(`${folder}/${fileName}`) };
+    const url = REMOTE_PATTERN(`${folder}/${fileName}`);
+    return url ? { remote: url } : null;
   }
 
   return null;
@@ -256,7 +267,8 @@ export function getInterSource(trackId: string, interIndex: number): AudioSource
     if (interIndex >= config.maxInters) return null;
     const interNum = String(interIndex + 1).padStart(2, '0');
     const fileName = `${config.pattern}${interNum}_inter.mp3`;
-    return { remote: REMOTE_PATTERN(`${config.folder}/${fileName}`) };
+    const url = REMOTE_PATTERN(`${config.folder}/${fileName}`);
+    return url ? { remote: url } : null;
   }
 
   return null;
@@ -282,8 +294,8 @@ export function getInterTranscriptSource(trackId: string, interIndex: number): A
 }
 
 /**
- * Get WordPress base URL for custom audio paths
+ * Get WordPress URL for a given local audio path. Returns null if not on WP.
  */
-export function getRemoteUrl(path: string): string {
+export function getRemoteUrl(path: string): string | null {
   return REMOTE_PATTERN(path);
 }

@@ -8,7 +8,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:web": "expo export --platform web",
-    "gen:waveforms": "node scripts/gen-waveforms.mjs"
+    "gen:waveforms": "node scripts/gen-waveforms.mjs",
+    "gen:wp-map": "node scripts/gen-wp-audio-map.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/montserrat": "^0.4.2",
