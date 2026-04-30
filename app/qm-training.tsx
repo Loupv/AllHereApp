@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import Animated, { Keyframe } from 'react-native-reanimated';
 import { useAudioPlayer } from 'expo-audio';
 import { BouncyScrollView as ScrollView } from '../src/components/BouncyScrollView';
 import { Background } from '../src/components/Background';
@@ -10,20 +9,6 @@ import { CircleButton } from '../src/components/CircleButton';
 import { useLayout } from '../src/hooks/useLayout';
 import { qmProgram } from '../src/content/catalog';
 import { colors, radius, spacing, type } from '../src/theme';
-
-// Same crossfade-while-sliding entry/exit used by the SM / QM detail
-// pages — keeps the route transition consistent across QM surfaces.
-const detailEnter = new Keyframe({
-  0:   { opacity: 0, transform: [{ translateX: 40 }] },
-  60:  { opacity: 0.6, transform: [{ translateX: 16 }] },
-  100: { opacity: 1, transform: [{ translateX: 0 }] },
-}).duration(320);
-
-const detailExit = new Keyframe({
-  0:   { opacity: 1, transform: [{ translateX: 0 }] },
-  40:  { opacity: 0.6, transform: [{ translateX: 16 }] },
-  100: { opacity: 0, transform: [{ translateX: 40 }] },
-}).duration(260);
 
 // Picker presets — the three knobs the user can twist before starting
 // a free-training session. Values in *seconds* internally so the timer
@@ -233,7 +218,6 @@ export default function QMTrainingScreen() {
     return (
       <Background color={colors.bgTabAlt}>
         <Stack.Screen options={{ title: '' }} />
-        <Animated.View style={{ flex: 1 }} entering={detailEnter} exiting={detailExit}>
           <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center' }]}>
             <View style={[styles.column, { maxWidth: columnMax }]}>
               <ProgramHeader
@@ -335,7 +319,6 @@ export default function QMTrainingScreen() {
               <Text style={styles.launchHint}>Start when you are ready</Text>
             </View>
           </ScrollView>
-        </Animated.View>
       </Background>
     );
   }
@@ -344,7 +327,6 @@ export default function QMTrainingScreen() {
   return (
     <Background color={colors.bgTabAlt}>
       <Stack.Screen options={{ title: '' }} />
-      <Animated.View style={{ flex: 1 }} entering={detailEnter} exiting={detailExit}>
         <View style={[styles.content, { alignItems: 'center' }]}>
           <View style={[styles.column, { maxWidth: columnMax, alignItems: 'center', justifyContent: 'center', flex: 1 }]}>
             {/* Round / break / countdown label — same grammar as the
@@ -442,7 +424,6 @@ export default function QMTrainingScreen() {
             )}
           </View>
         </View>
-      </Animated.View>
     </Background>
   );
 }

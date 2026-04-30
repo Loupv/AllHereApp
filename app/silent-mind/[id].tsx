@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Text, View, Pressable, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import Animated, { Keyframe } from 'react-native-reanimated';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { ContentCard } from '../../src/components/ContentCard';
@@ -12,24 +11,6 @@ import { useProgress, isTrackUnlocked } from '../../src/player/progressStore';
 import { useLayout } from '../../src/hooks/useLayout';
 import { colors, spacing, type } from '../../src/theme';
 import { noOrphan } from '../../src/utils/noOrphan';
-
-// Entering: incoming page slides 40 px from the right while fading
-// from 0 → 1 — reads as a crossfade DURING the slide rather than a
-// hard slide-on-top.
-const detailEnter = new Keyframe({
-  0:   { opacity: 0, transform: [{ translateX: 40 }] },
-  60:  { opacity: 0.6, transform: [{ translateX: 16 }] },
-  100: { opacity: 1, transform: [{ translateX: 0 }] },
-}).duration(320);
-
-// Exiting: same trajectory in reverse — when the user dismisses the
-// detail page (header back, swipe-back gesture, OS back button) the
-// page slides back to the right and fades out, mirroring the entry.
-const detailExit = new Keyframe({
-  0:   { opacity: 1, transform: [{ translateX: 0 }] },
-  40:  { opacity: 0.6, transform: [{ translateX: 16 }] },
-  100: { opacity: 0, transform: [{ translateX: 40 }] },
-}).duration(260);
 
 export default function VoletScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -55,14 +36,10 @@ export default function VoletScreen() {
   return (
     <Background color={colors.bgTab}>
       <Stack.Screen options={{ title: volet.title }} />
-      {/* Crossfade-while-sliding: a custom Keyframe combines a short
-          horizontal slide (40 px from the right) with an opacity
-          ramp 0 → 1, so the incoming page emerges through the
-          outgoing one rather than covering it with a hard edge. The
-          shared root gradient + EnergyColumn behind both pages keeps
-          the backdrop continuous, reinforcing the "same screen
-          morphing" feel. */}
-      <Animated.View style={{ flex: 1 }} entering={detailEnter} exiting={detailExit}>
+      {/* The native stack already runs a slide_from_right animation
+          on push (configured in app/_layout.tsx). Don't double up
+          with a custom Animated.View entering — that overlapped the
+          two animations and produced a visible stutter. */}
       <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center' }]}>
         <View style={[styles.column, { maxWidth: columnMax }]}>
           <ProgramHeader
@@ -156,7 +133,6 @@ export default function VoletScreen() {
           ) : null}
         </View>
       </ScrollView>
-      </Animated.View>
     </Background>
   );
 }

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Text, View, Pressable, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import Animated, { Keyframe } from 'react-native-reanimated';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { ContentCard } from '../../src/components/ContentCard';
@@ -12,18 +11,6 @@ import { useProgress, isTrackUnlocked } from '../../src/player/progressStore';
 import { useLayout } from '../../src/hooks/useLayout';
 import { colors, spacing, type } from '../../src/theme';
 import { noOrphan } from '../../src/utils/noOrphan';
-
-const detailEnter = new Keyframe({
-  0:   { opacity: 0, transform: [{ translateX: 40 }] },
-  60:  { opacity: 0.6, transform: [{ translateX: 16 }] },
-  100: { opacity: 1, transform: [{ translateX: 0 }] },
-}).duration(320);
-
-const detailExit = new Keyframe({
-  0:   { opacity: 1, transform: [{ translateX: 0 }] },
-  40:  { opacity: 0.6, transform: [{ translateX: 16 }] },
-  100: { opacity: 0, transform: [{ translateX: 40 }] },
-}).duration(260);
 
 export default function QMVoletScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -50,9 +37,9 @@ export default function QMVoletScreen() {
   return (
     <Background color={colors.bgTabAlt}>
       <Stack.Screen options={{ title: `QM · ${volet.title}` }} />
-      {/* Crossfade-while-sliding via custom Keyframe — see SM detail
-          page for details. */}
-      <Animated.View style={{ flex: 1 }} entering={detailEnter} exiting={detailExit}>
+      {/* Native stack already animates the push (slide_from_right in
+          app/_layout.tsx) — running another Animated.View entering
+          here doubled up and made the screen visibly stutter. */}
       <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center' }]}>
         <View style={[styles.column, { maxWidth: columnMax }]}>
           <ProgramHeader
@@ -134,7 +121,6 @@ export default function QMVoletScreen() {
           ) : null}
         </View>
       </ScrollView>
-      </Animated.View>
     </Background>
   );
 }
