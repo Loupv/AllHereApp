@@ -53,12 +53,19 @@ export function ProgramHeader({ eyebrow, title, subtitle, description, accent }:
       {/* Title group: main title + (optional) byline. They live in
           the same wrapper so they read as a single typographic unit;
           the `gap` from `styles.root` doesn't apply between them
-          because they're inside one View. */}
+          because they're inside one View. When `subtitle` is omitted
+          we still render an invisible placeholder of the same height
+          so SM and QM tabs (the latter has "A new way to meditate")
+          land their content at exactly the same vertical Y — keeps
+          the cross-tab swipe feeling like one continuous surface. */}
       <View style={styles.titleGroup}>
         <Text style={styles.title}>{noOrphan(title)}</Text>
-        {subtitle ? (
-          <Text style={styles.titleByline}>{noOrphan(subtitle)}</Text>
-        ) : null}
+        <Text
+          style={[styles.titleByline, !subtitle && styles.titleBylineHidden]}
+          aria-hidden={!subtitle}
+        >
+          {subtitle ? noOrphan(subtitle) : ' '}
+        </Text>
       </View>
 
       {description ? (
@@ -102,17 +109,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: spacing.sm,
   },
-  // Secondary title line — smaller than `title`, italic, dim, but
-  // still part of the title group (sits inside `titleGroup`). Reads
-  // as a brand-promise byline rather than body copy.
+  // Secondary title line — same display family / uppercase / letter
+  // spacing as the main title, just smaller. Reads as part of the
+  // title group rather than a body line.
   titleByline: {
-    ...type.body,
+    ...type.display,
     color: colors.textMuted,
-    fontSize: 14,
+    fontSize: 13,
+    letterSpacing: 1.2,
     lineHeight: 20,
     textAlign: 'center',
-    fontStyle: 'italic',
     paddingHorizontal: spacing.sm,
+  },
+  // Reserves the byline's vertical box without drawing anything when
+  // the consumer didn't pass a subtitle — equalizes header height
+  // across SM (no byline) and QM (has byline).
+  titleBylineHidden: {
+    opacity: 0,
   },
   description: {
     ...type.body,
