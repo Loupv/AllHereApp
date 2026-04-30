@@ -115,30 +115,6 @@ function extractEmbedFromHtml(html: string | undefined): { embedUrl?: string; co
   return { embedUrl: url, contentHtml };
 }
 
-/**
- * Synthesize a playable iframe URL from external podcast / video links
- * found inside a WP post's content. allhere.org's editor often pastes
- * just the listen-on badges (Apple Podcasts / Spotify / Buzzsprout)
- * with NO inline iframe — turn the first detected podcast link into a
- * real embed so the detail page renders an actual player instead of
- * just showing the listen-on icons.
- */
-function podcastEmbedFromHtml(html: string | undefined): string | undefined {
-  if (!html) return undefined;
-  const sp = html.match(/open\.spotify\.com\/episode\/([a-zA-Z0-9]+)/);
-  if (sp) return `https://open.spotify.com/embed/episode/${sp[1]}`;
-  const ap = html.match(/podcasts\.apple\.com\/[^"'\s]*?id(\d+)(?:[^"'\s]*?\?i=(\d+))?/);
-  if (ap) {
-    const showId = ap[1];
-    const epId = ap[2];
-    const base = `https://embed.podcasts.apple.com/podcast/id${showId}`;
-    return epId ? `${base}?i=${epId}` : base;
-  }
-  const bz = html.match(/buzzsprout\.com\/(\d+)\/episodes\/(\d+)/);
-  if (bz) return `https://www.buzzsprout.com/${bz[1]}/episodes/${bz[2]}?iframe=true`;
-  return undefined;
-}
-
 async function enrichWithScrapedEmbed<T extends { contentHtml?: string; link?: string; embedUrl?: string }>(item: T): Promise<T> {
   // Already an inline iframe? Lift it into embedUrl so the detail view
   // can show it as the hero, and strip it from contentHtml.
@@ -147,12 +123,11 @@ async function enrichWithScrapedEmbed<T extends { contentHtml?: string; link?: s
     if (embedUrl) return { ...item, embedUrl, contentHtml };
     return item;
   }
-  // Podcast badges-only posts — synthesize an embed from the first
-  // recognized listen-on link. Cheaper than the live-page scrape and
-  // covers Forum Radio / similar in-the-headlines podcast posts where
-  // the WP content carries only Spotify / Apple / Buzzsprout badges.
-  const synth = podcastEmbedFromHtml(item.contentHtml);
-  if (synth) return { ...item, embedUrl: synth };
+  // For podcast posts (e.g. Forum Radio Interview), the WP content
+  // already carries an inline <audio> element wrapped in a custom
+  // widget — HtmlViewer rewrites that into a native <audio controls>
+  // tag that works without the inline JS. Don't synthesize a separate
+  // hero embed: we'd end up with two players on the same page.
   if (!item.link) return item;
   const embed = await scrapeEmbed(item.link);
   if (!embed) return item;

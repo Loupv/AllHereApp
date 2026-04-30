@@ -40,23 +40,57 @@ const htmlToParagraphs = (html: string): string[] => {
 // WP rarely outputs <script> but we strip them just in case. Everything
 // else (iframes, images, links, headings) renders as-is on web.
 
-const sanitize = (html: string) =>
-  html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/ on[a-z]+="[^"]*"/gi, '') // strip inline event handlers
-    .replace(/ on[a-z]+='[^']*'/gi, '')
-    // Strip srcset / sizes / lazy-loading attributes on <img>: WP
-    // generates srcset entries for tiny variants (e.g. 18w) that the
-    // browser may pick when our CSS forces width:100%, leaving the
-    // image effectively invisible — and rocket-lazyload's
-    // loading="lazy" + data-lazy-src kept podcast-platform badges
-    // (Apple/Spotify/Deezer/Buzzsprout) from ever loading on the
-    // detail page. Force browsers to use just the canonical `src`.
-    .replace(/\s+srcset=("[^"]*"|'[^']*')/gi, '')
-    .replace(/\s+sizes=("[^"]*"|'[^']*')/gi, '')
-    .replace(/\s+loading=("[^"]*"|'[^']*')/gi, '')
-    .replace(/\s+data-lazy-src=("[^"]*"|'[^']*')/gi, '')
-    .replace(/\s+data-lazy-srcset=("[^"]*"|'[^']*')/gi, '');
+/**
+ * The Forum Radio (and similar) WP posts ship a custom audio widget:
+ * a wrapping <div class="podcast-player-wrap"> with hand-rolled
+ * play/seek/mute buttons, an inline <style> block, and an inline
+ * <script> that wires the buttons to an <audio> element holding the
+ * Buzzsprout MP3. Our sanitize step strips the <script>, leaving
+ * the buttons inert and the page with what looks like a broken
+ * player. Replace the whole widget with a clean <audio controls>
+ * element pointing at the same MP3 — the browser's native player
+ * works without JS and is consistent across Spotify / Apple /
+ * Buzzsprout-only posts where this widget is the source of truth.
+ */
+const rewriteCustomAudioWidget = (html: string): string => {
+  const start = html.search(/<div\s+class="(?:list-img[^"]*|podcast-player-wrap)/i);
+  if (start < 0) return html;
+  const tail = html.slice(start);
+  const srcMatch = tail.match(/<source\s+src="([^"]+\.mp3[^"]*)"\s+type="audio\/mpeg"/i);
+  if (!srcMatch) return html;
+  const src = srcMatch[1];
+  // Find the end of the widget block — typically `</script></div>` (the
+  // wrapper div closes after the inline script). Match the inline JS
+  // closer plus any number of immediately-following </div> tags so we
+  // don't leave a dangling wrapper open.
+  const closer = tail.match(/<\/script>(\s*<\/div>)*/i);
+  if (!closer) return html;
+  const end = start + (closer.index ?? 0) + closer[0].length;
+  const replacement = `<audio src="${src}" controls preload="metadata" style="width:100%;display:block;margin:16px 0;border-radius:10px"></audio>`;
+  return html.slice(0, start) + replacement + html.slice(end);
+};
+
+const sanitize = (html: string) => {
+  const lifted = rewriteCustomAudioWidget(html);
+  return (
+    lifted
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/ on[a-z]+="[^"]*"/gi, '') // strip inline event handlers
+      .replace(/ on[a-z]+='[^']*'/gi, '')
+      // Strip srcset / sizes / lazy-loading attributes on <img>: WP
+      // generates srcset entries for tiny variants (e.g. 18w) that the
+      // browser may pick when our CSS forces width:100%, leaving the
+      // image effectively invisible — and rocket-lazyload's
+      // loading="lazy" + data-lazy-src kept podcast-platform badges
+      // (Apple/Spotify/Deezer/Buzzsprout) from ever loading on the
+      // detail page. Force browsers to use just the canonical `src`.
+      .replace(/\s+srcset=("[^"]*"|'[^']*')/gi, '')
+      .replace(/\s+sizes=("[^"]*"|'[^']*')/gi, '')
+      .replace(/\s+loading=("[^"]*"|'[^']*')/gi, '')
+      .replace(/\s+data-lazy-src=("[^"]*"|'[^']*')/gi, '')
+      .replace(/\s+data-lazy-srcset=("[^"]*"|'[^']*')/gi, '')
+  );
+};
 
 // ---- component ---------------------------------------------------------
 
@@ -132,6 +166,9 @@ const SCOPED_CSS = `
 .ah-html .podcast-img { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; align-items: center; }
 .ah-html .podcast-img a { display: inline-block; line-height: 0; }
 .ah-html .podcast-img img { width: auto; max-width: 175px; height: auto; margin: 0; border-radius: 6px; display: inline-block; }
+/* Native <audio> element (the rewritten Forum Radio / Buzzsprout
+   player) — dark-glass background that matches the rest of the app. */
+.ah-html audio { width: 100%; display: block; margin: 16px 0; border-radius: 10px; background: rgba(255,255,255,0.04); }
 .ah-html ul, .ah-html ol { padding-left: 20px; }
 .ah-html figure { margin: 16px 0; }
 .ah-html figcaption { font-size: 12px; color: #8a93a6; text-align: center; margin-top: 6px; }

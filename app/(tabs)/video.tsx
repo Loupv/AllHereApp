@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
+import { LazyImage } from '../../src/components/LazyImage';
 import { SeeMoreLink } from '../../src/components/SeeMoreLink';
 import { videoItems, type VideoItem, type MediaKind } from '../../src/content/catalog';
 import { useVideoFeed, useNewsFeed } from '../../src/content/remote';
@@ -193,7 +194,7 @@ export default function VideoScreen() {
             >
               {isUnread ? <View style={styles.unreadStrip} /> : null}
               <View style={styles.posterWrap}>
-                <Image source={r.poster} style={styles.poster} resizeMode="cover" />
+                <LazyImage source={r.poster} style={styles.poster} resizeMode="cover" alt={r.title} />
                 <View style={styles.posterOverlay} />
                 {r.kind === 'video' ? (
                   <View style={styles.playBadge}>
