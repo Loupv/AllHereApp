@@ -192,6 +192,10 @@ export default function RootLayout() {
           gestureDirection: 'horizontal',
           fullScreenGestureEnabled: true,
           fullScreenGestureShadowEnabled: true,
+          // Make the back-swipe drive our slide_from_right animation
+          // in reverse, instead of falling back to a platform default
+          // that may conflict with the custom animation we set above.
+          customAnimationOnGesture: true,
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'none' }} />
