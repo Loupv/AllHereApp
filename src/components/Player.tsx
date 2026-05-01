@@ -14,7 +14,7 @@ import { loadTranscript } from '../content/loadTranscript';
 import { findCueIndex, TranscriptCue } from '../content/transcript';
 import { trackProgram, trackLocation } from '../content/catalog';
 import { resolveAudioSource, prefetchAudio } from '../content/audioResolver';
-import { getAudioSource, getInterSource } from '../content/audioRegistry';
+import { getAudioSource, getInterSource, getTranscriptSource, getInterTranscriptSource } from '../content/audioRegistry';
 import { WAVEFORMS } from '../content/waveforms.generated';
 import { colors, radius, spacing, type } from '../theme';
 import { noOrphan } from '../utils/noOrphan';
@@ -509,15 +509,45 @@ function PlayerInner() {
   }, [track?.id]);
 
   useEffect(() => {
-    // Prefer round-specific transcript when playing a segmented round / inter
-    const roundTranscript = (() => {
-      const r = track?.rounds;
-      if (!r) return undefined;
-      if (inBreak) return r.roundInterTranscripts?.[currentRound - 1] ?? undefined;
-      if (currentRound === 0) return r.introTranscript;
-      return r.roundTranscripts?.[currentRound - 1];
-    })();
-    const tr = roundTranscript ?? track?.transcript;
+    // Prefer round-specific transcript when playing a segmented round / inter.
+    // Fallback chain (most-specific first → least):
+    //  1. track.rounds.roundTranscripts / .roundInterTranscripts (catalog
+    //     hardcoded — rare, used for the home QM3 quick start)
+    //  2. track.transcript (single-audio tracks)
+    //  3. audioRegistry.getTranscriptSource(track.id, roundIdx, isInter) —
+    //     resolves bundled .wjson based on track id + round index, covering
+    //     the QM tracks that don't carry transcripts in the catalog directly
+    //     (qm1-4, qm2-3, etc. used to render "No transcript for this audio"
+    //     even though the .wjson files were bundled).
+    const r = track?.rounds;
+    let tr: number | string | null | undefined;
+    if (r) {
+      if (inBreak) {
+        tr = r.roundInterTranscripts?.[currentRound - 1] ?? undefined;
+        if (tr == null && track?.id) {
+          const fb = getInterTranscriptSource(track.id, currentRound - 1);
+          tr = fb?.bundled ?? fb?.remote ?? null;
+        }
+      } else if (currentRound === 0) {
+        tr = r.introTranscript;
+        if (tr == null && track?.id) {
+          const fb = getTranscriptSource(track.id);
+          tr = fb?.bundled ?? fb?.remote ?? null;
+        }
+      } else {
+        tr = r.roundTranscripts?.[currentRound - 1];
+        if (tr == null && track?.id) {
+          const fb = getTranscriptSource(track.id, currentRound - 1);
+          tr = fb?.bundled ?? fb?.remote ?? null;
+        }
+      }
+    } else {
+      tr = track?.transcript;
+      if (tr == null && track?.id) {
+        const fb = getTranscriptSource(track.id);
+        tr = fb?.bundled ?? fb?.remote ?? null;
+      }
+    }
     // Reset scroll to top for every new audio (new track or new round)
     scrollRef.current?.scrollTo({ y: 0, animated: false });
     expectedScrollY.current = 0;

@@ -172,17 +172,15 @@ export default function RootLayout() {
           // has no title. Just the chevron is enough.
           headerBackTitle: '',
           headerBackButtonDisplayMode: 'minimal',
-          // Cross-fade for tab → detail pushes. Slide_from_right used to
-          // bleed two layers visually because every screen has
-          // backgroundColor:'transparent' (so the shared gradient +
-          // EnergyColumn backdrop shows through every page). With
-          // transparent screens, slide_from_right rendered both old
-          // and new content overlapping during the parallax — what
-          // the user reported as "superposition d'animation". Fade
-          // keeps the static backdrop perfectly steady and cross-
-          // fades only the content layer.
-          animation: 'fade',
-          animationDuration: 220,
+          // simple_push: only the new screen slides in from the right,
+          // the old one stays put (no parallax). slide_from_right used
+          // to layer two transparent screens during the parallax move
+          // and the user could see both contents at once — what they
+          // called "superposition". simple_push avoids that because
+          // there's nothing for the old screen to do; the new screen
+          // just covers it as it slides in.
+          animation: 'simple_push',
+          animationDuration: 260,
           // Native swipe-back from the left edge to dismiss a detail page
           // (iOS already does this by default; we set it explicitly so
           // Android's native-stack also picks it up). Web gets an
