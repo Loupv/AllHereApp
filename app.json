@@ -23,7 +23,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "bundleIdentifier": "com.allhere.allhere",
+      "bundleIdentifier": "org.allhere.silentmind",
       "supportsTablet": true,
       "infoPlist": {
         "UIBackgroundModes": [
