@@ -181,12 +181,17 @@ export default function RootLayout() {
           // just covers it as it slides in.
           animation: 'simple_push',
           animationDuration: 260,
-          // Native swipe-back from the left edge to dismiss a detail page
-          // (iOS already does this by default; we set it explicitly so
-          // Android's native-stack also picks it up). Web gets an
-          // equivalent handler via <WebSwipeBack /> below.
+          // Native swipe-back: activate from anywhere on the screen, not
+          // only from the left edge. iOS's default edge-only swipe was
+          // confusing on detail pages with horizontal content (the
+          // user started a swipe mid-screen and nothing happened). The
+          // SubPageSwipeNav wrapper consumes only LEFTWARD pans, so a
+          // rightward pan falls through to this back gesture cleanly.
+          // Web gets an equivalent handler via <WebSwipeBack /> below.
           gestureEnabled: true,
           gestureDirection: 'horizontal',
+          fullScreenGestureEnabled: true,
+          fullScreenGestureShadowEnabled: true,
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'none' }} />
