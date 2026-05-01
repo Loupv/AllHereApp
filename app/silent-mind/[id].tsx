@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { ContentCard } from '../../src/components/ContentCard';
+import { TrackCard } from '../../src/components/TrackCard';
 import { ProgramHeader } from '../../src/components/ProgramHeader';
 import { SubPageSwipeNav } from '../../src/components/SubPageSwipeNav';
 import { silentMindVolets, qmVolets, silentMindProgram, trackDuration } from '../../src/content/catalog';
@@ -92,12 +93,10 @@ export default function VoletScreen() {
                     disabled
                   />
                 ) : (
-                  <ContentCard
+                  <TrackCard
                     key={t.id}
-                    title={t.title}
+                    track={t}
                     duration={trackDuration(t)}
-                    kind="audio"
-                    description={t.description}
                     expanded={expandedId === t.id}
                     onToggle={() => setExpandedId(prev => prev === t.id ? null : t.id)}
                     onPlay={() => openPlayer(t, playable, { autoStart: true })}

@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
 import { ContentCard } from '../../src/components/ContentCard';
+import { TrackCard } from '../../src/components/TrackCard';
 import { ProgramHeader } from '../../src/components/ProgramHeader';
 import { SubPageSwipeNav } from '../../src/components/SubPageSwipeNav';
 import { qmVolets, qmProgram, silentMindVolets, trackDuration } from '../../src/content/catalog';
@@ -76,14 +77,12 @@ export default function QMVoletScreen() {
                   );
                 }
                 return (
-                  <ContentCard
+                  <TrackCard
                     key={t.id}
-                    title={t.title}
+                    track={t}
                     meta={t.rounds ? `${t.rounds.max} × ${t.rounds.roundLengthMinutes} min` : undefined}
                     duration={trackDuration(t)}
-                    kind="audio"
                     accent={colors.accentAlt}
-                    description={t.description}
                     expanded={expandedId === t.id}
                     onToggle={() => setExpandedId(prev => prev === t.id ? null : t.id)}
                     onPlay={() => openPlayer(t, playable, { autoStart: true })}

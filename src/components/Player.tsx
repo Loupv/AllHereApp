@@ -241,9 +241,6 @@ function PlayerInner() {
   const [isResolving, setIsResolving] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [resolveError, setResolveError] = useState<string | null>(null);
-  const [isDownloadingForOffline, setIsDownloadingForOffline] = useState(false);
-  const [offlineDownloadProgress, setOfflineDownloadProgress] = useState(0);
-  const [offlineDownloadError, setOfflineDownloadError] = useState<string | null>(null);
   const endedHandled = useRef(false);
   const roundChangedAt = useRef(0);
 
@@ -367,44 +364,8 @@ function PlayerInner() {
     }
   }, [status.playing, track?.id, currentRound, playlist, index]);
 
-  // Download audio for offline listening
-  const handleDownloadForOffline = async () => {
-    if (!track?.id || isDownloadingForOffline) return;
-
-    // Use same resolution logic as main audio playback
-    let roundIndex: number | undefined;
-    if (track.rounds) {
-      if (currentRound === 0) {
-        roundIndex = undefined;
-      } else if (inBreak) {
-        roundIndex = currentRound - 1;
-      } else {
-        roundIndex = currentRound - 1;
-      }
-    }
-
-    setIsDownloadingForOffline(true);
-    setOfflineDownloadError(null);
-    setOfflineDownloadProgress(0);
-    try {
-      await resolveAudioSource(
-        track.id,
-        roundIndex,
-        inBreak,
-        (bytes, total) => {
-          if (total > 0) setOfflineDownloadProgress(Math.round((bytes / total) * 100));
-        },
-      );
-      setOfflineDownloadProgress(100);
-      // Keep the success state visible for 2 seconds
-      setTimeout(() => setOfflineDownloadProgress(0), 2000);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Download failed';
-      setOfflineDownloadError(msg);
-    } finally {
-      setIsDownloadingForOffline(false);
-    }
-  };
+  // (Offline download UI moved to ContentCard via TrackCard — see
+  // useTrackDownload hook. The Player no longer carries that affordance.)
 
   // Reset smooth time whenever the audio source identity changes (new track, round, or break)
   const sourceKey = `${track?.id ?? 'none'}|${inBreak ? 'b' : 'r'}|${currentRound}`;
@@ -1145,19 +1106,7 @@ function PlayerInner() {
           />
         )}
 
-        {offlineDownloadProgress > 0 ? (
-          <View style={styles.sideBtn}>
-            <Text style={styles.sideBtnText}>{offlineDownloadProgress}%</Text>
-          </View>
-        ) : offlineDownloadError ? (
-          <Pressable onPress={handleDownloadForOffline} style={styles.sideBtn}>
-            <Text style={styles.sideBtnText}>⟳</Text>
-          </Pressable>
-        ) : !hasStarted && !isDownloadingForOffline ? (
-          <Pressable onPress={handleDownloadForOffline} style={styles.sideBtn}>
-            <Text style={styles.sideBtnText}>⬇</Text>
-          </Pressable>
-        ) : hasStarted && !finished && canSeek ? (
+        {hasStarted && !finished && canSeek ? (
           <Pressable onPress={() => seekAndResume(Math.min(duration, t + 15))} style={styles.sideBtn}>
             <Text style={styles.sideBtnText}>+15s</Text>
           </Pressable>

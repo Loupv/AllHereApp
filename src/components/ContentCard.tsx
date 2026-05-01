@@ -24,7 +24,7 @@ type Props = {
    * Track description shown when the card is expanded (accordion mode).
    * If absent, the card stays a plain row that calls `onPress` directly.
    */
-  description?: string | { text: string; style?: 'bold' | 'italic' }[];
+  description?: string | { text: string; style?: 'bold' | 'italic' | 'normal' }[];
   /**
    * Tap on the row body — expands the accordion if `description` +
    * `onPlay` are provided (controlled mode via `expanded` /
@@ -44,6 +44,17 @@ type Props = {
   expanded?: boolean;
   onToggle?: () => void;
   accent?: string;
+  /**
+   * Optional offline-download chip shown alongside the Play button in
+   * the expanded panel. Only rendered when `onDownload` is provided.
+   *   - 'idle': ⬇ download icon (tap to start)
+   *   - 'downloading': progress label (e.g. "47%")
+   *   - 'cached': checkmark — already on disk
+   *   - 'error': retry icon
+   */
+  downloadState?: 'idle' | 'downloading' | 'cached' | 'error';
+  downloadProgress?: number;
+  onDownload?: () => void;
 };
 
 export function ContentCard({
@@ -51,6 +62,7 @@ export function ContentCard({
   duration, kind = 'audio', disabled,
   description, onPress, onPlay, expanded = false, onToggle,
   accent = colors.accent,
+  downloadState, downloadProgress, onDownload,
 }: Props) {
   const tint = disabled ? colors.textDim : accent;
   const expandable = !!description && !!onPlay && !!onToggle && !disabled;
@@ -67,7 +79,7 @@ export function ContentCard({
 
   // Description can be a single string or a structured list of lines (for
   // pre-formatted tracks like the QM intro). Normalise to a flat array.
-  const descLines: { text: string; style?: 'bold' | 'italic' }[] | null =
+  const descLines: { text: string; style?: 'bold' | 'italic' | 'normal' }[] | null =
     typeof description === 'string'
       ? [{ text: description }]
       : Array.isArray(description) ? description : null;
@@ -116,17 +128,46 @@ export function ContentCard({
               </Text>
             ))}
           </View>
-          <Pressable
-            onPress={onPlay}
-            style={({ pressed }) => [
-              styles.playBtn,
-              { borderColor: tint },
-              pressed && { opacity: 0.75 },
-            ]}
-          >
-            <Text style={[styles.playGlyph, { color: tint }]}>▶</Text>
-            <Text style={[styles.playLabel, { color: tint }]}>Play</Text>
-          </Pressable>
+          <View style={styles.actionsRow}>
+            <Pressable
+              onPress={onPlay}
+              style={({ pressed }) => [
+                styles.playBtn,
+                { borderColor: tint },
+                pressed && { opacity: 0.75 },
+              ]}
+            >
+              <Text style={[styles.playGlyph, { color: tint }]}>▶</Text>
+              <Text style={[styles.playLabel, { color: tint }]}>Play</Text>
+            </Pressable>
+            {onDownload ? (
+              <Pressable
+                onPress={downloadState === 'downloading' ? undefined : onDownload}
+                disabled={downloadState === 'downloading'}
+                accessibilityLabel={
+                  downloadState === 'cached'
+                    ? 'Saved offline'
+                    : downloadState === 'downloading'
+                      ? `Downloading ${downloadProgress ?? 0}%`
+                      : downloadState === 'error'
+                        ? 'Retry download'
+                        : 'Download for offline use'
+                }
+                style={({ pressed }) => [
+                  styles.downloadBtn,
+                  { borderColor: tint },
+                  pressed && { opacity: 0.75 },
+                ]}
+              >
+                <Text style={[styles.downloadGlyph, { color: tint }]}>
+                  {downloadState === 'cached' ? '✓'
+                    : downloadState === 'downloading' ? `${downloadProgress ?? 0}%`
+                    : downloadState === 'error' ? '⟳'
+                    : '⬇'}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
       ) : null}
     </View>
@@ -180,8 +221,14 @@ const styles = StyleSheet.create({
   desc: { ...type.body, color: colors.textMuted, fontSize: 13, lineHeight: 19 },
   descBold: { ...type.body, color: colors.text, fontFamily: 'Montserrat_700Bold', fontSize: 14, lineHeight: 20 },
   descItalic: { ...type.body, color: colors.textMuted, fontStyle: 'italic' },
+  // Row holding the Play button + the optional Download chip side-by-
+  // side under the description.
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   playBtn: {
-    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -192,4 +239,14 @@ const styles = StyleSheet.create({
   },
   playGlyph: { fontSize: 12 },
   playLabel: { ...type.overline, fontSize: 11, letterSpacing: 1.4 },
+  downloadBtn: {
+    minWidth: 44,
+    height: 32,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  downloadGlyph: { ...type.overline, fontSize: 11, letterSpacing: 1.2 },
 });
