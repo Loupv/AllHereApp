@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { Platform } from 'react-native';
 import * as audioCacheManager from '../services/audioCacheManager';
 import * as audioDownloader from '../services/audioDownloader';
 import { getAudioSource, getInterSource } from '../content/audioRegistry';
@@ -83,30 +84,70 @@ export function useTrackDownload(track: AudioTrack | undefined): DownloadInfo {
     if (!track || inFlight.current) return;
     const { keys, remoteFor } = buildCacheKeys(track);
     if (keys.length === 0) return;
+    // Web has no real disk to write to — expo-file-system's native
+    // APIs (getInfoAsync, createDownloadResumable…) are unavailable
+    // there, so the chip would spin forever. Browsers cache audio
+    // playback automatically anyway. Mark as cached so the UI gives
+    // the user useful feedback instead of a stuck 0%.
+    if (Platform.OS === 'web') {
+      setState('cached');
+      setProgress(100);
+      return;
+    }
     inFlight.current = true;
     setState('downloading');
     setProgress(0);
+    // Watchdog: if no progress callback fires for 30 s, assume the
+    // download is stuck (server not responding, NSURLSession hang,
+    // etc.) and surface the error UI so the user can retry. The
+    // timer is rearmed every time setProgress is called.
+    let watchdog: ReturnType<typeof setTimeout> | null = null;
+    let stalled = false;
+    const armWatchdog = () => {
+      if (watchdog) clearTimeout(watchdog);
+      watchdog = setTimeout(() => {
+        stalled = true;
+        console.warn(`[useTrackDownload] no progress for ${track.id} in 30s — marking error`);
+        setState('error');
+        inFlight.current = false;
+      }, 30000);
+    };
+    armWatchdog();
     try {
       // Walk every key (round / inter). Per-segment progress is rolled
       // into a smooth global bar by averaging on completed segments
       // plus the current segment's local progress.
       for (let idx = 0; idx < keys.length; idx++) {
+        if (stalled) return;
         const key = keys[idx];
         const url = remoteFor(key);
         if (!url) continue;
         const cached = await audioCacheManager.getCachedUri(key);
-        if (cached) continue; // already on disk, skip
+        if (cached) {
+          // Bump progress so the user sees motion when some segments
+          // were already cached from a prior partial download.
+          const overall = ((idx + 1) / keys.length) * 100;
+          setProgress(Math.round(overall));
+          armWatchdog();
+          continue;
+        }
         await audioDownloader.downloadAudio(key, url, (bytes, total) => {
+          armWatchdog();
           const segmentPct = total > 0 ? bytes / total : 0;
           const overall = ((idx + segmentPct) / keys.length) * 100;
-          setProgress(Math.round(overall));
+          // Force at least 1% so the user knows something is happening
+          // even before the first byte arrives.
+          setProgress(Math.max(1, Math.round(overall)));
         });
       }
+      if (stalled) return;
       setProgress(100);
       setState('cached');
-    } catch {
-      setState('error');
+    } catch (err) {
+      console.warn(`[useTrackDownload] download failed for ${track.id}:`, err);
+      if (!stalled) setState('error');
     } finally {
+      if (watchdog) clearTimeout(watchdog);
       inFlight.current = false;
     }
   }, [track?.id]);
