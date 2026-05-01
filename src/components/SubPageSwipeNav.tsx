@@ -61,9 +61,14 @@ export function SubPageSwipeNav({ children }: { children: ReactNode }) {
 
   const pan = Gesture.Pan()
     // Only activate on a clear leftward swipe (translationX < -12).
-    // Positive offset is reserved for the OS back-gesture so we don't
-    // race it.
+    // Activating only on negative motion isn't enough — gesture-handler
+    // would still keep the touch in 'pending' state on a rightward
+    // swipe, which blocked react-native-screens' native back-gesture
+    // from kicking in. Explicitly fail on any rightward motion so the
+    // touch is released back to the stack and the iOS swipe-back
+    // animation can run uncontested.
     .activeOffsetX([-9999, -12])
+    .failOffsetX([0, 9999])
     .failOffsetY([-15, 15])
     .onEnd((e) => {
       'worklet';
