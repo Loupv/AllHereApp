@@ -6,7 +6,6 @@ import { Background } from '../../src/components/Background';
 import { ContentCard } from '../../src/components/ContentCard';
 import { TrackCard } from '../../src/components/TrackCard';
 import { ProgramHeader } from '../../src/components/ProgramHeader';
-import { SubPageSwipeNav } from '../../src/components/SubPageSwipeNav';
 import { silentMindVolets, qmVolets, silentMindProgram, trackDuration } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { useProgress, isTrackUnlocked } from '../../src/player/progressStore';
@@ -42,7 +41,6 @@ export default function VoletScreen() {
           on push (configured in app/_layout.tsx). Don't double up
           with a custom Animated.View entering — that overlapped the
           two animations and produced a visible stutter. */}
-      <SubPageSwipeNav>
       <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center' }]}>
         <View style={[styles.column, { maxWidth: columnMax }]}>
           <ProgramHeader
@@ -134,7 +132,6 @@ export default function VoletScreen() {
           ) : null}
         </View>
       </ScrollView>
-      </SubPageSwipeNav>
     </Background>
   );
 }
