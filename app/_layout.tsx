@@ -172,15 +172,15 @@ export default function RootLayout() {
           // has no title. Just the chevron is enough.
           headerBackTitle: '',
           headerBackButtonDisplayMode: 'minimal',
-          // simple_push: only the new screen slides in from the right,
-          // the old one stays put (no parallax). slide_from_right used
-          // to layer two transparent screens during the parallax move
-          // and the user could see both contents at once — what they
-          // called "superposition". simple_push avoids that because
-          // there's nothing for the old screen to do; the new screen
-          // just covers it as it slides in.
-          animation: 'simple_push',
-          animationDuration: 260,
+          // slide_from_right: native iOS push with parallax + the
+          // interactive back-gesture. We tried simple_push to avoid
+          // the parallax overlap when both screens were transparent,
+          // but simple_push by design has no interactive back gesture.
+          // Compromise: keep slide_from_right and give the detail
+          // screens an opaque background (per-screen below) so the
+          // new screen masks the old one as it slides in — no
+          // visible overlap, but the back-swipe is preserved.
+          animation: 'slide_from_right',
           // Native swipe-back: activate from anywhere on the screen, not
           // only from the left edge. iOS's default edge-only swipe was
           // confusing on detail pages with horizontal content (the
@@ -195,11 +195,16 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'none' }} />
-        <Stack.Screen name="silent-mind/[id]" options={{ title: '' }} />
-        <Stack.Screen name="qm/[id]" options={{ title: '' }} />
-        <Stack.Screen name="qm-training" options={{ title: '' }} />
-        <Stack.Screen name="news/[id]" options={{ title: '' }} />
-        <Stack.Screen name="video/[id]" options={{ title: '' }} />
+        {/* Detail screens use an opaque background to mask the
+            previous screen during the parallax slide. They're meant
+            to feel like cards sliding over the tabbed surface. The
+            shared gradient + EnergyColumn backdrop only shows on the
+            (tabs) view. */}
+        <Stack.Screen name="silent-mind/[id]" options={{ title: '', contentStyle: { backgroundColor: colors.bg } }} />
+        <Stack.Screen name="qm/[id]" options={{ title: '', contentStyle: { backgroundColor: colors.bg } }} />
+        <Stack.Screen name="qm-training" options={{ title: '', contentStyle: { backgroundColor: colors.bg } }} />
+        <Stack.Screen name="news/[id]" options={{ title: '', contentStyle: { backgroundColor: colors.bg } }} />
+        <Stack.Screen name="video/[id]" options={{ title: '', contentStyle: { backgroundColor: colors.bg } }} />
       </Stack>
       <WebSwipeBack />
       </ThemeProvider>
