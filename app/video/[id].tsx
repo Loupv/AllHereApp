@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
 import { ScrollView, Text, View, Image, StyleSheet, Pressable, Linking, Platform } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Background } from '../../src/components/Background';
+import { BackButton } from '../../src/components/BackButton';
 import { AboutFooter } from '../../src/components/AboutFooter';
 import { HtmlViewer } from '../../src/components/HtmlViewer';
 import { EmbedPlayer } from '../../src/components/EmbedPlayer';
@@ -22,6 +24,7 @@ export default function VideoArticleScreen() {
   const remoteList = useRemoteStore(s => s.videos);
   const markSeen = useNotifications(s => s.markSeen);
   const { columnMax } = useLayout();
+  const insets = useSafeAreaInsets();
   const video =
     videoItems.find(v => v.id === id) ??
     remoteList.find(v => v.id === id);
@@ -40,7 +43,8 @@ export default function VideoArticleScreen() {
   return (
     <Background>
       <Stack.Screen options={{ title: '' }} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <BackButton />
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top }]}>
         <View style={[styles.column, { maxWidth: columnMax }]}>
           {video.embedUrl
             ? <EmbedPlayer src={video.embedUrl} />

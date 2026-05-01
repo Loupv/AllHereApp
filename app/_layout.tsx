@@ -184,31 +184,26 @@ export default function RootLayout() {
           // Native swipe-back: activate from anywhere on the screen, not
           // only from the left edge. iOS's default edge-only swipe was
           // confusing on detail pages with horizontal content (the
-          // user started a swipe mid-screen and nothing happened). The
-          // SubPageSwipeNav wrapper consumes only LEFTWARD pans, so a
-          // rightward pan falls through to this back gesture cleanly.
+          // user started a swipe mid-screen and nothing happened).
           // Web gets an equivalent handler via <WebSwipeBack /> below.
           gestureEnabled: true,
           gestureDirection: 'horizontal',
           fullScreenGestureEnabled: true,
           fullScreenGestureShadowEnabled: true,
-          // Make the back-swipe drive our slide_from_right animation
-          // in reverse, instead of falling back to a platform default
-          // that may conflict with the custom animation we set above.
-          customAnimationOnGesture: true,
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'none' }} />
-        {/* Detail screens use an opaque background to mask the
-            previous screen during the parallax slide. They're meant
-            to feel like cards sliding over the tabbed surface. The
-            shared gradient + EnergyColumn backdrop only shows on the
-            (tabs) view. */}
-        <Stack.Screen name="silent-mind/[id]" options={{ title: '', contentStyle: { backgroundColor: colors.bg } }} />
-        <Stack.Screen name="qm/[id]" options={{ title: '', contentStyle: { backgroundColor: colors.bg } }} />
-        <Stack.Screen name="qm-training" options={{ title: '', contentStyle: { backgroundColor: colors.bg } }} />
-        <Stack.Screen name="news/[id]" options={{ title: '', contentStyle: { backgroundColor: colors.bg } }} />
-        <Stack.Screen name="video/[id]" options={{ title: '', contentStyle: { backgroundColor: colors.bg } }} />
+        {/* Detail screens hide the navigation header — the page
+            renders its own colored eyebrow ("SILENT MIND PROGRAM ·
+            PART 1") at the same vertical position as the tabs (which
+            also have no header). Back is the swipe-right gesture
+            (fullScreenGestureEnabled). Opaque background masks the
+            previous screen during the parallax slide. */}
+        <Stack.Screen name="silent-mind/[id]" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+        <Stack.Screen name="qm/[id]" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+        <Stack.Screen name="qm-training" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+        <Stack.Screen name="news/[id]" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+        <Stack.Screen name="video/[id]" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
       </Stack>
       <WebSwipeBack />
       </ThemeProvider>

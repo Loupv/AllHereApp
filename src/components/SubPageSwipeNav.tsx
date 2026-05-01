@@ -59,16 +59,17 @@ export function SubPageSwipeNav({ children }: { children: ReactNode }) {
     router.replace(HREF[TABS[next]] as any);
   };
 
+  // Pure detection — no translateX tracking, no animation. We tried
+  // animating the source page off-screen during the drag but the
+  // destination tab isn't mounted as a sibling during a stack pop
+  // + tab replace, so the visual was always "source slides off,
+  // then destination snaps in" — never a true co-animation. Per the
+  // user's call: instantaneous switch on threshold, the drag is just
+  // gesture intent. The platform's own stack-pop + material-top-tabs
+  // transitions handle the visual hand-off.
   const pan = Gesture.Pan()
-    // Only activate on a clear leftward swipe (translationX < -12).
-    // Activating only on negative motion isn't enough — gesture-handler
-    // would still keep the touch in 'pending' state on a rightward
-    // swipe, which blocked react-native-screens' native back-gesture
-    // from kicking in. Explicitly fail on any rightward motion so the
-    // touch is released back to the stack and the iOS swipe-back
-    // animation can run uncontested.
-    .activeOffsetX([-9999, -12])
-    .failOffsetX([0, 9999])
+    .activeOffsetX(-12)
+    .failOffsetX(8)
     .failOffsetY([-15, 15])
     .onEnd((e) => {
       'worklet';

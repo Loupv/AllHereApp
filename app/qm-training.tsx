@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAudioPlayer } from 'expo-audio';
 import { BouncyScrollView as ScrollView } from '../src/components/BouncyScrollView';
 import { Background } from '../src/components/Background';
+import { BackButton } from '../src/components/BackButton';
 import { ProgramHeader } from '../src/components/ProgramHeader';
 import { CircleButton } from '../src/components/CircleButton';
 import { useLayout } from '../src/hooks/useLayout';
@@ -56,6 +58,7 @@ type Phase = 'config' | 'countdown' | 'round' | 'break' | 'done';
 export default function QMTrainingScreen() {
   const router = useRouter();
   const { columnMax } = useLayout();
+  const insets = useSafeAreaInsets();
 
   // Single bell + single tick instances, reused for every cue.
   // `replace` semantics aren't needed — seekTo(0) before play()
@@ -218,7 +221,8 @@ export default function QMTrainingScreen() {
     return (
       <Background color={colors.bgTabAlt}>
         <Stack.Screen options={{ title: '' }} />
-          <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center' }]}>
+        <BackButton />
+          <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center', paddingTop: insets.top }]}>
             <View style={[styles.column, { maxWidth: columnMax }]}>
               <ProgramHeader
                 eyebrow={qmProgram.eyebrow}
@@ -327,7 +331,8 @@ export default function QMTrainingScreen() {
   return (
     <Background color={colors.bgTabAlt}>
       <Stack.Screen options={{ title: '' }} />
-        <View style={[styles.content, { alignItems: 'center' }]}>
+      <BackButton />
+        <View style={[styles.content, { alignItems: 'center', paddingTop: insets.top }]}>
           <View style={[styles.column, { maxWidth: columnMax, alignItems: 'center', justifyContent: 'center', flex: 1 }]}>
             {/* Round / break / countdown label — same grammar as the
                 audio Player's round bar so the session reads as a
@@ -433,17 +438,20 @@ const styles = StyleSheet.create({
   column: { width: '100%', alignSelf: 'center' },
 
   // ---- config picker ---------------------------------------------
+  // Tightened in 78% to fit the whole setup screen (header + 3 pickers
+  // + total + launch + hint) within a standard iPhone viewport
+  // (375×812 minus safe-area + tab-bar) without scrolling.
   pickerBlock: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
-    gap: spacing.sm,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
+    gap: spacing.xs,
   },
   pickerLabel: {
     ...type.sectionLabel,
     color: colors.textMuted,
     fontSize: 11,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   pickerRow: {
     flexDirection: 'row',
@@ -451,7 +459,7 @@ const styles = StyleSheet.create({
   },
   pickerCell: {
     flex: 1,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm + 2,
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.18)',
@@ -476,11 +484,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1.4,
     textAlign: 'center',
-    marginTop: spacing.lg,
+    marginTop: spacing.sm,
   },
   launchRow: {
     alignItems: 'center',
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   launchHint: {
     ...type.overline,
@@ -488,7 +496,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.4,
     textAlign: 'center',
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
 
   // ---- session UI -----------------------------------------------

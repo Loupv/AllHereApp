@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Text, View, Pressable, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
+import { BackButton } from '../../src/components/BackButton';
 import { ContentCard } from '../../src/components/ContentCard';
 import { TrackCard } from '../../src/components/TrackCard';
 import { ProgramHeader } from '../../src/components/ProgramHeader';
+import { SubPageSwipeNav } from '../../src/components/SubPageSwipeNav';
 import { silentMindVolets, qmVolets, silentMindProgram, trackDuration } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { useProgress, isTrackUnlocked } from '../../src/player/progressStore';
@@ -19,6 +22,7 @@ export default function VoletScreen() {
   const openPlayer = usePlayerStore(s => s.open);
   const listened = useProgress(s => s.listened);
   const { columnMax } = useLayout();
+  const insets = useSafeAreaInsets();
   const volet = silentMindVolets.find(v => v.id === id);
   // Mirror volet in the QM tab — same id suffix ('part1' / 'part2' / 'part3').
   const qmTwin = qmVolets.find(v => v.id === id);
@@ -37,11 +41,13 @@ export default function VoletScreen() {
   return (
     <Background color={colors.bgTab}>
       <Stack.Screen options={{ title: volet.title }} />
+      <BackButton />
       {/* The native stack already runs a slide_from_right animation
           on push (configured in app/_layout.tsx). Don't double up
           with a custom Animated.View entering — that overlapped the
           two animations and produced a visible stutter. */}
-      <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center' }]}>
+      <SubPageSwipeNav>
+      <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center', paddingTop: insets.top }]}>
         <View style={[styles.column, { maxWidth: columnMax }]}>
           <ProgramHeader
             eyebrow={
@@ -132,6 +138,7 @@ export default function VoletScreen() {
           ) : null}
         </View>
       </ScrollView>
+      </SubPageSwipeNav>
     </Background>
   );
 }

@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Text, View, Pressable, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { Background } from '../../src/components/Background';
+import { BackButton } from '../../src/components/BackButton';
 import { ContentCard } from '../../src/components/ContentCard';
 import { TrackCard } from '../../src/components/TrackCard';
 import { ProgramHeader } from '../../src/components/ProgramHeader';
+import { SubPageSwipeNav } from '../../src/components/SubPageSwipeNav';
 import { qmVolets, qmProgram, silentMindVolets, trackDuration } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { useProgress, isTrackUnlocked } from '../../src/player/progressStore';
@@ -19,6 +22,7 @@ export default function QMVoletScreen() {
   const openPlayer = usePlayerStore(s => s.open);
   const listened = useProgress(s => s.listened);
   const { columnMax } = useLayout();
+  const insets = useSafeAreaInsets();
   const volet = qmVolets.find(v => v.id === id);
   const smTwin = silentMindVolets.find(v => v.id === id);
 
@@ -38,10 +42,12 @@ export default function QMVoletScreen() {
   return (
     <Background color={colors.bgTabAlt}>
       <Stack.Screen options={{ title: `QM · ${volet.title}` }} />
+      <BackButton />
       {/* Native stack already animates the push (slide_from_right in
           app/_layout.tsx) — running another Animated.View entering
           here doubled up and made the screen visibly stutter. */}
-      <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center' }]}>
+      <SubPageSwipeNav>
+      <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center', paddingTop: insets.top }]}>
         <View style={[styles.column, { maxWidth: columnMax }]}>
           <ProgramHeader
             eyebrow={
@@ -120,6 +126,7 @@ export default function QMVoletScreen() {
           ) : null}
         </View>
       </ScrollView>
+      </SubPageSwipeNav>
     </Background>
   );
 }
