@@ -952,44 +952,11 @@ function PlayerInner() {
       </View>
 
       <View style={styles.body}>
-      <View style={styles.top}>
-        {/* Track title used to live up here at the top of the window;
-            it now sits right above the play circle (mirroring the
-            Start screen's stack) so the screen-to-screen morph feels
-            continuous. We keep just the round bar at the top — purely
-            a "where am I in this session" status row. */}
-        {rounds ? (
-          <View style={styles.roundBar}>
-            {hasStarted ? (
-              <>
-                <Text style={[styles.roundBarText, { color: accent }, inBreak && styles.roundBarBreak]}>
-                  {currentRound === 0
-                    ? 'INTRO'
-                    : inBreak
-                      ? `· BREAK · between round ${currentRound} and ${currentRound + 1} ·`
-                      : `ROUND ${currentRound} / ${selectedRounds}`}
-                </Text>
-                <View style={styles.dotsRow}>
-                  {Array.from({ length: selectedRounds }, (_, i) => {
-                    const state = i + 1 < currentRound ? 'done' : i + 1 === currentRound ? 'current' : 'upcoming';
-                    return (
-                      <View key={i} style={[
-                        styles.dot,
-                        state === 'done' && styles.dotDone,
-                        state === 'current' && [styles.dotCurrent, { backgroundColor: accent }],
-                      ]} />
-                    );
-                  })}
-                </View>
-              </>
-            ) : (
-              <Text style={[styles.roundBarText, { color: accent }]}>
-                QM{rounds.roundLengthMinutes} · {rounds.roundLengthMinutes}-MIN ROUNDS · UP TO {rounds.max}
-              </Text>
-            )}
-          </View>
-        ) : null}
-      </View>
+      {/* Round bar moved into the pre-circle eyebrow slot below for
+          QM tracks — keeping it here too would duplicate the round
+          count in two places. Non-QM tracks keep an empty top bar
+          to preserve safe-area spacing. */}
+      <View style={styles.top} />
 
       {/* Middle content area */}
       {/* Flex spacer pushing the circle down so it lands at roughly
@@ -1011,11 +978,37 @@ function PlayerInner() {
         const alreadyListened = !!listened[track.id];
         return (
           <View style={styles.preCircle}>
-            {loc ? (
+            {rounds ? (
+              hasStarted ? (
+                <View style={styles.roundBar}>
+                  <Text style={[styles.roundBarText, { color: accent }, inBreak && styles.roundBarBreak]}>
+                    {currentRound === 0
+                      ? 'INTRO'
+                      : inBreak
+                        ? `· BREAK · between round ${currentRound} and ${currentRound + 1} ·`
+                        : `ROUND ${currentRound} / ${selectedRounds}`}
+                  </Text>
+                  <View style={styles.dotsRow}>
+                    {Array.from({ length: selectedRounds }, (_, i) => {
+                      const state = i + 1 < currentRound ? 'done' : i + 1 === currentRound ? 'current' : 'upcoming';
+                      return (
+                        <View key={i} style={[
+                          styles.dot,
+                          state === 'done' && styles.dotDone,
+                          state === 'current' && [styles.dotCurrent, { backgroundColor: accent }],
+                        ]} />
+                      );
+                    })}
+                  </View>
+                </View>
+              ) : (
+                <Text style={[styles.preCircleEyebrow, { color: accent }]} numberOfLines={1}>
+                  QM{rounds.roundLengthMinutes} · {rounds.max} × {rounds.roundLengthMinutes} MIN
+                </Text>
+              )
+            ) : loc ? (
               <Text style={styles.preCircleEyebrow} numberOfLines={1}>
-                {rounds
-                  ? `${loc.label.toUpperCase()} · QM${rounds.roundLengthMinutes} · ${rounds.max} × ${rounds.roundLengthMinutes} MIN`
-                  : `${loc.label.toUpperCase()} · ${loc.position} / ${loc.total}`}
+                {loc.label.toUpperCase()} · {loc.position} / {loc.total}
               </Text>
             ) : null}
             {/* Tiny "you've heard this one" tag, rendered between the
