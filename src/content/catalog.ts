@@ -210,14 +210,14 @@ export const silentMindVolets: Volet[] = [
     ],
     qmTracks: [
       {
-        id: 'qm1-2', title: 'Breath and Self-Observation',
+        id: 'qm1-2', title: 'QM3 — Breath and Self-Observation',
         description: 'Turn the mind towards the breathing process — notice the body exhaling, inhaling, then resting attention on the natural breath.',
         rounds: {
           max: 7, roundLengthMinutes: 3, breakSeconds: 60,
         },
       },
       {
-        id: 'qm1-4', title: 'Center of Gravity',
+        id: 'qm1-4', title: 'QM5 — Center of Gravity',
         description: 'Start with a long exhalation — empty yourself of air, then let the body inhale freely. Deepen into the Center of Gravity practice.',
         rounds: {
           max: 5, roundLengthMinutes: 5, breakSeconds: 60,
@@ -257,7 +257,7 @@ export const silentMindVolets: Volet[] = [
       // Asset files still exist under assets/audio/QMPart2/, just
       // unreferenced; flip back when an SM "Cosmic Sky" lands.
       {
-        id: 'qm2-3', title: 'Unfollow and Witness the Air',
+        id: 'qm2-3', title: 'QM3 — Unfollow and Witness the Air',
         description: "QM3 training by All Here — designed to train the ability to quickly mobilize presence. Six rounds of three minutes each with one-minute breaks in between.",
         rounds: {
           max: 6, roundLengthMinutes: 3, breakSeconds: 60,
@@ -309,7 +309,7 @@ const threeMinutes: AudioTrack = {
 // with 1-min inters, reusing the segmented Breath audio.
 const qm3RoundsHome: AudioTrack = {
   id: 'home-qm3',
-  title: 'QM · Three rounds',
+  title: 'QM3 · Three rounds',
   durationHint: '11 min',
   description: 'A first taste of Quantified Meditation: three rounds of three minutes with one-minute pauses between them.',
   rounds: {
@@ -357,7 +357,7 @@ export const startJourneySteps = [
   },
   {
     id: 'step-qm3',
-    label: 'QM · 3 rounds',
+    label: 'QM3 · 3 rounds',
     description: 'A first Quantified Meditation session:\nthree short rounds with one-minute pauses.',
     track: qm3RoundsHome,
   },

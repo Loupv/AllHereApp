@@ -93,6 +93,19 @@ const REMOTE_PATTERN = (path: string): string | null => {
  * @returns { bundled?, remote? } or null if not found
  */
 export function getAudioSource(trackId: string, roundIndex?: number): AudioSource | null {
+  // home-qm3 (the Start screen "QM · Three rounds" quick CTA) walks
+  // through the same bundled QM3 audio as the per-round entries below,
+  // but indexed by roundIndex 0..2 instead of having distinct track
+  // ids. resolveAudioSource is called with track.id='home-qm3' +
+  // roundIndex, so we have to handle that shape here too — otherwise
+  // the resolve threw "Audio source not found" and the Player got
+  // stuck loading.
+  if (trackId === 'home-qm3' && roundIndex !== undefined) {
+    const homeQm3Rounds = [BUNDLED_AUDIO.qm3Br1, BUNDLED_AUDIO.qm3Br2, BUNDLED_AUDIO.qm3Br3];
+    const src = homeQm3Rounds[roundIndex];
+    if (src !== undefined) return { bundled: src };
+  }
+
   // Map bundled track IDs to their audio sources
   const bundledMap: Record<string, number> = {
     'home-1min': BUNDLED_AUDIO.homeOneMin,
@@ -244,6 +257,12 @@ export function isBundled(trackId: string): boolean {
  * @param interIndex - Inter index (0-based, between rounds)
  */
 export function getInterSource(trackId: string, interIndex: number): AudioSource | null {
+  // home-qm3: bundled inters (only 2 — between rounds 1-2 and 2-3).
+  if (trackId === 'home-qm3') {
+    const homeQm3Inters = [BUNDLED_AUDIO.qm3Inter1, BUNDLED_AUDIO.qm3Inter2];
+    const src = homeQm3Inters[interIndex];
+    return src !== undefined ? { bundled: src } : null;
+  }
   const qmInterMap: Record<string, { folder: string; pattern: string; maxInters: number }> = {
     'qm1-2': {
       folder: 'QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation',
