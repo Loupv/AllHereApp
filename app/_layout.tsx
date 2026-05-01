@@ -172,11 +172,17 @@ export default function RootLayout() {
           // has no title. Just the chevron is enough.
           headerBackTitle: '',
           headerBackButtonDisplayMode: 'minimal',
-          // Horizontal slide when pushing a detail page from a tab — the
-          // "opening a sub-folder" cue. Applies to every non-(tabs) child
-          // (silent-mind/[id], qm/[id], news/[id], video/[id]). Tab
-          // switches themselves keep their own root-level behaviour.
-          animation: 'slide_from_right',
+          // Cross-fade for tab → detail pushes. Slide_from_right used to
+          // bleed two layers visually because every screen has
+          // backgroundColor:'transparent' (so the shared gradient +
+          // EnergyColumn backdrop shows through every page). With
+          // transparent screens, slide_from_right rendered both old
+          // and new content overlapping during the parallax — what
+          // the user reported as "superposition d'animation". Fade
+          // keeps the static backdrop perfectly steady and cross-
+          // fades only the content layer.
+          animation: 'fade',
+          animationDuration: 220,
           // Native swipe-back from the left edge to dismiss a detail page
           // (iOS already does this by default; we set it explicitly so
           // Android's native-stack also picks it up). Web gets an

@@ -638,11 +638,13 @@ function PlayerInner() {
     const kick = () => {
       try {
         player.seekTo(0);
-        const p = player.play();
-        // play() returns a Promise on web; surface autoplay /
-        // policy rejections instead of swallowing them silently.
-        if (p && typeof (p as any).then === 'function') {
-          (p as Promise<void>).catch((err) =>
+        // expo-audio types play() as void, but on web it actually
+        // returns a Promise that can reject (autoplay policy / format
+        // errors). Cast through unknown so TS doesn't fight the
+        // truthiness check.
+        const p = player.play() as unknown as Promise<void> | undefined;
+        if (p && typeof p.then === 'function') {
+          p.catch((err) =>
             console.warn('[Player] play() rejected:', err),
           );
         }
@@ -856,6 +858,19 @@ function PlayerInner() {
 
   // Native-only PanResponder fallback. On web we ignore these and drive
   // everything through the effect above.
+  //
+  // We bounce commitSeek through a ref because PanResponder.create() is
+  // captured ONCE in useRef — its handler closures freeze to the first-
+  // render values of `player`, `status.playing`, etc. At first render
+  // resolvedUri is still null, so `player` is the empty placeholder
+  // useAudioPlayer hands out before a source lands. Calling
+  // player.seekTo() on that frozen reference would no-op while the
+  // real audio (created on the next render once resolvedUri arrives)
+  // keeps playing from its old position — the symptom: timeline drag
+  // moves the visual but audio stays put. ±15 s buttons sidestep this
+  // because their inline onPress closures re-bind every render.
+  const commitSeekRef = useRef(commitSeek);
+  useEffect(() => { commitSeekRef.current = commitSeek; });
   const pan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => Platform.OS !== 'web',
@@ -867,7 +882,7 @@ function PlayerInner() {
       onPanResponderMove: (e) => {
         seekFromX(e.nativeEvent.locationX, barWidth, durationRef, scrubValue);
       },
-      onPanResponderRelease: commitSeek,
+      onPanResponderRelease: () => commitSeekRef.current(),
       onPanResponderTerminate: () => setScrubbing(false),
     }),
   ).current;
