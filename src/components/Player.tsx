@@ -50,19 +50,27 @@ function peaksForSource(source: any): number[] | undefined {
   if (source == null) return undefined;
   let stem: string | undefined;
   try {
+    // Extract a filename stem from a Metro/web/native URL. Handles three
+    // shapes:
+    //   1. Plain path:  http://host/path/breath7_round01.mp3
+    //   2. Cache hash:  file:///cache/audio_qm1-2.5e7a.mp3
+    //   3. Metro web:   http://host/assets/?unstable_path=.%2Fassets%2F…breath7_round01.mp3
+    // (3) is the breaker — the filename lives in a query param, not the path.
+    const extractStem = (url: string): string => {
+      const pathPart = url.includes('?unstable_path=')
+        ? decodeURIComponent(url.split('?unstable_path=')[1].split('&')[0])
+        : url.split('?')[0];
+      const last = pathPart.split('/').pop() || '';
+      return decodeURIComponent(last)
+        .replace(/\.[a-f0-9]{6,}\.(mp3|wav|m4a|ogg)$/i, '')
+        .replace(/\.(mp3|wav|m4a|ogg)$/i, '');
+    };
     if (typeof source === 'string') {
-      // Remote URL — derive stem from the last path segment.
-      const last = source.split('?')[0].split('/').pop() || '';
-      stem = decodeURIComponent(last).replace(/\.(mp3|wav|m4a|ogg)$/i, '');
+      stem = extractStem(source);
     } else {
       const asset: any = Asset.fromModule(source);
       stem = asset?.name;
-      if (!stem && typeof asset?.uri === 'string') {
-        const last = asset.uri.split('?')[0].split('/').pop() || '';
-        stem = decodeURIComponent(last)
-          .replace(/\.[a-f0-9]{6,}\.(mp3|wav|m4a|ogg)$/i, '')
-          .replace(/\.(mp3|wav|m4a|ogg)$/i, '');
-      }
+      if (!stem && typeof asset?.uri === 'string') stem = extractStem(asset.uri);
     }
     if (!stem) return undefined;
     const key = waveformKey(stem);
