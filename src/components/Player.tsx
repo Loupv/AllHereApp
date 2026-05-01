@@ -1013,7 +1013,9 @@ function PlayerInner() {
           <View style={styles.preCircle}>
             {loc ? (
               <Text style={styles.preCircleEyebrow} numberOfLines={1}>
-                {loc.label.toUpperCase()} · {loc.position} / {loc.total}
+                {rounds
+                  ? `${loc.label.toUpperCase()} · QM${rounds.roundLengthMinutes} · ${rounds.max} × ${rounds.roundLengthMinutes} MIN`
+                  : `${loc.label.toUpperCase()} · ${loc.position} / ${loc.total}`}
               </Text>
             ) : null}
             {/* Tiny "you've heard this one" tag, rendered between the

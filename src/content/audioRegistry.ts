@@ -68,8 +68,19 @@ export const BUNDLED_TRANSCRIPTS = {
   qm5_inter2: require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round02_inter.wjson'),
   qm5_inter3: require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round03_inter.wjson'),
   qm5_inter4: require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round04_inter.wjson'),
-  // QMPart2 — QM3 6rounds Unfollow and Witness
+  // QMPart2 — QM3 6rounds Unfollow and Witness (overall + per-round + per-inter)
   qm23_unfollow: require('../../assets/audio/QMPart2/Words/QM3_6rounds_ErkinGuided_UnfollowAndWitness.wjson'),
+  qm23_round1: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round01.wjson'),
+  qm23_round2: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round02.wjson'),
+  qm23_round3: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round03.wjson'),
+  qm23_round4: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round04.wjson'),
+  qm23_round5: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round05.wjson'),
+  qm23_round6: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round06.wjson'),
+  qm23_inter1: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round01_inter.wjson'),
+  qm23_inter2: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round02_inter.wjson'),
+  qm23_inter3: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round03_inter.wjson'),
+  qm23_inter4: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round04_inter.wjson'),
+  qm23_inter5: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round05_inter.wjson'),
 } as const;
 
 import { WP_AUDIO_MAP } from './wpAudioMap.generated';
@@ -161,6 +172,13 @@ export function getAudioSource(trackId: string, roundIndex?: number): AudioSourc
   };
 
   if (trackId in qmRoundMap && roundIndex !== undefined) {
+    // qm1-2 rounds 1-3 are bundled (same files as home-qm3) — they're
+    // not on WordPress, so we MUST return the bundled require here
+    // instead of trying to resolve a remote URL.
+    if (trackId === 'qm1-2' && roundIndex < 3) {
+      const bundled = [BUNDLED_AUDIO.qm3Br1, BUNDLED_AUDIO.qm3Br2, BUNDLED_AUDIO.qm3Br3][roundIndex];
+      return { bundled };
+    }
     const { folder, pattern } = qmRoundMap[trackId];
     const roundNum = String(roundIndex + 1).padStart(2, '0');
     const fileName = `${pattern}${roundNum}.mp3`;
@@ -198,8 +216,11 @@ export function getTranscriptSource(
       const t = BUNDLED_TRANSCRIPTS[key];
       if (t !== undefined) return { bundled: t };
     }
-    // qm2-3: only the overall transcript is bundled (per-round wjson not present)
-    if (trackId === 'qm2-3') return { bundled: BUNDLED_TRANSCRIPTS.qm23_unfollow };
+    if (trackId === 'qm2-3') {
+      const key = `qm23_round${roundNum}` as keyof typeof BUNDLED_TRANSCRIPTS;
+      const t = BUNDLED_TRANSCRIPTS[key];
+      if (t !== undefined) return { bundled: t };
+    }
   }
 
   // Single-track transcripts
@@ -284,6 +305,11 @@ export function getInterSource(trackId: string, interIndex: number): AudioSource
   if (trackId in qmInterMap) {
     const config = qmInterMap[trackId];
     if (interIndex >= config.maxInters) return null;
+    // qm1-2 inters 1-2 are bundled (shared with home-qm3) — not on WP.
+    if (trackId === 'qm1-2' && interIndex < 2) {
+      const bundled = [BUNDLED_AUDIO.qm3Inter1, BUNDLED_AUDIO.qm3Inter2][interIndex];
+      return { bundled };
+    }
     const interNum = String(interIndex + 1).padStart(2, '0');
     const fileName = `${config.pattern}${interNum}_inter.mp3`;
     const url = REMOTE_PATTERN(`${config.folder}/${fileName}`);
@@ -306,8 +332,10 @@ export function getInterTranscriptSource(trackId: string, interIndex: number): A
     const t = BUNDLED_TRANSCRIPTS[`qm5_inter${interNum}` as keyof typeof BUNDLED_TRANSCRIPTS];
     if (t !== undefined) return { bundled: t };
   }
-  // qm2-3: per-inter wjson not present, use overall transcript
-  if (trackId === 'qm2-3') return { bundled: BUNDLED_TRANSCRIPTS.qm23_unfollow };
+  if (trackId === 'qm2-3') {
+    const t = BUNDLED_TRANSCRIPTS[`qm23_inter${interNum}` as keyof typeof BUNDLED_TRANSCRIPTS];
+    if (t !== undefined) return { bundled: t };
+  }
 
   return null;
 }
