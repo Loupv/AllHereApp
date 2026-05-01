@@ -250,21 +250,21 @@ function PlayerInner() {
     if (inBreak) {
       const interSrc = r?.roundInters?.[currentRound - 1];
       if (interSrc) return interSrc;
-      // Remote round-based tracks: derive canonical URL via registry so
-      // peaksForSource can extract the filename stem and find the waveform.
-      return getInterSource(track.id, currentRound - 1)?.remote ?? undefined;
+      // Registry first — prefer bundled require (Asset.name = stable
+      // stem like "breath7_round01_inter") then remote URL, both of
+      // which let peaksForSource resolve a waveform key.
+      const interReg = getInterSource(track.id, currentRound - 1);
+      return interReg?.bundled ?? interReg?.remote ?? undefined;
     }
     if (currentRound === 0) return r?.introSource;
     if (r?.roundSources && r.roundSources[currentRound - 1]) return r.roundSources[currentRound - 1];
     if (track.source) return track.source;
-    // Remote audio (cached or streaming): prefer the canonical remote URL
-    // for the waveform lookup. resolvedUri rotates between
-    //   https://allhere.org/.../1.-Welcome.mp3   (streaming, key matches)
-    //   file:///cache/audio_intro_1.mp3          (cached, key DOESN'T match)
-    // — so always prefer the registry's remote URL when present.
+    // Registry: bundled require (Asset has a stable .name) wins over
+    // remote URL, which wins over the cache-rotated resolvedUri (whose
+    // file:// path doesn't carry the original stem).
     const roundIdx = r ? Math.max(0, currentRound - 1) : undefined;
-    const remote = getAudioSource(track.id, roundIdx)?.remote;
-    return remote ?? resolvedUri ?? undefined;
+    const reg = getAudioSource(track.id, roundIdx);
+    return reg?.bundled ?? reg?.remote ?? resolvedUri ?? undefined;
   })();
 
   /**
