@@ -195,7 +195,7 @@ export const silentMindVolets: Volet[] = [
       {
         id: 'p1-1', title: 'Turning Inward',
         durationHint: '19:24',
-        description: 'An introductory eyes-open practice. Find a suitable, comfortable location away from disturbance, then turn the attention of the mind gently inward.',
+        description: 'An introductory eyes-open practice. Find a suitable, comfortable location away from disturbance, then begin the practice.',
       },
       {
         id: 'p1-2', title: 'Breath and Self-Observation',
@@ -230,8 +230,7 @@ export const silentMindVolets: Volet[] = [
     title: 'Part 2',
     subtitle: 'Stability & Equanimity',
     tagline: 'The Sky',
-    description:
-      'Deepen practice with breath observation and gravity center focus. Develop sustained attention and mental stability through real-time visual feedback.',
+    description: 'Towards the breathing body observation.',
     image: require('../../assets/images/hero/sky.jpg'),
     tracks: [
       {
@@ -270,8 +269,7 @@ export const silentMindVolets: Volet[] = [
     title: 'Part 3',
     subtitle: 'Towards Silence',
     tagline: 'The Space',
-    description:
-      'Cultivate deep contemplative states and autonomous practice. Access profound silence and inner peace with minimal guidance and subtle tracking.',
+    description: 'Anchoring of internal attention.',
     image: require('../../assets/images/hero/space.jpg'),
     tracks: [
       {

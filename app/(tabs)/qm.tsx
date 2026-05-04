@@ -9,16 +9,16 @@ import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
 import { useLayout } from '../../src/hooks/useLayout';
 import { colors, spacing } from '../../src/theme';
 
-// Synthetic Volet used to render the QM "Free Training" entry through
-// the same `<VoletCard>` shell as the real volets. Title empty +
-// subtitle "Free Training" mirrors the SM intro card's grammar
-// (subtitle-only, no eyebrow), and `routeOverride` on the card sends
-// the tap to /qm-training instead of /qm/<id>.
+// Synthetic Volet used to render the QM self-guided training entry
+// through the same `<VoletCard>` shell as the real volets. Title empty
+// + subtitle mirrors the SM intro card's grammar (subtitle-only, no
+// eyebrow), and `routeOverride` on the card sends the tap to
+// /qm-training instead of /qm/<id>.
 const QM_TRAINING_ENTRY: Volet = {
   id: 'qm-training',
   title: '',
-  subtitle: 'Free Training',
-  description: 'Set up your own session — timed rounds with bell cues, no spoken guidance.',
+  subtitle: 'Self-guided training in Quantified Meditation',
+  description: 'Pick a preset matching one of our QM formats, or set up your own — timed rounds with bell cues, no spoken guidance.',
   tracks: [],
 };
 

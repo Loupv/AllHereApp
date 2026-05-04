@@ -15,6 +15,8 @@ import { findCueIndex, TranscriptCue } from '../content/transcript';
 import { trackProgram, trackLocation } from '../content/catalog';
 import { resolveAudioSource, prefetchAudio } from '../content/audioResolver';
 import { getAudioSource, getInterSource, getTranscriptSource, getInterTranscriptSource } from '../content/audioRegistry';
+import { useSessionPrefs } from '../player/sessionPrefs';
+import { getBellSource } from '../player/bellRegistry';
 import { WAVEFORMS } from '../content/waveforms.generated';
 import { colors, radius, spacing, type } from '../theme';
 import { noOrphan } from '../utils/noOrphan';
@@ -298,6 +300,22 @@ function PlayerInner() {
   const player = useAudioPlayer(resolvedUri ?? undefined);
   const status = useAudioPlayerStatus(player);
 
+  // Boundary bell — plays once at the start of the audio and once at
+  // the end, gated by Session Sounds prefs. Uses its own audio
+  // instance so it never preempts the main track. Selected variant
+  // can be 'none' (silent) — guarded inside `playBoundaryBell`.
+  const bellSoundId = useSessionPrefs(s => s.bellSoundId);
+  const bellAtAudioBoundaries = useSessionPrefs(s => s.bellAtAudioBoundaries);
+  const bellSource = useMemo(() => getBellSource(bellSoundId), [bellSoundId]);
+  // expo-audio refuses null sources — fall back to whichever sample
+  // BELL_SOUNDS[0] holds when 'None' is selected; we just never
+  // call play() in that case.
+  const bellInstance = useAudioPlayer(bellSource ?? require('../../assets/audio/bell.mp3'));
+  const playBoundaryBell = () => {
+    if (!bellSource) return;
+    try { bellInstance.seekTo(0); bellInstance.play(); } catch {}
+  };
+
   const [cues, setCues] = useState<TranscriptCue[]>([]);
   const [scrubbing, setScrubbing] = useState(false);
   // While the player is catching up after a seek, `pendingSeekTo` holds
@@ -474,8 +492,22 @@ function PlayerInner() {
     // already pauses the outgoing player; once the resolve effect
     // produces the new URI, expo-audio swaps cleanly.
     setPendingSeekTo(null);
+    startBellFiredRef.current = false;
     return () => { try { player.pause(); } catch {} };
   }, [track?.id]);
+
+  // One-shot start bell — rings the moment playback actually starts
+  // (after autoStart or the first user-initiated play), gated by the
+  // Session Sounds pref. We watch `status.playing` flipping to true
+  // for the first time on this track. Per-round transitions don't
+  // re-fire it — only a track change resets the ref above.
+  const startBellFiredRef = useRef(false);
+  useEffect(() => {
+    if (startBellFiredRef.current) return;
+    if (!hasStarted || !status.playing) return;
+    startBellFiredRef.current = true;
+    if (bellAtAudioBoundaries) playBoundaryBell();
+  }, [hasStarted, status.playing, bellAtAudioBoundaries]);
 
   useEffect(() => {
     // Prefer round-specific transcript when playing a segmented round / inter.
@@ -599,6 +631,9 @@ function PlayerInner() {
       // value and interrupted the after-practice settle. Just dismiss
       // the player; the user lands back wherever they opened it from.
       try { player.pause(); } catch {}
+      // Final bell — single chime to mark the audio ending. Gated
+      // by Session Sounds pref; silent when bell is set to 'None'.
+      if (bellAtAudioBoundaries) playBoundaryBell();
       close();
       return;
     }
