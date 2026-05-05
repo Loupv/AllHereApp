@@ -35,9 +35,15 @@ import { Player } from '../src/components/Player';
 import { VideoPlayerModal } from '../src/components/VideoPlayerModal';
 import { AnimatedGradient } from '../src/components/AnimatedGradient';
 import { EnergyColumn } from '../src/components/EnergyColumn';
+import { AtmosphereBackground as ShaderBackground } from '../src/components/AtmosphereBackground';
+import { VideoBackground } from '../src/components/VideoBackground';
+import { themeForNextTrack } from '../src/shaders';
+import { useShaderThemeStore } from '../src/shaders/themeStore';
 import { WebSwipeBack } from '../src/components/WebSwipeBack';
 import { usePlayerStore } from '../src/player/store';
+import { useProgress } from '../src/player/progressStore';
 import { useAuth } from '../src/auth/authStore';
+import { AppState } from 'react-native';
 import { colors } from '../src/theme';
 import { ThemeProvider, DarkTheme } from '@react-navigation/native';
 
@@ -54,6 +60,22 @@ const TransparentNavTheme = {
 export default function RootLayout() {
   const [introDone, setIntroDone] = useState(false);
   const user = useAuth(s => s.user);
+  // Shader theme: auto-derived from progress, optionally overridden
+  // by the dev pill on the home tab (via the shared store), and
+  // forced to the slow-lake variant on Media + About where the
+  // calmer water motion is a quieter companion to dense text.
+  const nextTrackId = useProgress(s => s.nextTrackId)();
+  const shaderOverride = useShaderThemeStore(s => s.override);
+  const shaderTheme = shaderOverride ?? themeForNextTrack(nextTrackId);
+  // Pause only when the app is backgrounded. The shader keeps
+  // running on every screen now (lake on Media/About, the
+  // progress-based theme everywhere else).
+  const [appActive, setAppActive] = useState(true);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', s => setAppActive(s === 'active'));
+    return () => sub.remove();
+  }, []);
+  const shaderPaused = !appActive;
 
   // Configure expo-audio's session once at startup so the Player keeps
   // playing when the user locks the screen, and the session takes a
@@ -152,6 +174,13 @@ export default function RootLayout() {
           </View>
         </>
       ) : null}
+      {/* Atmospheric shader behind everything — rendered at root
+          level so it stays visible behind the audio Player overlay
+          (which fades the navigator below). Paused when off-home
+          or app-backgrounded for battery. */}
+      {shaderTheme === 'earth'
+        ? <VideoBackground paused={shaderPaused} />
+        : <ShaderBackground theme={shaderTheme} paused={shaderPaused} />}
       <Animated.View style={[{ flex: 1 }, stackFadeStyle]} pointerEvents={playerOpen ? 'none' : 'auto'}>
       <ThemeProvider value={TransparentNavTheme}>
       <Stack

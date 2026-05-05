@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Modal, View, Text, Pressable, StyleSheet, Switch, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, SlideInDown, SlideOutDown, FadeOut } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import { useAuth } from '../auth/authStore';
 import { useProgress } from '../player/progressStore';
 import { useSessionPrefs } from '../player/sessionPrefs';
@@ -41,13 +43,6 @@ export function AccountSheet({ visible, onClose }: Props) {
   const setBellSoundId          = useSessionPrefs(s => s.setBellSoundId);
   const setBellAtAudioBoundaries = useSessionPrefs(s => s.setBellAtAudioBoundaries);
   const bellEnabled             = bellSoundId !== 'none';
-  // Remember the last non-'none' selection so flipping the master Bell
-  // toggle off → on restores whatever variant the user picked, instead
-  // of always snapping back to 'classic'.
-  const lastBellSoundIdRef = useRef<string>(bellSoundId !== 'none' ? bellSoundId : 'classic');
-  useEffect(() => {
-    if (bellSoundId !== 'none') lastBellSoundIdRef.current = bellSoundId;
-  }, [bellSoundId]);
 
   const handleReset = () => {
     if (!confirmingReset) {
@@ -64,6 +59,21 @@ export function AccountSheet({ visible, onClose }: Props) {
     onClose();
   };
 
+  // Vertical-swipe-down to dismiss. Activates only on a clearly
+  // downward drag (≥ 12 px) so the inner ScrollView gets the
+  // gesture for normal vertical scrolling. Triggers when the
+  // drag has gone past 80 px or the velocity is high enough to
+  // suggest a flick.
+  const dismissPan = Gesture.Pan()
+    .activeOffsetY(12)
+    .failOffsetY(-8)
+    .onEnd((e) => {
+      'worklet';
+      if (e.translationY > 80 || e.velocityY > 600) {
+        runOnJS(handleClose)();
+      }
+    });
+
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
       <Animated.View
@@ -74,6 +84,7 @@ export function AccountSheet({ visible, onClose }: Props) {
         {/* Scrim — tap to dismiss. Sits behind the sheet so the sheet
             interior stays interactive. */}
         <Pressable style={styles.scrim} onPress={handleClose} />
+        <GestureDetector gesture={dismissPan}>
         <Animated.View
           style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}
           entering={SlideInDown.duration(260)}
@@ -104,7 +115,7 @@ export function AccountSheet({ visible, onClose }: Props) {
             <View style={styles.rowSwitch}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowLabel}>3-2-1 countdown</Text>
-                <Text style={styles.rowHint}>Tick beats before round 1 and at the end of every break.</Text>
+                <Text style={styles.rowHint}>QM Training only — beats before round 1 and at the end of every break.</Text>
               </View>
               <Switch
                 value={countdownEnabled}
@@ -115,29 +126,17 @@ export function AccountSheet({ visible, onClose }: Props) {
               />
             </View>
 
-            {/* Master bell toggle — when off, the radio + child toggle
-                below grey out and `bellSoundId` is forced to 'none' so
-                the QM timer + Player both go silent. Toggling back on
-                restores 'classic' (or whatever non-none variant the
-                user last picked, tracked via a ref). */}
-            <View style={styles.rowSwitch}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowLabel}>Bell</Text>
-                <Text style={styles.rowHint}>Plays at QM round boundaries and (optionally) at the start / end of guided audios.</Text>
-              </View>
-              <Switch
-                value={bellEnabled}
-                onValueChange={(v) => setBellSoundId(v ? lastBellSoundIdRef.current : 'none')}
-                trackColor={{ false: 'rgba(255,255,255,0.14)', true: 'rgba(54,160,158,0.55)' }}
-                thumbColor={bellEnabled ? colors.accentAlt : '#bbb'}
-                ios_backgroundColor="rgba(255,255,255,0.14)"
-              />
-            </View>
-
-            <View style={[styles.bellGroup, !bellEnabled && styles.groupDisabled]} pointerEvents={bellEnabled ? 'auto' : 'none'}>
-              <Text style={[styles.rowHint, styles.bellSoundLabel]}>Sound</Text>
+            {/* Bell sound — variant picker is the master control:
+                "None" disables every bell, otherwise pick the
+                variant. Below it sits the single toggle that
+                governs whether the chosen bell also plays at the
+                start / end of guided audios (QM rounds always
+                ring it, regardless of the toggle). */}
+            <View style={styles.bellGroup}>
+              <Text style={styles.rowLabel}>Bell sound</Text>
+              <Text style={styles.rowHint}>Rings at QM round boundaries. Pick "None" to silence every bell in the app.</Text>
               <View style={styles.radioRow}>
-                {BELL_SOUNDS.filter(b => b.id !== 'none').map(b => {
+                {BELL_SOUNDS.map(b => {
                   const selected = bellSoundId === b.id;
                   return (
                     <Pressable
@@ -205,6 +204,7 @@ export function AccountSheet({ visible, onClose }: Props) {
             </Pressable>
           </ScrollView>
         </Animated.View>
+        </GestureDetector>
       </Animated.View>
     </Modal>
   );

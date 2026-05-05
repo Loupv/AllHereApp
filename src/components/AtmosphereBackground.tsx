@@ -1,5 +1,13 @@
 import * as React from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
+
+// Module-level shared start time so the shader clock survives a
+// theme switch (which remounts the GLView via key={theme}). Set
+// the first time onContextCreate fires; reused for every later
+// mount. Initialised to 0 as a sentinel; the first context to fire
+// stamps it to (now - WARMUP_SECONDS * 1000) so the very first
+// frame already runs past the build-up phase.
+let sharedStart = 0;
 import { GLView } from 'expo-gl';
 import { VERTEX_SHADER, FRAG_FOR_THEME } from '../shaders/glsl';
 import type { ShaderTheme } from '../shaders';
@@ -19,9 +27,27 @@ import type { ShaderTheme } from '../shaders';
  * `attribute vec2 aPos` covering NDC [-1,1]²); all the work happens
  * in the fragment shader.
  */
-export function AtmosphereBackground({ theme }: { theme: ShaderTheme }) {
+type Props = { theme: ShaderTheme; paused?: boolean };
+
+export function AtmosphereBackground({ theme, paused = false }: Props) {
   const { width, height } = useWindowDimensions();
+  // Mirror the latest paused value into a ref so the render loop
+  // (whose closure was created on context-init) sees the up-to-
+  // date state on every frame instead of the value at mount.
+  const pausedRef = React.useRef(paused);
+  React.useEffect(() => { pausedRef.current = paused; }, [paused]);
   const fragSrc = React.useMemo(() => FRAG_FOR_THEME[theme], [theme]);
+  // Cheap content hash of the fragment source so the GLView re-
+  // mounts whenever the shader is edited (hot reload). String
+  // length alone wasn't enough — comment-only or same-length
+  // tweaks left the key unchanged and the old program ran.
+  const srcHash = React.useMemo(() => {
+    let h = 0;
+    for (let i = 0; i < fragSrc.length; i++) {
+      h = ((h << 5) - h + fragSrc.charCodeAt(i)) | 0;
+    }
+    return h;
+  }, [fragSrc]);
 
   const onContextCreate = React.useCallback((gl: any) => {
     const w = gl.drawingBufferWidth;
@@ -53,14 +79,38 @@ export function AtmosphereBackground({ theme }: { theme: ShaderTheme }) {
     const uRes = gl.getUniformLocation(prog, 'uRes');
     gl.uniform2f(uRes, w, h);
 
-    const start = Date.now();
+    // Pre-warm the clock by `WARMUP_SECONDS` so we skip the
+    // initial "ripples just spawned / density envelope at zero /
+    // ..." setup phases. Shaders are designed to be looking right
+    // at any random t > warmup, so this jumps the field straight
+    // into a settled, mid-life state on theme activation.
+    //
+    // The shared module-level `sharedStart` keeps uTime continuous
+    // ACROSS theme switches as well, so cycling the pill doesn't
+    // restart the clock at the warmup boundary every time.
+    const WARMUP_SECONDS = 60;
+    if (sharedStart === 0) {
+      sharedStart = Date.now() - WARMUP_SECONDS * 1000;
+    }
+    const start = sharedStart;
     let stopped = false;
+    let frameIdx = 0;
     const draw = () => {
       if (stopped) return;
-      gl.uniform1f(uTime, (Date.now() - start) / 1000);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      // expo-gl native needs `endFrameEXP`; web has it as a no-op.
-      if (typeof gl.endFrameEXP === 'function') gl.endFrameEXP();
+      frameIdx++;
+      // Two GPU-saving knobs at once:
+      //   1. paused → skip the GL submit entirely (still keep
+      //      the rAF loop alive so we can resume when the home
+      //      screen comes back into focus, but no draw work).
+      //   2. 30 fps → only render every other rAF tick. The
+      //      visible motion in these shaders is slow enough that
+      //      30 fps is indistinguishable from 60 fps to the eye.
+      if (!pausedRef.current && (frameIdx & 1) === 0) {
+        gl.uniform1f(uTime, (Date.now() - start) / 1000);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        // expo-gl native needs `endFrameEXP`; web has it as a no-op.
+        if (typeof gl.endFrameEXP === 'function') gl.endFrameEXP();
+      }
       requestAnimationFrame(draw);
     };
     draw();
@@ -70,7 +120,11 @@ export function AtmosphereBackground({ theme }: { theme: ShaderTheme }) {
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
       <GLView
-        key={theme}
+        // Key includes a content fingerprint of the shader source
+        // so that hot-reloaded edits to glsl.ts force the GLView
+        // to remount and recompile, instead of keeping the stale
+        // program from the original onContextCreate closure.
+        key={`${theme}-${srcHash}`}
         style={{ width, height }}
         onContextCreate={onContextCreate}
       />

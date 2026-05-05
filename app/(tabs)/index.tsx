@@ -10,8 +10,8 @@ import { useLayout } from '../../src/hooks/useLayout';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { CircleButton } from '../../src/components/CircleButton';
-import { AtmosphereBackground as ShaderBackground } from '../../src/components/AtmosphereBackground';
 import { themeForNextTrack, type ShaderTheme } from '../../src/shaders';
+import { useShaderThemeStore } from '../../src/shaders/themeStore';
 import { KindIcon } from '../../src/components/KindIcon';
 import { AccountSheet } from '../../src/components/AccountSheet';
 import {
@@ -165,23 +165,20 @@ export default function StartScreen() {
   // entry point — Start CTA, QM/SM list ContentCard, etc.). No
   // per-screen subscription needed here.
 
-  // Atmospheric shader behind the home content — theme picked from
-  // the next-up SM track so the page feels like it's tracking the
-  // user's progress through the journey (intro/default → earth →
-  // sky → space). `themeOverride` is a dev affordance for cycling
-  // through themes via the floating pill below; null = auto.
-  const [themeOverride, setThemeOverride] = useState<ShaderTheme | null>(null);
+  // Shader theme state lives in a tiny shared store so the
+  // ShaderBackground (now rendered at the root layout, behind the
+  // audio Player) and this dev pill can both reach it.
+  const themeOverride = useShaderThemeStore(s => s.override);
+  const setThemeOverride = useShaderThemeStore(s => s.setOverride);
   const autoTheme = themeForNextTrack(nextId);
-  const shaderTheme = themeOverride ?? autoTheme;
   const cycleTheme = () => {
-    const order: (ShaderTheme | null)[] = [null, 'default', 'earth', 'sky', 'space'];
+    const order: (ShaderTheme | null)[] = [null, 'earth', 'sky', 'space', 'lake', 'default'];
     const i = order.indexOf(themeOverride);
     setThemeOverride(order[(i + 1) % order.length]);
   };
 
   return (
     <View style={styles.root}>
-      <ShaderBackground theme={shaderTheme} />
       <SwipeTabs current="index">
         <View style={{ flex: 1 }}>
           <ScrollView
@@ -390,7 +387,13 @@ const styles = StyleSheet.create({
   // Vertical spacers — flex:1 with a tiny floor so on compact phones
   // everything stays packed and on tall viewports the surplus is
   // distributed evenly between hero/journey and pills.
-  spacerTop: { flex: 1, minHeight: spacing.sm },
+  // Spacers tuned so the CircleButton lands at roughly the same
+  // vertical Y as the Player's circle (which sits at ~44 % of the
+  // usable height between header and bottom area, computed from
+  // its flexSpacer 0.78 + middle flex 1 ratio). spacerTop is
+  // weighted heavier than the bottom spacers so the journey
+  // block + circle sit visually centred-low like in the Player.
+  spacerTop: { flex: 1.7, minHeight: spacing.sm },
   spacerBottom: { flex: 1, minHeight: spacing.md },
   bottomFloor: { flex: 1, minHeight: spacing.sm },
 
