@@ -56,6 +56,7 @@ export default function VoletScreen() {
                 : silentMindProgram.eyebrow
             }
             title={volet.subtitle}
+            subtitle={volet.tagline}
             description={volet.description}
             accent={colors.accent}
           />
@@ -121,21 +122,6 @@ export default function VoletScreen() {
           })()}
           </View>
 
-          {qmTwin && qmTwin.tracks.length > 0 ? (
-            // Borderless sibling CTA — matches the list's hairline motif
-            // (see ContentCard). Just a labelled row with a trailing arrow.
-            <Pressable
-              onPress={() => router.replace(`/qm/${qmTwin.id}` as any)}
-              style={({ pressed }) => [styles.siblingCta, pressed && { opacity: 0.7 }]}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.siblingEyebrow}>Quantified meditation</Text>
-                <Text style={styles.siblingText}>{noOrphan(`Go to QM Training · ${volet.title}`)}</Text>
-                <Text style={styles.siblingHint}>{noOrphan('Short, timed rounds with pauses, for the same practices.')}</Text>
-              </View>
-              <Text style={[styles.siblingArrow, { color: colors.accentAlt }]}>→</Text>
-            </Pressable>
-          ) : null}
         </View>
       </ScrollView>
       </SubPageSwipeNav>

@@ -37,11 +37,9 @@ import { AnimatedGradient } from '../src/components/AnimatedGradient';
 import { EnergyColumn } from '../src/components/EnergyColumn';
 import { AtmosphereBackground as ShaderBackground } from '../src/components/AtmosphereBackground';
 import { VideoBackground } from '../src/components/VideoBackground';
-import { themeForNextTrack } from '../src/shaders';
 import { useShaderThemeStore } from '../src/shaders/themeStore';
 import { WebSwipeBack } from '../src/components/WebSwipeBack';
 import { usePlayerStore } from '../src/player/store';
-import { useProgress } from '../src/player/progressStore';
 import { useAuth } from '../src/auth/authStore';
 import { AppState } from 'react-native';
 import { colors } from '../src/theme';
@@ -64,9 +62,12 @@ export default function RootLayout() {
   // by the dev pill on the home tab (via the shared store), and
   // forced to the slow-lake variant on Media + About where the
   // calmer water motion is a quieter companion to dense text.
-  const nextTrackId = useProgress(s => s.nextTrackId)();
   const shaderOverride = useShaderThemeStore(s => s.override);
-  const shaderTheme = shaderOverride ?? themeForNextTrack(nextTrackId);
+  // Single global shader theme — space everywhere. The per-route
+  // lake swap was distracting because the field hard-cut between
+  // tabs; one continuous backdrop reads better. The dev pill on
+  // Start can override locally for design exploration.
+  const shaderTheme = shaderOverride ?? 'space';
   // Pause only when the app is backgrounded. The shader keeps
   // running on every screen now (lake on Media/About, the
   // progress-based theme everywhere else).

@@ -142,8 +142,8 @@ export const introAudios: AudioTrack[] = [
     id: 'intro-1', title: 'Welcome',
     // source is remote (Part0 on WordPress) — Player resolves via track.id
     transcript: BUNDLED_TRANSCRIPTS.introWelcome,
-    durationHint: '2:30',
-    description: "Welcome to the Silent Mind program, All Here's journey into a quiet and attentive way of being. A vertical progression toward advanced meditation practice.",
+    durationHint: '2:20',
+    description: "Welcome to the Silent Mind program, All Here's journey towards Stability and Silence of Mind. A vertical progression toward advanced meditation practice.",
   },
   // 'Prepare the space' (intro-3) is intentionally pulled for now —
   // tracking the change here so it's easy to restore: the asset files
@@ -152,18 +152,13 @@ export const introAudios: AudioTrack[] = [
     id: 'intro-2', title: 'Silent Mind',
     transcript: BUNDLED_TRANSCRIPTS.introSilentMind,
     durationHint: '2:17',
-    description: "At the heart of our practice is the development of the Silent Mind — a practical method to reduce fluctuations of consciousness and cultivate a profound inner presence.",
+    description: "At the heart of our practice is the development of the Silent Mind — a practical method to reduce fluctuations of consciousness and cultivate a profound inner silence.",
   },
   {
     id: 'intro-4', title: 'QM Training',
     transcript: BUNDLED_TRANSCRIPTS.introQMFormat,
     durationHint: '1:13',
-    description: [
-      { text: 'An introduction to the\nQuantified Meditation format', style: 'bold' },
-      { text: 'High intensity training', style: 'italic' },
-      { text: 'Multiple rounds, short breaks', style: 'italic' },
-      { text: 'Train to reproduce the same meditative state on demand', style: 'italic' },
-    ],
+    description: 'An introduction to the Quantified Meditation format — high-intensity training with multiple rounds and short breaks, to reproduce the same meditative state on demand.',
   },
 ];
 
@@ -210,7 +205,7 @@ export const silentMindVolets: Volet[] = [
     ],
     qmTracks: [
       {
-        id: 'qm1-2', title: 'QM3 — Breath and Self-Observation',
+        id: 'qm1-2', title: 'QM3 — Breathing Body',
         description: 'Turn the mind towards the breathing process — notice the body exhaling, inhaling, then resting attention on the natural breath.',
         rounds: {
           max: 7, roundLengthMinutes: 3, breakSeconds: 60,
@@ -218,7 +213,7 @@ export const silentMindVolets: Volet[] = [
       },
       {
         id: 'qm1-4', title: 'QM5 — Center of Gravity',
-        description: 'Start with a long exhalation — empty yourself of air, then let the body inhale freely. Deepen into the Center of Gravity practice.',
+        description: 'Start with a long exhalation — empty yourself of air, then let the body inhale freely, then deepen into the Center of Gravity practice.',
         rounds: {
           max: 5, roundLengthMinutes: 5, breakSeconds: 60,
         },
@@ -309,7 +304,7 @@ const qm3RoundsHome: AudioTrack = {
   id: 'home-qm3',
   title: 'QM3 · Three rounds',
   durationHint: '11 min',
-  description: 'A first taste of Quantified Meditation: three rounds of three minutes with one-minute pauses between them.',
+  description: 'A first taste of Quantified Meditation: three rounds of three minutes with one-minute breaks between them.',
   rounds: {
     max: 3,
     roundLengthMinutes: 3,
@@ -356,7 +351,7 @@ export const startJourneySteps = [
   {
     id: 'step-qm3',
     label: 'QM3 · 3 rounds',
-    description: 'A first Quantified Meditation session:\nthree short rounds with one-minute pauses.',
+    description: 'A first Quantified Meditation session: three short rounds with one-minute breaks.',
     track: qm3RoundsHome,
   },
 ];
@@ -374,9 +369,7 @@ export const qmProgram = {
   // used to live as line 1 of the description, but visually it
   // belonged with the title, not buried in the body copy below.
   byline: 'A new way to meditate',
-  intro:
-    'Multiple rounds, short breaks,\n' +
-    'reproduce the same meditative state on demand.',
+  intro: 'Multiple rounds, short breaks, reproduce the same meditative state on demand.',
   banner: require('../../assets/images/hero/space.jpg'),
 };
 

@@ -630,10 +630,11 @@ void main() {
   // The gradients are a wide low-frequency fbm in two channels;
   // amplitude kept tiny so the field still feels overwhelmingly
   // dark.
-  float bgN1 = fbm(q * 0.6 + 7.3);
-  float bgN2 = fbm(q * 0.9 + 13.7);
-  vec3 col = vec3(0.012, 0.006, 0.022) * bgN1
-           + vec3(0.004, 0.014, 0.030) * bgN2;
+  // Single cheap vnoise gradient — the previous two fbm() calls
+  // were 10 octaves total just for a subtle background tint that
+  // the eye barely registers. One vnoise sample is plenty.
+  float bgN = vnoise(q * 0.7 + 7.3);
+  vec3 col = vec3(0.010, 0.008, 0.026) * bgN;
 
   // Milky-way band — clearly visible diagonal river of dust +
   // light. Falloff back to 5 so the band has substance, but
@@ -645,6 +646,21 @@ void main() {
   float bandAxis = dot(q, perp);
   float drift = dot(q, bandDir);
   float bandMask = exp(-bandAxis * bandAxis * 5.0);
+  // Large-scale low-frequency noise mask — gates the milky way
+  // shape so its envelope is irregular (some sections fade out,
+  // others stay bright) instead of a smooth uniform band. The
+  // noise is sampled at a low spatial frequency and drifts very
+  // slowly, so the silhouette appears organic without the dust
+  // shapes themselves moving. \`shapeMask\` is reused below for
+  // the dust mix, the spine boost AND the band stars so every
+  // milky-way feature shares the same envelope.
+  // Cheap single-octave vnoise — the shape envelope is so low-
+  // frequency that fbm's extra octaves added cost without visible
+  // benefit.
+  float shapeN = vnoise(vec2(drift * 0.6 + uTime * 0.010, bandAxis * 0.5));
+  // Lifted floor (0.55) + narrower swing so the mask only gently
+  // breaks the band instead of carving big black voids in it.
+  float shapeMask = 0.55 + 0.45 * smoothstep(0.25, 0.70, shapeN);
 
   // Ridge-fbm dust — replaces the smooth fbm haze with sharp
   // fibrous strands aligned with the band. \`1 - abs(2n - 1)\`
@@ -669,7 +685,7 @@ void main() {
   dustWarm = mix(dustWarm, hueC, smoothstep(0.55, 1.0, hueT));
   vec3 dustCool = vec3(0.02, 0.00, 0.05);
   vec3 dustCol = mix(dustCool, dustWarm, smoothstep(0.20, 0.70, dust));
-  col = mix(col, dustCol, bandMask * 0.85);
+  col = mix(col, dustCol, bandMask * shapeMask * 0.70);
 
   // Spine picks up a slightly hotter version of the local band
   // hue, giving the centreline a warm core that varies along
@@ -677,7 +693,7 @@ void main() {
   float spine = exp(-bandAxis * bandAxis * 22.0) * smoothstep(0.40, 0.90, dust);
   vec3 spineCol = mix(vec3(0.36, 0.08, 0.24), vec3(0.10, 0.06, 0.34), smoothstep(0.0, 0.55, hueT));
   spineCol = mix(spineCol, vec3(0.06, 0.22, 0.30), smoothstep(0.55, 1.0, hueT));
-  col += spineCol * spine * 0.55;
+  col += spineCol * spine * shapeMask * 0.45;
 
   // Distant galaxies — bright cores + structured halos. Each
   // galaxy has its own shape, scale and texture: a compact
@@ -705,9 +721,12 @@ void main() {
 
   // Disc interior texture — static fbm sampled per-galaxy. Acts
   // as dust lanes / arm-density variation across the body.
-  float tex1 = fbm((q - galPos1) * 16.0);
-  float tex2 = fbm((q - galPos2) * 22.0 + 1.7);
-  float tex3 = fbm((q - galPos3) * 18.0 + 3.3);
+  // Single-octave vnoise instead of full fbm — the texture is
+  // already heavily attenuated by the disc falloff, the extra
+  // octaves were invisible. Saves 12 noise samples per pixel.
+  float tex1 = vnoise((q - galPos1) * 16.0);
+  float tex2 = vnoise((q - galPos2) * 22.0 + 1.7);
+  float tex3 = vnoise((q - galPos3) * 18.0 + 3.3);
   // Modulate disc by texture so the body has a structured
   // internal pattern rather than a uniform fade.
   disc1 *= 0.35 + 0.85 * tex1;
@@ -717,20 +736,20 @@ void main() {
   // Galaxies as soft cosmic gradients — palette mixes deep
   // violet, dim red-purple, and indigo so the field carries the
   // requested warm tones without burning white.
-  col += vec3(0.22, 0.06, 0.32) * (core1 * 0.55 + disc1 * 0.65);  // deep violet
-  col += vec3(0.30, 0.06, 0.20) * (core2 * 0.55 + disc2 * 0.55);  // deep red-violet
-  col += vec3(0.08, 0.08, 0.30) * (core3 * 0.55 + disc3 * 0.65);  // indigo
+  col += vec3(0.22, 0.06, 0.32) * (core1 * 0.45 + disc1 * 0.55);  // deep violet
+  col += vec3(0.30, 0.06, 0.20) * (core2 * 0.45 + disc2 * 0.45);  // deep red-violet
+  col += vec3(0.08, 0.08, 0.30) * (core3 * 0.45 + disc3 * 0.55);  // indigo
 
   // Star layers — densities ~doubled across the board so the
   // sky looks properly populated, not a sparse field.
+  // Cut from 5 → 3 star layers — the densest layer was double-
+  // counting bright pinpoints inside the band; the eye doesn't
+  // miss it once the field is populated.
   float s = 0.0;
   s += starLayer(q * 24.0,  0.040, 0.9);
   s += starLayer(q * 50.0,  0.025, 0.55);
-  s += starLayer(q * 110.0, 0.012, 0.30);
-  float bs = 0.0;
-  bs += starLayer(q * 70.0  + 5.1, 0.080, 1.0);
-  bs += starLayer(q * 140.0 + 7.7, 0.050, 0.6);
-  col += vec3(1.0, 0.97, 0.92) * (s + bs * bandMask * 1.4);
+  float bs = starLayer(q * 70.0 + 5.1, 0.080, 1.0);
+  col += vec3(1.0, 0.97, 0.92) * (s + bs * bandMask * shapeMask * 1.4);
 
   gl_FragColor = vec4(col, 1.0);
 }

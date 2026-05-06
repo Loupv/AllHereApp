@@ -15,8 +15,6 @@ import { findCueIndex, TranscriptCue } from '../content/transcript';
 import { trackProgram, trackLocation } from '../content/catalog';
 import { resolveAudioSource, prefetchAudio } from '../content/audioResolver';
 import { getAudioSource, getInterSource, getTranscriptSource, getInterTranscriptSource } from '../content/audioRegistry';
-import { useSessionPrefs } from '../player/sessionPrefs';
-import { getBellSource } from '../player/bellRegistry';
 import { WAVEFORMS } from '../content/waveforms.generated';
 import { colors, radius, spacing, type } from '../theme';
 import { noOrphan } from '../utils/noOrphan';
@@ -203,16 +201,9 @@ function useSmoothTime(
 
 function PlayerInner() {
   const router = useRouter();
-  const { isTablet } = useLayout();
+  const { isTablet, playSize: circleSize } = useLayout();
   const { height: winH } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  // Match the Start screen's `playSize` formula exactly so the round
-  // CircleButton lands at the same pixel size when the user taps
-  // through. Any divergence here breaks the morph illusion.
-  const usableH = Math.max(360, winH - insets.top - insets.bottom);
-  const circleSize = isTablet
-    ? Math.max(180, Math.min(240, Math.round(usableH / 5.0)))
-    : Math.max(120, Math.min(160, Math.round(usableH / 5.5)));
   const { track, close, playlist, index, playNext, playPrev } = usePlayerStore();
   const hasNext = index >= 0 && index < playlist.length - 1;
   const hasPrev = index > 0;
@@ -299,22 +290,6 @@ function PlayerInner() {
   // Only create player once we have a resolved URI
   const player = useAudioPlayer(resolvedUri ?? undefined);
   const status = useAudioPlayerStatus(player);
-
-  // Boundary bell — plays once at the start of the audio and once at
-  // the end, gated by Session Sounds prefs. Uses its own audio
-  // instance so it never preempts the main track. Selected variant
-  // can be 'none' (silent) — guarded inside `playBoundaryBell`.
-  const bellSoundId = useSessionPrefs(s => s.bellSoundId);
-  const bellAtAudioBoundaries = useSessionPrefs(s => s.bellAtAudioBoundaries);
-  const bellSource = useMemo(() => getBellSource(bellSoundId), [bellSoundId]);
-  // expo-audio refuses null sources — fall back to whichever sample
-  // BELL_SOUNDS[0] holds when 'None' is selected; we just never
-  // call play() in that case.
-  const bellInstance = useAudioPlayer(bellSource ?? require('../../assets/audio/bell.mp3'));
-  const playBoundaryBell = () => {
-    if (!bellSource) return;
-    try { bellInstance.seekTo(0); bellInstance.play(); } catch {}
-  };
 
   const [cues, setCues] = useState<TranscriptCue[]>([]);
   const [scrubbing, setScrubbing] = useState(false);
@@ -492,23 +467,11 @@ function PlayerInner() {
     // already pauses the outgoing player; once the resolve effect
     // produces the new URI, expo-audio swaps cleanly.
     setPendingSeekTo(null);
-    startBellFiredRef.current = false;
     return () => { try { player.pause(); } catch {} };
   }, [track?.id]);
 
-  // One-shot start bell — rings the moment playback actually starts
-  // (after autoStart or the first user-initiated play), gated by the
-  // Session Sounds pref. We watch `status.playing` flipping to true
-  // for the first time on this track. Per-round transitions don't
-  // re-fire it — only a track change resets the ref above.
-  const startBellFiredRef = useRef(false);
-  useEffect(() => {
-    if (startBellFiredRef.current) return;
-    if (!hasStarted || !status.playing) return;
-    startBellFiredRef.current = true;
-    if (bellAtAudioBoundaries) playBoundaryBell();
-  }, [hasStarted, status.playing, bellAtAudioBoundaries]);
 
+  // (after autoStart or the first user-initiated play), gated by the
   useEffect(() => {
     // Prefer round-specific transcript when playing a segmented round / inter.
     // Fallback chain (most-specific first → least):
@@ -631,13 +594,17 @@ function PlayerInner() {
       // value and interrupted the after-practice settle. Just dismiss
       // the player; the user lands back wherever they opened it from.
       try { player.pause(); } catch {}
-      // Final bell — single chime to mark the audio ending. Gated
-      // by Session Sounds pref; silent when bell is set to 'None'.
-      if (bellAtAudioBoundaries) playBoundaryBell();
       close();
       return;
     }
-    const hasInter = !!track?.rounds?.roundInters?.[currentRound - 1];
+    // Inter source can come from the catalog `roundInters` array OR
+    // from the registry-driven resolver (catalogs like qm1-2 don't
+    // list inters explicitly — they're derived per-round from the
+    // bundled / remote pattern). If either resolves, we treat it as
+    // a real break and switch the Player into break mode.
+    const catalogInter = track?.rounds?.roundInters?.[currentRound - 1];
+    const registryInter = track ? getInterSource(track.id, currentRound - 1) : null;
+    const hasInter = !!catalogInter || !!registryInter;
     if (hasInter) {
       setInBreak(true);
       roundChangedAt.current = Date.now();
@@ -697,32 +664,28 @@ function PlayerInner() {
 
   const currentCueIdx = useMemo(() => (cues.length ? findCueIndex(cues, t) : -1), [cues, t]);
 
+  // Auto-scroll fires only on cue boundary changes, not on every
+  // status tick. The previous version recomputed an interpolated Y
+  // every ~100 ms and applied it with `animated: false`, which on
+  // native produced a visible per-tick tremble (each scrollTo hard-
+  // snapped the offset by ~5–10 px). Snapping once per cue with
+  // `animated: true` lets RN do a single smooth animation between
+  // lines — karaoke still tracks the voice but the bar reads as a
+  // continuous glide rather than a stutter.
   useEffect(() => {
     if (!hasStarted || inBreak) return;
     if (currentCueIdx < 0) return;
     if (Date.now() < userScrollingUntil.current) return;
     const cur = cueLayouts.current[currentCueIdx];
     if (cur == null) return;
-    const next = cueLayouts.current[currentCueIdx + 1];
-    const cue = cues[currentCueIdx];
-    const nextCue = cues[currentCueIdx + 1];
-    const nextY = next != null ? next : cur + 60;
-    const span = Math.max(0.01, (nextCue ? nextCue.start : cue.end) - cue.start);
-    const frac = Math.max(0, Math.min(1, (t - cue.start) / span));
-    const y = cur + (nextY - cur) * frac;
-    // Offset chosen to land the current line near the top third of the
-    // 130 px transcript window (≈ 50 px below the top of the visible
-    // band, just past the CSS mask fade). The previous 140 px offset
-    // was tuned for the old 180 px frame and pushed the current line
-    // off the bottom of the now-shorter window — the karaoke felt
-    // late vs the voice. Smaller offset = scroll triggers earlier =
-    // current word stays visible.
-    const targetY = Math.max(0, y - 50);
+    // Offset lands the current line ~50 px below the top of the
+    // 130 px transcript window (just past the CSS mask fade).
+    const targetY = Math.max(0, cur - 50);
+    if (Math.abs(targetY - expectedScrollY.current) < 1) return;
     expectedScrollY.current = targetY;
-    const animated = nextScrollAnimated.current;
     nextScrollAnimated.current = false;
-    scrollRef.current?.scrollTo({ y: targetY, animated });
-  }, [currentCueIdx, t, hasStarted, inBreak]);
+    scrollRef.current?.scrollTo({ y: targetY, animated: true });
+  }, [currentCueIdx, hasStarted, inBreak]);
 
   const markUserScrolling = () => {
     userScrollingUntil.current = Date.now() + 5000;
@@ -804,6 +767,15 @@ function PlayerInner() {
     seekAndResume(scrubValue.current);
     setScrubbing(false);
   };
+  // Ref-bouncer for commitSeek so handlers captured by long-lived
+  // closures (the web useEffect listeners attached at mount) always
+  // call the latest version. Without this, the web onUp pointed at
+  // a frozen closure where `status.playing` was false (snapshot from
+  // when the effect first ran, before the user pressed play), so
+  // `seekAndResume` would pause + seek + skip the resume — visible
+  // as "tapping the waveform stops the audio".
+  const commitSeekRef = useRef(commitSeek);
+  useEffect(() => { commitSeekRef.current = commitSeek; });
 
   // Release the post-seek pin only once playback ACTUALLY resumes at
   // the target — i.e. engineState transitioned out of 'buffering' AND
@@ -851,7 +823,7 @@ function PlayerInner() {
     const onUp = () => {
       if (!dragging) return;
       dragging = false;
-      commitSeek();
+      commitSeekRef.current();
     };
 
     const onTouchStart = (e: TouchEvent) => {
@@ -903,8 +875,6 @@ function PlayerInner() {
   // keeps playing from its old position — the symptom: timeline drag
   // moves the visual but audio stays put. ±15 s buttons sidestep this
   // because their inline onPress closures re-bind every render.
-  const commitSeekRef = useRef(commitSeek);
-  useEffect(() => { commitSeekRef.current = commitSeek; });
   const pan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => Platform.OS !== 'web',
@@ -939,7 +909,12 @@ function PlayerInner() {
   // engineState machine collapses both into "user pressed play but no
   // audio is coming out yet", which is exactly the state where the
   // spinner belongs.
-  const isLoading = engineState === 'loading' || engineState === 'buffering';
+  // Cached / bundled audio reads from disk — there's nothing the user
+  // can wait for, so suppress the spinner for those even if expo-audio
+  // hasn't yet flipped `isLoaded` true. For remote streaming (http(s)
+  // URIs) we keep the buffering UI so the user understands the wait.
+  const isLocalUri = !!resolvedUri && (resolvedUri.startsWith('file://') || resolvedUri.startsWith('asset://'));
+  const isLoading = !isLocalUri && (engineState === 'loading' || engineState === 'buffering');
   const canSeek = duration > 0;
   const description = track.description ?? (track.rounds ? QM_DESCRIPTION : DEFAULT_DESCRIPTION);
   const rounds = track.rounds;
@@ -1323,11 +1298,9 @@ function PlayerInner() {
             <Pressable onPress={endBreak} style={styles.nextRoundBtn}>
               <Text style={[styles.nextRoundText, { color: accent }]}>Skip to round {currentRound + 1} →</Text>
             </Pressable>
-          ) : finished ? null : rounds ? (
+          ) : finished ? null : rounds && currentRound === 0 ? (
             <Pressable onPress={handleRoundEnd} style={styles.nextRoundBtn}>
-              <Text style={[styles.nextRoundText, { color: accent }]}>
-                {currentRound === 0 ? 'Skip intro →' : 'End this round →'}
-              </Text>
+              <Text style={[styles.nextRoundText, { color: accent }]}>Skip intro →</Text>
             </Pressable>
           ) : null}
         </View>

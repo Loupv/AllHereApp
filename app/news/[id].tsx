@@ -46,15 +46,20 @@ export default function NewsArticleScreen() {
       <BackButton />
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top }]}>
         <View style={[styles.column, { maxWidth: columnMax }]}>
-          {article.embedUrl
-            ? <EmbedPlayer src={article.embedUrl} />
-            : <Image source={article.image} style={styles.hero} resizeMode="cover" />}
-          <View style={styles.body}>
+          {/* Title + meta render BEFORE the embed so the BackButton
+              chevron lands over the dark header band, not the video
+              frame where it was hard to see. */}
+          <View style={styles.header}>
             <View style={styles.meta}>
               <Text style={styles.eyebrow}>{article.eyebrow}</Text>
               <Text style={styles.date}>{article.date}</Text>
             </View>
             <Text style={styles.title}>{noOrphan(article.title)}</Text>
+          </View>
+          {article.embedUrl
+            ? <EmbedPlayer src={article.embedUrl} />
+            : <Image source={article.image} style={styles.hero} resizeMode="cover" />}
+          <View style={styles.body}>
             {article.contentHtml ? (
               <View style={styles.html}>
                 <HtmlViewer html={article.contentHtml} link={article.link} />
@@ -81,6 +86,10 @@ const styles = StyleSheet.create({
   content: { paddingTop: spacing.md, paddingBottom: spacing.md, alignItems: 'center' },
   column: { width: '100%', alignSelf: 'center' },
   hero: { width: '100%', height: 240 },
+  // Header band above the embed — leaves room for the absolute
+  // BackButton (top-left chevron) so it sits over the dark header
+  // surface instead of the video frame.
+  header: { padding: spacing.lg, paddingTop: spacing.xl, alignItems: 'center' },
   body: { padding: spacing.lg, alignItems: 'center' },
   meta: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
   eyebrow: { ...type.overline, color: colors.accent },

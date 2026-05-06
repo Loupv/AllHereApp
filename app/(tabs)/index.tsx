@@ -93,16 +93,9 @@ export default function StartScreen() {
   const user = useAuth(s => s.user);
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { isTablet, columnMax } = useLayout();
+  const { isTablet, columnMax, playSize } = useLayout();
   const usableH = Math.max(360, height - insets.top - insets.bottom);
   const isTall = !isTablet && usableH >= 820;
-  // Circle diameter — same size used by the Player so the ring stays
-  // pinned at the same screen position through the Start ↔ Player
-  // crossfade. Sized smaller now that the text lives OUTSIDE the
-  // button (eyebrow + title + duration above, ▶ inside).
-  const playSize = isTablet
-    ? Math.max(180, Math.min(240, Math.round(usableH / 5.0)))
-    : Math.max(120, Math.min(160, Math.round(usableH / 5.5)));
 
   const [reveal] = useState(() => {
     if (didRevealOnce) return false;
@@ -271,7 +264,7 @@ export default function StartScreen() {
                 entering={reveal ? FadeInDown.delay(420).duration(550) : undefined}
               >
                 <Text style={[styles.pillsLabel, isTablet && styles.captionTablet]}>
-                  {noOrphan('Quick meditation')}
+                  {noOrphan('Instant Meditation')}
                 </Text>
                 <View style={styles.pillsRow}>
                   {MODES.map(m => (

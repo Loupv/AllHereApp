@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Pressable, Text, View, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle,
-  withRepeat, withSequence, withTiming, Easing,
+  withRepeat, withTiming, Easing,
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { colors, type } from '../theme';
@@ -71,26 +71,31 @@ export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, siz
   const voiceActive = useSharedValue(0);
 
   useEffect(() => {
+    // Use the reverse=true mode of withRepeat so each cycle is one
+    // continuous tween (0 → 1 → 0 → 1…) instead of two separate
+    // withTiming legs glued by withSequence. The withSequence form
+    // had a subtly visible discontinuity at the loop boundary —
+    // every other cycle's first leg started from a different value
+    // than the prior cycle ended at, producing a tiny "snap". The
+    // reverse-loop variant always carries the same animation factory
+    // forward, with reanimated handling the bounce between cycles
+    // on the worklet thread.
     breath.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 3600, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 3600, easing: Easing.inOut(Easing.sin) }),
-      ),
-      -1, false,
+      withTiming(1, { duration: 3600, easing: Easing.inOut(Easing.sin) }),
+      -1, true,
     );
     glowPulse.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 2700, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 2700, easing: Easing.inOut(Easing.sin) }),
-      ),
-      -1, false,
+      withTiming(1, { duration: 2700, easing: Easing.inOut(Easing.sin) }),
+      -1, true,
     );
+    // Sway oscillates around 0; -1 → +1 is twice the swing of breath.
+    // Start at -1 so the bounce stays symmetric (otherwise the first
+    // cycle's range was 0 → +1 → -1 → +1 — visibly faster than later
+    // cycles).
+    sway.value = -1;
     sway.value = withRepeat(
-      withSequence(
-        withTiming(1,  { duration: 4500, easing: Easing.inOut(Easing.sin) }),
-        withTiming(-1, { duration: 4500, easing: Easing.inOut(Easing.sin) }),
-      ),
-      -1, false,
+      withTiming(1, { duration: 9000, easing: Easing.inOut(Easing.sin) }),
+      -1, true,
     );
   }, []);
 
@@ -106,12 +111,15 @@ export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, siz
     voiceActive.value  = withTiming(mode === 'playing' ? 1 : 0, { duration: 500 });
   }, [mode]);
 
-  // Damp incoming voice samples lightly — peaks are now ~50 ms-resolved
-  // (see scripts/gen-waveforms.mjs at PEAKS_PER_SECOND = 20), so we only
-  // need a short blend window to keep transitions smooth without
-  // muddying the response. 90 ms feels alive without strobing.
+  // Damp incoming voice samples — peaks are ~50 ms-resolved (see
+  // scripts/gen-waveforms.mjs at PEAKS_PER_SECOND = 20), but the
+  // status tick that drives `voice` updates lands every ~100 ms.
+  // 180 ms gives enough headroom that consecutive samples blend
+  // through a single in-flight withTiming instead of strobing — the
+  // previous 90 ms window often saw a fresh tween cancel its
+  // predecessor mid-flight, which read as micro-jitter on the ring.
   useEffect(() => {
-    voiceSV.value = withTiming(Math.max(0, Math.min(1, voice)), { duration: 90 });
+    voiceSV.value = withTiming(Math.max(0, Math.min(1, voice)), { duration: 180 });
   }, [voice]);
 
   // ---- geometry ------------------------------------------------------

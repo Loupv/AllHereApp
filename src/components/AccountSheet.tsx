@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { Modal, View, Text, Pressable, StyleSheet, Switch, ScrollView } from 'react-native';
+import { Modal, View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, SlideInDown, SlideOutDown, FadeOut } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { useAuth } from '../auth/authStore';
 import { useProgress } from '../player/progressStore';
-import { useSessionPrefs } from '../player/sessionPrefs';
-import { BELL_SOUNDS } from '../player/bellRegistry';
 import { colors, radius, spacing, type } from '../theme';
 
 type Props = {
@@ -34,16 +32,6 @@ export function AccountSheet({ visible, onClose }: Props) {
   const resetProgress = useProgress(s => s.resetProgress);
   const insets = useSafeAreaInsets();
   const [confirmingReset, setConfirmingReset] = useState(false);
-  // Session sound prefs — countdown ticks + bell variant + bell-at-
-  // boundaries toggles. All persisted via the sessionPrefs store.
-  const countdownEnabled        = useSessionPrefs(s => s.countdownEnabled);
-  const bellSoundId             = useSessionPrefs(s => s.bellSoundId);
-  const bellAtAudioBoundaries   = useSessionPrefs(s => s.bellAtAudioBoundaries);
-  const setCountdownEnabled     = useSessionPrefs(s => s.setCountdownEnabled);
-  const setBellSoundId          = useSessionPrefs(s => s.setBellSoundId);
-  const setBellAtAudioBoundaries = useSessionPrefs(s => s.setBellAtAudioBoundaries);
-  const bellEnabled             = bellSoundId !== 'none';
-
   const handleReset = () => {
     if (!confirmingReset) {
       setConfirmingReset(true);
@@ -104,71 +92,6 @@ export function AccountSheet({ visible, onClose }: Props) {
             {user?.email ? (
               <Text style={styles.email} numberOfLines={1}>{user.email}</Text>
             ) : null}
-
-            <View style={styles.divider} />
-
-            {/* Session sounds — covers both the QM Training timer
-                (countdown ticks + bell at round boundaries) and the
-                Player (bell at audio start / end). */}
-            <Text style={styles.sectionLabel}>Session sounds</Text>
-
-            <View style={styles.rowSwitch}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowLabel}>3-2-1 countdown</Text>
-                <Text style={styles.rowHint}>QM Training only — beats before round 1 and at the end of every break.</Text>
-              </View>
-              <Switch
-                value={countdownEnabled}
-                onValueChange={setCountdownEnabled}
-                trackColor={{ false: 'rgba(255,255,255,0.14)', true: 'rgba(54,160,158,0.55)' }}
-                thumbColor={countdownEnabled ? colors.accentAlt : '#bbb'}
-                ios_backgroundColor="rgba(255,255,255,0.14)"
-              />
-            </View>
-
-            {/* Bell sound — variant picker is the master control:
-                "None" disables every bell, otherwise pick the
-                variant. Below it sits the single toggle that
-                governs whether the chosen bell also plays at the
-                start / end of guided audios (QM rounds always
-                ring it, regardless of the toggle). */}
-            <View style={styles.bellGroup}>
-              <Text style={styles.rowLabel}>Bell sound</Text>
-              <Text style={styles.rowHint}>Rings at QM round boundaries. Pick "None" to silence every bell in the app.</Text>
-              <View style={styles.radioRow}>
-                {BELL_SOUNDS.map(b => {
-                  const selected = bellSoundId === b.id;
-                  return (
-                    <Pressable
-                      key={b.id}
-                      onPress={() => setBellSoundId(b.id)}
-                      style={({ pressed }) => [
-                        styles.radioCell,
-                        selected && styles.radioCellSelected,
-                        pressed && { opacity: 0.85 },
-                      ]}
-                    >
-                      <View style={[styles.radioDot, selected && styles.radioDotSelected]} />
-                      <Text style={[styles.radioLabel, selected && styles.radioLabelSelected]}>{b.label}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-
-            <View style={[styles.rowSwitch, !bellEnabled && styles.groupDisabled]} pointerEvents={bellEnabled ? 'auto' : 'none'}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowLabel}>Bell at audio boundaries</Text>
-                <Text style={styles.rowHint}>Single bell at the start and at the end of every guided audio.</Text>
-              </View>
-              <Switch
-                value={bellAtAudioBoundaries}
-                onValueChange={setBellAtAudioBoundaries}
-                trackColor={{ false: 'rgba(255,255,255,0.14)', true: 'rgba(54,160,158,0.55)' }}
-                thumbColor={bellAtAudioBoundaries ? colors.accentAlt : '#bbb'}
-                ios_backgroundColor="rgba(255,255,255,0.14)"
-              />
-            </View>
 
             <View style={styles.divider} />
 

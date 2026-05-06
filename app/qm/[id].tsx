@@ -111,19 +111,6 @@ export default function QMVoletScreen() {
             ) : null}
           </View>
 
-          {smTwin ? (
-            <Pressable
-              onPress={() => router.replace(`/silent-mind/${smTwin.id}` as any)}
-              style={({ pressed }) => [styles.siblingCta, pressed && { opacity: 0.7 }]}
-            >
-              <Text style={[styles.siblingArrow, { color: colors.accent }]}>←</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.siblingEyebrow}>Silent Mind program</Text>
-                <Text style={styles.siblingText}>{noOrphan(`Back to Silent Mind · ${smTwin.title}`)}</Text>
-                <Text style={styles.siblingHint}>{noOrphan('The guided, untimed version of these practices.')}</Text>
-              </View>
-            </Pressable>
-          ) : null}
         </View>
       </ScrollView>
       </SubPageSwipeNav>

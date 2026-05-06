@@ -46,13 +46,18 @@ export default function VideoArticleScreen() {
       <BackButton />
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top }]}>
         <View style={[styles.column, { maxWidth: columnMax }]}>
+          {/* Title + meta render BEFORE the player so the back chevron
+              (absolute top-left) sits over the empty header band, not
+              over a dark video frame where it disappears. */}
+          <View style={styles.header}>
+            {video.duration ? <Text style={styles.date}>{video.duration}</Text> : null}
+            <Text style={styles.title}>{noOrphan(video.title)}</Text>
+            {video.subtitle ? <Text style={styles.subtitle}>{noOrphan(video.subtitle)}</Text> : null}
+          </View>
           {video.embedUrl
             ? <EmbedPlayer src={video.embedUrl} />
             : <Image source={video.poster} style={styles.hero} resizeMode="cover" />}
           <View style={styles.body}>
-            {video.duration ? <Text style={styles.date}>{video.duration}</Text> : null}
-            <Text style={styles.title}>{noOrphan(video.title)}</Text>
-            {video.subtitle ? <Text style={styles.subtitle}>{noOrphan(video.subtitle)}</Text> : null}
             {video.contentHtml ? (
               <View style={styles.html}>
                 <HtmlViewer html={video.contentHtml} link={video.link} />
@@ -75,6 +80,10 @@ const styles = StyleSheet.create({
   content: { paddingTop: spacing.md, paddingBottom: spacing.md, alignItems: 'center' },
   column: { width: '100%', alignSelf: 'center' },
   hero: { width: '100%', height: 220 },
+  // Header band above the player — leaves room for the absolute
+  // BackButton (top-left chevron) to sit over a clean dark surface
+  // instead of the video frame, where it was hard to see.
+  header: { padding: spacing.lg, paddingTop: spacing.xl, alignItems: 'center' },
   body: { padding: spacing.lg, alignItems: 'center' },
   date: { ...type.overline, color: colors.textDim, marginBottom: spacing.sm },
   title: {

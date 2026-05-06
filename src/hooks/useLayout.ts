@@ -25,16 +25,28 @@ export type LayoutInfo = {
   columnMax: number;
   /** How many columns a grid should use at this width. */
   gridColumns: 1 | 2;
+  /** Shared CircleButton diameter — used by Start, Player and QM
+   *  Training so the round play button is the same size on every
+   *  screen. Pass to <CircleButton size={playSize} />. */
+  playSize: number;
 };
 
 export function useLayout(): LayoutInfo {
   const { width, height } = useWindowDimensions();
   const isTablet = width >= TABLET_MIN_WIDTH;
+  // Single source-of-truth play diameter formula. Mirrored from the
+  // original Start-screen calc so existing layouts keep the same
+  // pixel size; importing from one place ensures Player + QM Training
+  // never drift out of sync again.
+  const playSize = isTablet
+    ? Math.max(180, Math.min(240, Math.round(height / 5.0)))
+    : Math.max(120, Math.min(160, Math.round(height / 5.5)));
   return {
     width,
     height,
     isTablet,
     columnMax: Math.min(width, CONTENT_MAX_WIDTH),
     gridColumns: isTablet ? 2 : 1,
+    playSize,
   };
 }

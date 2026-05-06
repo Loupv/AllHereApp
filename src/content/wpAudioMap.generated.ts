@@ -10,6 +10,7 @@ export const WP_AUDIO_MAP: Record<string, string> = {
   "1 - Follow the Air.mp3": "https://allhere.org/wp-content/uploads/2026/04/1-Follow-the-Air.mp3",
   "1 - Turning Inward (Eyes-open, introductory practice).mp3": "https://allhere.org/wp-content/uploads/2026/04/1-Turning-Inward-Eyes-open-introductory-practice.mp3",
   "1. Welcome.mp3": "https://allhere.org/wp-content/uploads/2026/05/1.-Welcome.mp3",
+  "2 - Follow and witness the Air.mp3": "https://allhere.org/wp-content/uploads/2026/05/2-Follow-and-witness-the-Air.mp3",
   "2 - Self-Observation and Breath Following.mp3": "https://allhere.org/wp-content/uploads/2026/04/2-Self-Observation-and-Breath-Following.mp3",
   "2. Silent Mind.mp3": "https://allhere.org/wp-content/uploads/2026/05/2.-Silent-Mind.mp3",
   "3 - Center of Gravity.mp3": "https://allhere.org/wp-content/uploads/2026/04/3-Center-of-Gravity.mp3",

@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Modal, useWindowDimensions } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAudioPlayer } from 'expo-audio';
-import { BouncyScrollView as ScrollView } from '../src/components/BouncyScrollView';
 import { Background } from '../src/components/Background';
 import { BackButton } from '../src/components/BackButton';
 import { ProgramHeader } from '../src/components/ProgramHeader';
@@ -29,8 +28,9 @@ type Preset = {
 };
 const PRESETS: Preset[] = [
   { id: 'beginner', rounds: 3, lengthMin: 3, breakSec: 60, label: '3 × 3 min', sub: 'A first taste' },
+  { id: 'standard', rounds: 5, lengthMin: 3, breakSec: 60, label: '5 × 3 min', sub: 'Standard format' },
   { id: 'qm3-6',    rounds: 6, lengthMin: 3, breakSec: 60, label: '6 × 3 min', sub: 'QM3 — Unfollow & Witness' },
-  { id: 'qm3-7',    rounds: 7, lengthMin: 3, breakSec: 60, label: '7 × 3 min', sub: 'QM3 — Breath' },
+  { id: 'qm3-7',    rounds: 7, lengthMin: 3, breakSec: 60, label: '7 × 3 min', sub: 'QM3 — Breathing Body' },
   { id: 'qm5',      rounds: 5, lengthMin: 5, breakSec: 60, label: '5 × 5 min', sub: 'QM5 — Center of Gravity' },
 ];
 
@@ -77,8 +77,17 @@ type Phase = 'config' | 'countdown' | 'round' | 'break' | 'done';
 
 export default function QMTrainingScreen() {
   const router = useRouter();
-  const { columnMax } = useLayout();
+  const { columnMax, playSize } = useLayout();
   const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
+  // Fixed Y for the CircleButton centre — pinned absolutely on both
+  // the pre-play (config) and play (in-session) screens so the round
+  // button stays in the exact same spot regardless of the variable
+  // content above it (totalLine vs the much taller round/dots/timer
+  // stack). 0.52 of the usable height matches the play position the
+  // flex-based Start tab and Player land at.
+  const usableH = Math.max(360, winH - insets.top - insets.bottom);
+  const playCenterY = insets.top + Math.round(usableH * 0.52);
 
   // User-selected bell variant from Session Sounds. `null` means the
   // user picked "None" — every `playBell()` becomes a no-op. We bind
@@ -109,8 +118,9 @@ export default function QMTrainingScreen() {
   };
 
   // ---- config: a preset OR a custom triple --------------------------
-  // Default = "QM3 — Breath" preset (the most recognisable format).
-  const [roundsCount, setRoundsCount] = useState<number>(7);
+  // Default = the "Standard format" preset (5 × 3 min) — friendliest
+  // entry point for someone landing on this screen for the first time.
+  const [roundsCount, setRoundsCount] = useState<number>(5);
   const [roundLengthMin, setRoundLengthMin] = useState<number>(3);
   const [breakSeconds, setBreakSeconds] = useState<number>(60);
   // Custom-format modal state. Open it from "Custom format…", commit
@@ -135,11 +145,6 @@ export default function QMTrainingScreen() {
   const [currentRound, setCurrentRound] = useState<number>(1);
   const [elapsed, setElapsed] = useState<number>(0); // seconds in the current round / break
   const [paused, setPaused] = useState<boolean>(false);
-  // Pre-round countdown beeps (the "3 / 2 / 1" tick burst). Backed by
-  // the persisted Session Sounds preference — flip from the Account
-  // sheet (Settings → Session sounds → 3-2-1 countdown).
-  const countdownEnabled = useSessionPrefs(s => s.countdownEnabled);
-
   // Convert config to seconds so the timer math is uniform.
   const roundSeconds = roundLengthMin * 60;
   const phaseDuration =
@@ -175,7 +180,7 @@ export default function QMTrainingScreen() {
   // adding a third state. `inBreakCountdown` is the source of truth
   // for both audio (tick) and visual (big number) below.
   const inBreakCountdown =
-    phase === 'break' && countdownEnabled && remaining > 0 && remaining <= PRE_ROUND_SECONDS;
+    phase === 'break' && remaining > 0 && remaining <= PRE_ROUND_SECONDS;
 
   // Per-second audio cue during the lead-in (initial countdown phase
   // before round 1, or the last 3 s of every break). One tick at each
@@ -235,16 +240,11 @@ export default function QMTrainingScreen() {
     setCurrentRound(1);
     setElapsed(0);
     setPaused(false);
-    if (countdownEnabled) {
-      // 3 s lead-in: ticks fire from the per-second effect, bell fires
-      // at the phase=>round flip.
-      setPhase('countdown');
-    } else {
-      // Countdown disabled: drop straight into round 1 with just the
-      // boundary bell.
-      playBell();
-      setPhase('round');
-    }
+    // Drop straight into round 1 with the bell — the 3-2-1 ticks are
+    // only used to bridge breaks back to the next round, not at the
+    // initial start (the user already tapped play).
+    playBell();
+    setPhase('round');
   };
   const skipPhase = () => {
     // Manual "end round / skip break / start now" — does the same
@@ -269,7 +269,7 @@ export default function QMTrainingScreen() {
     }
     if (phase === 'break') {
       setCurrentRound(c => c + 1);
-      setPhase('countdown');
+      setPhase('round');
       setElapsed(0);
     }
   };
@@ -285,20 +285,35 @@ export default function QMTrainingScreen() {
       <Background color={colors.bgTabAlt}>
         <Stack.Screen options={{ title: '' }} />
         <BackButton />
-          <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center', paddingTop: insets.top }]}>
-            <View style={[styles.column, { maxWidth: columnMax }]}>
-              <ProgramHeader
-                eyebrow={qmProgram.eyebrow}
-                title="Self-guided training"
-                description="Pick a format matching one of our QM sessions, or set up your own. Bell cues only — no spoken guidance."
-                accent={colors.accentAlt}
-              />
+          <View style={[styles.content, { alignItems: 'center', paddingTop: insets.top, flex: 1 }]}>
+            <View style={[styles.column, { maxWidth: columnMax, flex: 1 }]}>
+              {/* Top region — header anchored to top, total line
+                  pushed to the bottom so it sits right above the
+                  play circle. Flex 1.7 / 1 ratio matches Start. */}
+              <View style={{ flex: 1.7, alignItems: 'center' }}>
+                <ProgramHeader
+                  eyebrow={qmProgram.eyebrow}
+                  title="Self-guided training"
+                  description="Pick a format matching one of our QM sessions, or set up your own. Bell cues only — no spoken guidance."
+                  accent={colors.accentAlt}
+                />
+                <View style={{ flex: 1 }} />
+                <Text style={styles.totalLine}>
+                  {roundsCount} × {roundLengthMin} min · break {breakSeconds < 60 ? `${breakSeconds}s` : `${Math.round(breakSeconds / 60)} min`}
+                </Text>
+              </View>
 
-              {/* Preset grid — one card per format we already use in
-                  the guided audios. Tapping a card sets the three
-                  values + highlights it via the matched-id derived
-                  state. */}
-              <View style={styles.presetBlock}>
+              {/* Spacer reserves the play circle's vertical
+                  footprint; the actual button is rendered absolutely
+                  below so it lines up with the in-session play. */}
+              <View style={{ height: playSize }} />
+
+              {/* Bottom region — hint sits just under the play, then
+                  presets fill the remaining space. */}
+              <View style={{ flex: 1, alignItems: 'center', width: '100%' }}>
+                <Text style={styles.launchHint}>Start when you are ready</Text>
+                <View style={{ flex: 1 }} />
+                <View style={styles.presetBlock}>
                 <Text style={styles.pickerLabel}>Choose a format</Text>
                 <View style={styles.presetGrid}>
                   {PRESETS.map(p => {
@@ -353,24 +368,25 @@ export default function QMTrainingScreen() {
                     </Text>
                   </Pressable>
                 </View>
+                </View>
               </View>
-
-              {/* Total session preview, then the launch button. */}
-              <Text style={styles.totalLine}>
-                {roundsCount} × {roundLengthMin} min · break {breakSeconds < 60 ? `${breakSeconds}s` : `${Math.round(breakSeconds / 60)} min`}
-              </Text>
-
-              <View style={styles.launchRow}>
-                <CircleButton
-                  mode="pre"
-                  size={120}
-                  accent={colors.accentAlt}
-                  onPress={startSession}
-                />
-              </View>
-              <Text style={styles.launchHint}>Start when you are ready</Text>
             </View>
-          </ScrollView>
+          </View>
+
+          {/* Pre-play CircleButton — pinned absolutely so its centre
+              sits at exactly playCenterY, identical to the in-session
+              play position rendered later. */}
+          <View
+            pointerEvents="box-none"
+            style={{ position: 'absolute', left: 0, right: 0, top: playCenterY - playSize / 2, alignItems: 'center' }}
+          >
+            <CircleButton
+              mode="pre"
+              size={playSize}
+              accent={colors.accentAlt}
+              onPress={startSession}
+            />
+          </View>
 
           {/* Custom-format modal — three picker rows, mirrored from the
               previous inline layout. Apply commits to the outer state
@@ -474,82 +490,76 @@ export default function QMTrainingScreen() {
       <Stack.Screen options={{ title: '' }} />
       <BackButton />
         <View style={[styles.content, { alignItems: 'center', paddingTop: insets.top }]}>
-          <View style={[styles.column, { maxWidth: columnMax, alignItems: 'center', justifyContent: 'center', flex: 1 }]}>
-            {/* Round / break / countdown label — same grammar as the
-                audio Player's round bar so the session reads as a
-                sibling experience. */}
-            <Text style={[styles.roundBarText, { color: colors.accentAlt }, phase === 'break' && styles.roundBarBreak]}>
-              {phase === 'done'
-                ? 'SESSION COMPLETE'
-                : phase === 'countdown'
-                  ? `· STARTING · round ${currentRound} of ${roundsCount} ·`
-                  : phase === 'break'
-                    ? `· BREAK · between round ${currentRound} and ${currentRound + 1} ·`
-                    : `ROUND ${currentRound} / ${roundsCount}`}
-            </Text>
-
-            {/* Round dot indicator — one dot per planned round, lit by
-                progress so far. */}
-            {phase !== 'done' ? (
-              <View style={styles.dotsRow}>
-                {Array.from({ length: roundsCount }, (_, i) => {
-                  const state = i + 1 < currentRound ? 'done' : i + 1 === currentRound ? 'current' : 'upcoming';
-                  return (
-                    <View
-                      key={i}
-                      style={[
-                        styles.dot,
-                        state === 'done' && styles.dotDone,
-                        state === 'current' && [styles.dotCurrent, { backgroundColor: colors.accentAlt }],
-                      ]}
-                    />
-                  );
-                })}
-              </View>
-            ) : null}
-
-            {/* Big number — during the 3-2-1 countdown shows the
-                whole-second tick (visual cue paired with the per-tick
-                bell), otherwise the mm:ss remaining for the round /
-                break / done state. The single number is the focal
-                point of the session — nothing else for the eyes to
-                wander to. */}
-            <View style={styles.timerSlot}>
-              <Text style={[
-                styles.timer,
-                (phase === 'countdown' || inBreakCountdown) && styles.timerCountdown,
-              ]}>
+          <View style={[styles.column, { maxWidth: columnMax, alignItems: 'center', flex: 1 }]}>
+            {/* Top region — round label + dots anchored at top, timer
+                pushed to bottom so it sits right above the play. Flex
+                1.7 / 1 ratio matches Start. */}
+            <View style={{ flex: 1.7, alignItems: 'center', width: '100%' }}>
+              <Text style={[styles.roundBarText, { color: colors.accentAlt }, phase === 'break' && styles.roundBarBreak]}>
                 {phase === 'done'
-                  ? '0:00'
-                  : phase === 'countdown' || inBreakCountdown
-                    ? String(countdownInt)
-                    : fmtMMSS(remaining)}
-              </Text>
-              <Text style={styles.timerSub}>
-                {phase === 'done'
-                  ? `${roundsCount} × ${roundLengthMin} min completed`
+                  ? 'SESSION COMPLETE'
                   : phase === 'countdown'
-                    ? 'get ready…'
-                    : inBreakCountdown
-                      ? 'next round in…'
-                      : phase === 'break'
-                        ? 'breathing break'
-                        : `${roundLengthMin} min round`}
+                    ? `· STARTING · round ${currentRound} of ${roundsCount} ·`
+                    : phase === 'break'
+                      ? `· BREAK · between round ${currentRound} and ${currentRound + 1} ·`
+                      : `ROUND ${currentRound} / ${roundsCount}`}
               </Text>
+
+              {phase !== 'done' ? (
+                <View style={styles.dotsRow}>
+                  {Array.from({ length: roundsCount }, (_, i) => {
+                    const state = i + 1 < currentRound ? 'done' : i + 1 === currentRound ? 'current' : 'upcoming';
+                    return (
+                      <View
+                        key={i}
+                        style={[
+                          styles.dot,
+                          state === 'done' && styles.dotDone,
+                          state === 'current' && [styles.dotCurrent, { backgroundColor: colors.accentAlt }],
+                        ]}
+                      />
+                    );
+                  })}
+                </View>
+              ) : null}
+
+              <View style={{ flex: 1 }} />
+
+              <View style={styles.timerSlot}>
+                <Text style={[
+                  styles.timer,
+                  (phase === 'countdown' || inBreakCountdown) && styles.timerCountdown,
+                ]}>
+                  {phase === 'done'
+                    ? '0:00'
+                    : phase === 'countdown' || inBreakCountdown
+                      ? String(countdownInt)
+                      : fmtMMSS(remaining)}
+                </Text>
+                <Text style={styles.timerSub}>
+                  {phase === 'done'
+                    ? `${roundsCount} × ${roundLengthMin} min completed`
+                    : phase === 'countdown'
+                      ? 'get ready…'
+                      : inBreakCountdown
+                        ? 'next round in…'
+                        : phase === 'break'
+                          ? 'breathing break'
+                          : `${roundLengthMin} min round`}
+                </Text>
+              </View>
             </View>
 
-            {/* Controls — vertical stack so the play button is on the
-                column's optical centre with the secondary actions
-                directly below. Order top → bottom: play/pause →
-                end-round → exit-training. */}
+            {/* Spacer reserves the play circle's footprint; the
+                actual button is rendered absolutely below so it sits
+                at the same Y as the pre-play. */}
+            <View style={{ height: playSize }} />
+
+            {/* Bottom region — skip / exit links sit just below the
+                play, then breathing room before the screen edge. */}
+            <View style={{ flex: 1, alignItems: 'center', width: '100%' }}>
             {phase !== 'done' ? (
               <View style={styles.controlsStack}>
-                <CircleButton
-                  mode={paused ? 'paused' : 'playing'}
-                  size={104}
-                  accent={colors.accentAlt}
-                  onPress={() => setPaused(p => !p)}
-                />
                 <Pressable onPress={skipPhase} hitSlop={10} style={styles.skipBtn}>
                   <Text style={[styles.skipBtnText, { color: colors.accentAlt }]}>
                     {phase === 'break'
@@ -573,8 +583,24 @@ export default function QMTrainingScreen() {
                 </Pressable>
               </View>
             )}
+            </View>
           </View>
         </View>
+        {/* In-session CircleButton — pinned at the same playCenterY
+            as the pre-play CircleButton above. */}
+        {phase !== 'done' ? (
+          <View
+            pointerEvents="box-none"
+            style={{ position: 'absolute', left: 0, right: 0, top: playCenterY - playSize / 2, alignItems: 'center' }}
+          >
+            <CircleButton
+              mode={paused ? 'paused' : 'playing'}
+              size={playSize}
+              accent={colors.accentAlt}
+              onPress={() => setPaused(p => !p)}
+            />
+          </View>
+        ) : null}
     </Background>
   );
 }
@@ -748,6 +774,54 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     textAlign: 'center',
     marginTop: spacing.xs,
+  },
+
+  // ---- bell radio ------------------------------------------------
+  bellGroup: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    gap: spacing.xs,
+  },
+  radioRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+  },
+  radioCell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  radioCellSelected: {
+    borderColor: colors.accentAlt,
+    backgroundColor: 'rgba(54,160,158,0.18)',
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.45)',
+  },
+  radioDotSelected: {
+    borderColor: colors.accentAlt,
+    backgroundColor: colors.accentAlt,
+  },
+  radioLabel: {
+    ...type.body,
+    color: colors.textDim,
+    fontSize: 13,
+  },
+  radioLabelSelected: {
+    color: colors.accentAlt,
   },
 
   // ---- session UI -----------------------------------------------
