@@ -23,7 +23,7 @@ const LOGO = require('../../assets/images/allhere-logo.png');
 // straight into a CSS `url(...)`. On native the require() resolves
 // to an opaque module id consumed by <Image> — `HERO_URI` stays
 // empty there since native doesn't take the web branch.
-const HERO_SOURCE = require('../../assets/images/lounge-1.jpg');
+const HERO_SOURCE = require('../../assets/images/aboutbanner.png');
 const HERO_URI: string =
   Platform.OS === 'web' && HERO_SOURCE && typeof HERO_SOURCE === 'object' && 'uri' in HERO_SOURCE
     ? (HERO_SOURCE as { uri: string }).uri
@@ -31,22 +31,22 @@ const HERO_URI: string =
 
 const pillars = [
   {
+    icon: require('../../assets/images/icon-practice.png'),
+    title: 'Meditation Practice',
+    body:
+      'We train methods that reduce random mind-wandering and enhance attention to achieve Stability and Silence of Mind.',
+  },
+  {
     icon: require('../../assets/images/icon-science.png'),
     title: 'Science',
     body:
-      'We make meditation measurable with our advanced brain tracking system, validated by fundamental research and rigorous R&D.',
+      'We make meditation measurable through scientific parameters and indexes, validated by fundamental research and rigorous R&D.',
   },
   {
     icon: require('../../assets/images/icon-technology.png'),
     title: 'Technology',
     body:
-      'We support meditation development by integrating research-grade EEG with real-time visualization and multisensory immersive technology.',
-  },
-  {
-    icon: require('../../assets/images/icon-practice.png'),
-    title: 'Meditation Practice',
-    body:
-      'We train methods to reduce random mind-wandering and enhance meditative attention in order to achieve a profound state of Stability and Silence of Mind.',
+      'We support your meditation practice by integrating advanced brain-imaging and multisensory immersive technology.',
   },
 ];
 
@@ -60,10 +60,13 @@ export default function AboutTabScreen() {
   // shrinking the image on iOS). Source picture is 674 × 702
   // (≈ square); we render it at full screen width and let the
   // wrapper crop the height to a banner.
+  // Banner is now displayed in its natural square ratio (zoomed out
+  // — `contain` rather than the previous bottom-cropped band). The
+  // frame height tracks the width so the image shows in full with
+  // no cropping.
   const heroW = Math.min(screenW, columnMax);
-  const heroSrcAspect = 674 / 702; // ≈ 0.96
-  const heroImgH = heroW / heroSrcAspect;        // image natural height at full width
-  const heroFrameH = Math.max(220, Math.min(360, Math.round(heroW / 1.6))); // banner height
+  const heroSrcAspect = 1070 / 1080; // ≈ 0.99 (aboutbanner.png) — square
+  const heroFrameH = heroW;
   return (
     <Background color={colors.bgTab}>
       <SwipeTabs current="about">
@@ -85,30 +88,20 @@ export default function AboutTabScreen() {
               Platform.OS === 'web' && {
                 // @ts-expect-error — web-only CSS props.
                 backgroundImage: `url(${HERO_URI})`,
-                backgroundSize: 'cover',
-                backgroundPosition: '50% 100%',
+                backgroundSize: 'contain',
+                backgroundPosition: '50% 50%',
                 backgroundRepeat: 'no-repeat',
               },
             ]}
           >
             {Platform.OS !== 'web' ? (
-              // Native: Image rendered with EXPLICIT pixel dimensions
-              // — width = full screen width, height = source's
-              // intrinsic height at that width. Anchored to the
-              // bottom of the wrapper via absolute positioning so the
-              // top overflows + clips. No percentages, no aspectRatio
-              // → no Yoga ambiguity that was leaving the IMG narrower
-              // than the wrapper on iOS.
+              // Native: full-frame Image with `contain` so the whole
+              // banner is visible (no crop). Wrapper is square so the
+              // banner sits centred in its own band.
               <Image
                 source={HERO_SOURCE}
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  bottom: 0,
-                  width: heroW,
-                  height: heroImgH,
-                }}
-                resizeMode="cover"
+                style={StyleSheet.absoluteFillObject}
+                resizeMode="contain"
               />
             ) : null}
           </View>
@@ -128,31 +121,8 @@ export default function AboutTabScreen() {
                 identical-grammar line and read as redundant. */}
             <Text style={styles.title}>{noOrphan('Where meditation meets\nscience & technology')}</Text>
             <Text style={styles.lead}>
-              {noOrphan('Founded in Geneva, All Here is inspiring the world to meditate through immersive, quantifiable technologies.')}
+              {noOrphan('Founded in Geneva, in collaboration with leading academic institutions, All Here is inspiring the world to meditate with Science & Technology.')}
             </Text>
-
-            {/* Inline stats: no cards / borders — three quiet columns
-                of value + label, aligned to the text above. */}
-            <View style={styles.stats}>
-              {/* `noOrphan` ties the last two words with a non-breaking
-                  space — fine on wide labels, but in these narrow stat
-                  columns the joined pair ('neuroscience research',
-                  'meditators analyzed') overflows and the text engine
-                  breaks mid-word. Plain strings let the labels wrap on
-                  ordinary spaces instead. */}
-              <View style={styles.stat}>
-                <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>Decades</Text>
-                <Text style={styles.statLabel}>of advanced meditation practice</Text>
-              </View>
-              <View style={styles.stat}>
-                <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>4 years</Text>
-                <Text style={styles.statLabel}>of neuroscience research</Text>
-              </View>
-              <View style={styles.stat}>
-                <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>+400</Text>
-                <Text style={styles.statLabel}>expert meditators analyzed</Text>
-              </View>
-            </View>
 
             {pillars.map(p => (
               <View key={p.title} style={styles.pillar}>
@@ -222,11 +192,11 @@ const styles = StyleSheet.create({
     ? ({
         width: '100%',
         height: '100%',
-        // @ts-expect-error — backgroundPosition is a CSS prop honoured
-        // by react-native-web's Image but absent from the RN typings.
+        // backgroundPosition is a CSS prop honoured by react-native-
+        // web's Image but absent from the RN typings — the `as any`
+        // cast on the wrapper object covers the assignment.
         // Visible band biased to the upper portion of the source
-        // (~18% from the top) — midway between the earlier 25% (too
-        // low) and 10% (too high). Lands on the subject's
+        // (~18% from the top) — lands on the subject's
         // shoulders / upper torso.
         backgroundPosition: '50% 18%',
       } as any)
@@ -256,19 +226,6 @@ const styles = StyleSheet.create({
   title: { ...type.display, color: colors.text, fontSize: 22, marginBottom: spacing.md, lineHeight: 28 },
   // Lead now reads as a prose paragraph, not a second hero banner.
   lead: { ...type.body, color: colors.textMuted, fontSize: 14, lineHeight: 21, marginBottom: spacing.lg },
-  // No filled cards — just three quiet columns. A hairline below the row
-  // separates it from the pillars that follow.
-  stats: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomColor: 'rgba(255,255,255,0.09)',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  stat: { flex: 1 },
-  statValue: { ...type.h3, color: colors.text, marginBottom: 2, fontSize: 14 },
-  statLabel: { ...type.caption, color: colors.textMuted, fontSize: 10, lineHeight: 14 },
   // Hairline pillar rows — same list motif as ContentCard / VoletCard.
   // Tightened sizes so the stack of three pillars doesn't dominate.
   pillar: {

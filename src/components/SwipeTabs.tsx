@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'expo-router';
 type TabName = 'index' | 'silent-mind' | 'qm' | 'video' | 'about';
 
 // Order mirrors the bottom tab bar (see app/(tabs)/_layout.tsx)
-const TABS: TabName[] = ['index', 'silent-mind', 'qm', 'video', 'about'];
+const TABS: TabName[] = ['index', 'qm', 'silent-mind', 'video', 'about'];
 
 const HREF: Record<TabName, string> = {
   index: '/',

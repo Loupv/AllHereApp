@@ -31,10 +31,20 @@ function Headphones({ color, size = 22 }: { color: string; size?: number }) {
   );
 }
 
-function Play({ color, size = 22 }: { color: string; size?: number }) {
+function Camera({ color, size = 22 }: { color: string; size?: number }) {
+  // Compact camcorder silhouette — body on the left, lens-cone on
+  // the right. Reads as "video device" rather than "play button"
+  // so it doesn't compete with the global ▶ play affordance.
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path d="M7 5l12 7-12 7V5z" fill={color} />
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M3 7h11a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"
+        fill={color}
+      />
+      <Path
+        d="M16 11l5-3v8l-5-3v-2z"
+        fill={color}
+      />
     </Svg>
   );
 }
@@ -49,7 +59,7 @@ function Text_({ color, size = 22 }: { color: string; size?: number }) {
 
 export function KindIcon({ kind, color, size = 22 }: { kind: MediaKind; color: string; size?: number }) {
   if (kind === 'audio') return <Headphones color={color} size={size} />;
-  if (kind === 'video') return <Play color={color} size={size} />;
+  if (kind === 'video') return <Camera color={color} size={size} />;
   // 'text' + 'article' both render the paragraph glyph
   return <Text_ color={color} size={size} />;
 }

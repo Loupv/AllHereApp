@@ -55,6 +55,12 @@ const TransparentNavTheme = {
   colors: { ...DarkTheme.colors, background: 'transparent' },
 };
 
+// Pick one of the three headline shaders at module load — that's
+// once per app process, so it survives navigation and only changes
+// when the app is fully relaunched.
+const LAUNCH_POOL: ('lake' | 'sky' | 'space')[] = ['lake', 'sky', 'space'];
+const LAUNCH_THEME = LAUNCH_POOL[Math.floor(Math.random() * LAUNCH_POOL.length)];
+
 export default function RootLayout() {
   const [introDone, setIntroDone] = useState(false);
   const user = useAuth(s => s.user);
@@ -63,11 +69,12 @@ export default function RootLayout() {
   // forced to the slow-lake variant on Media + About where the
   // calmer water motion is a quieter companion to dense text.
   const shaderOverride = useShaderThemeStore(s => s.override);
-  // Single global shader theme — space everywhere. The per-route
-  // lake swap was distracting because the field hard-cut between
-  // tabs; one continuous backdrop reads better. The dev pill on
-  // Start can override locally for design exploration.
-  const shaderTheme = shaderOverride ?? 'space';
+  // Random launch theme — picked once per app process from the three
+  // headline shaders (lake, sky, space). Module-level constant means
+  // every screen sees the same backdrop until the next launch, while
+  // re-opening the app gives the user a different atmosphere. Any
+  // dev pill override still wins.
+  const shaderTheme = shaderOverride ?? LAUNCH_THEME;
   // Pause only when the app is backgrounded. The shader keeps
   // running on every screen now (lake on Media/About, the
   // progress-based theme everywhere else).

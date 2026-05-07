@@ -142,7 +142,7 @@ export const introAudios: AudioTrack[] = [
     id: 'intro-1', title: 'Welcome',
     // source is remote (Part0 on WordPress) — Player resolves via track.id
     transcript: BUNDLED_TRANSCRIPTS.introWelcome,
-    durationHint: '2:20',
+    durationHint: '2:00',
     description: "Welcome to the Silent Mind program, All Here's journey towards Stability and Silence of Mind. A vertical progression toward advanced meditation practice.",
   },
   // 'Prepare the space' (intro-3) is intentionally pulled for now —
@@ -285,7 +285,7 @@ const oneMinute: AudioTrack = {
   title: 'One minute meditation',
   source: BUNDLED_AUDIO.homeOneMin,
   transcript: BUNDLED_TRANSCRIPTS.homeOneMin,
-  durationHint: '1:50',
+  durationHint: '1:06',
   description: 'One minute to arrive. A single breath, a moment of attention — your first taste of the practice.',
 };
 

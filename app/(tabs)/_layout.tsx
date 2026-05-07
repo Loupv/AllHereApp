@@ -152,8 +152,8 @@ export default function TabsLayout() {
 
   const tabs: TabMeta[] = [
     { route: 'index',       label: 'Start',       icon: '◐' },
-    { route: 'silent-mind', label: 'Silent Mind', icon: '◉' },
     { route: 'qm',          label: 'QM Training', icon: '◎' },
+    { route: 'silent-mind', label: 'Silent Mind', icon: '◉' },
     { route: 'video',       label: 'Media',       icon: '▷', badge: videoUnread },
     { route: 'about',       label: 'About',       icon: '◆' },
   ];
@@ -194,8 +194,8 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Start' }} />
-      <Tabs.Screen name="silent-mind" options={{ title: 'Silent Mind' }} />
       <Tabs.Screen name="qm" options={{ title: 'QM Training' }} />
+      <Tabs.Screen name="silent-mind" options={{ title: 'Silent Mind' }} />
       <Tabs.Screen name="video" options={{ title: 'Media' }} />
       <Tabs.Screen name="about" options={{ title: 'About' }} />
     </Tabs>

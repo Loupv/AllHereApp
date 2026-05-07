@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
 import { LazyImage } from '../../src/components/LazyImage';
+import { ProgramHeader } from '../../src/components/ProgramHeader';
 import { SeeMoreLink } from '../../src/components/SeeMoreLink';
 import { videoItems, type VideoItem, type MediaKind } from '../../src/content/catalog';
 import { useVideoFeed, useNewsFeed } from '../../src/content/remote';
@@ -112,11 +113,16 @@ export default function VideoScreen() {
   const refreshing = video.refreshing || news.refreshing;
   const refresh = () => { video.refresh(); news.refresh(); };
 
+  // Filters start OFF — when no filter is active, everything is shown
+  // (the toolbar acts as a "narrow down to" picker, not a default
+  // exclusion). As soon as the user enables one or more kinds, the
+  // list is restricted to those.
   const [enabled, setEnabled] = useState<Record<MediaKind, boolean>>({
-    video: true, audio: true, article: true,
+    video: false, audio: false, article: false,
   });
   const toggle = (k: MediaKind) => setEnabled(s => ({ ...s, [k]: !s[k] }));
-  const visible = rows.filter(r => enabled[r.kind]);
+  const anyOn = enabled.video || enabled.audio || enabled.article;
+  const visible = anyOn ? rows.filter(r => enabled[r.kind]) : rows;
   const counts: Record<MediaKind, number> = {
     video: rows.filter(r => r.kind === 'video').length,
     audio: rows.filter(r => r.kind === 'audio').length,
@@ -133,15 +139,12 @@ export default function VideoScreen() {
         onRefresh={refresh}
         refreshing={refreshing}
       >
-        <View style={styles.hero}>
-          <Image source={require('../../assets/images/hero/thepractice.jpg')} style={styles.heroImage} resizeMode="cover" />
-          <View style={styles.heroOverlay} />
-          <View style={styles.heroText}>
-            <Text style={styles.eyebrow}>MEDIA HUB</Text>
-            <Text style={styles.title}>{noOrphan('Watch, listen & read')}</Text>
-          </View>
-        </View>
         <View style={styles.columnWrap}>
+        <ProgramHeader
+          eyebrow="Media hub"
+          title="Watch, listen & read"
+          accent={colors.accent}
+        />
         <View style={styles.filterRow}>
           {TOGGLE_KINDS.map(k => {
             const on = enabled[k];
@@ -235,12 +238,6 @@ export default function VideoScreen() {
 
 const styles = StyleSheet.create({
   content: {},
-  hero: { height: 180, justifyContent: 'flex-end', overflow: 'hidden', marginBottom: spacing.md },
-  heroImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,16,46,0.35)' },
-  heroText: { padding: spacing.lg, alignItems: 'center' },
-  eyebrow: { ...type.overline, color: colors.accent, marginBottom: spacing.sm },
-  title: { ...type.display, color: colors.text, fontSize: 32, textAlign: 'center' },
   filterRow: {
     flexDirection: 'row',
     justifyContent: 'center',

@@ -452,7 +452,13 @@ function PlayerInner() {
     // track swap so it doesn't re-fire on future round changes.
     const auto = usePlayerStore.getState().consumeAutoStart();
     const startAtIntro = !!(auto && track?.rounds?.introSource);
-    setHasStarted(!!auto);
+    // Preserve hasStarted across an in-playlist Next/Prev: if the user
+    // was already actively playing, the new track should auto-play
+    // too instead of dropping back to the pre-play screen. We read the
+    // live `playing` flag straight from the store so it's up to date
+    // even though this effect is on the new track's render.
+    const wasPlaying = usePlayerStore.getState().playing;
+    setHasStarted(!!auto || wasPlaying);
     setCurrentRound(auto ? (startAtIntro ? 0 : 1) : 1);
     setSelectedRounds(track?.rounds?.max ?? 1);
     setIncludeIntro(!!track?.rounds?.introSource);
@@ -467,7 +473,21 @@ function PlayerInner() {
     // already pauses the outgoing player; once the resolve effect
     // produces the new URI, expo-audio swaps cleanly.
     setPendingSeekTo(null);
-    return () => { try { player.pause(); } catch {} };
+    // Pause aggressively on track swap. The bug: clicking Next while
+    // the previous track was playing left the old source emitting
+    // audio while expo-audio asynchronously decoded the new URI →
+    // briefly two audios overlapping. A single pause() doesn't
+    // always land before the swap because AVPlayer (iOS) and the
+    // web HTMLAudioElement keep feeding already-buffered bytes for a
+    // tick. Pausing once synchronously, then again on the next
+    // microtask after React commits the new URI, closes the gap
+    // without forcing a null-source intermediate (which broke web
+    // resume on qm1-4 round 1).
+    return () => {
+      try { player.pause(); } catch {}
+      Promise.resolve().then(() => { try { player.pause(); } catch {} });
+      setTimeout(() => { try { player.pause(); } catch {} }, 80);
+    };
   }, [track?.id]);
 
 
@@ -578,9 +598,22 @@ function PlayerInner() {
     }
   }, [t, duration, status.playing, hasStarted, inBreak, finished]);
 
+  // Aggressive pause — used at round / break transitions where the
+  // outgoing audio's tail (often a closing bell) was bleeding into the
+  // start of the inter audio (which itself opens with a bell). A
+  // single `player.pause()` is queued asynchronously by AVPlayer / web
+  // audio and lets a few buffered frames out — calling pause three
+  // times across sync, microtask and a short timeout closes that gap
+  // so only the inter's own bell is heard.
+  const pauseHard = () => {
+    try { player.pause(); } catch {}
+    Promise.resolve().then(() => { try { player.pause(); } catch {} });
+    setTimeout(() => { try { player.pause(); } catch {} }, 60);
+  };
+
   const handleRoundEnd = () => {
     // Stop the current audio immediately so it doesn't bleed into the transition.
-    try { player.pause(); } catch {}
+    pauseHard();
     // After intro (round 0), go straight to round 1 with no break
     if (currentRound === 0) {
       setCurrentRound(1);
@@ -593,7 +626,7 @@ function PlayerInner() {
       // No end-of-audio splash — the "AUDIO ENDED" panel added little
       // value and interrupted the after-practice settle. Just dismiss
       // the player; the user lands back wherever they opened it from.
-      try { player.pause(); } catch {}
+      pauseHard();
       close();
       return;
     }
@@ -615,7 +648,7 @@ function PlayerInner() {
   };
 
   const endBreak = () => {
-    try { player.pause(); } catch {}
+    pauseHard();
     setInBreak(false);
     setCurrentRound(r => r + 1);
     endedHandled.current = false;
@@ -676,6 +709,13 @@ function PlayerInner() {
     if (!hasStarted || inBreak) return;
     if (currentCueIdx < 0) return;
     if (Date.now() < userScrollingUntil.current) return;
+    // Don't react to the cue jump that happens *during* a scrub /
+    // tap on the waveform — t briefly equals the scrub target, the
+    // cue index updates, and we'd scroll. Then on release the seek
+    // resolves and t snaps to the same cue → another scroll. The
+    // pair was visible as a ghost frame in the transcript. Wait
+    // until the scrub gesture is over and the seek has converged.
+    if (scrubbing || pendingSeekTo != null) return;
     const cur = cueLayouts.current[currentCueIdx];
     if (cur == null) return;
     // Offset lands the current line ~50 px below the top of the
@@ -685,7 +725,7 @@ function PlayerInner() {
     expectedScrollY.current = targetY;
     nextScrollAnimated.current = false;
     scrollRef.current?.scrollTo({ y: targetY, animated: true });
-  }, [currentCueIdx, hasStarted, inBreak]);
+  }, [currentCueIdx, hasStarted, inBreak, scrubbing, pendingSeekTo]);
 
   const markUserScrolling = () => {
     userScrollingUntil.current = Date.now() + 5000;

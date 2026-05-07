@@ -10,8 +10,6 @@ import { useLayout } from '../../src/hooks/useLayout';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { CircleButton } from '../../src/components/CircleButton';
-import { themeForNextTrack, type ShaderTheme } from '../../src/shaders';
-import { useShaderThemeStore } from '../../src/shaders/themeStore';
 import { KindIcon } from '../../src/components/KindIcon';
 import { AccountSheet } from '../../src/components/AccountSheet';
 import {
@@ -158,18 +156,6 @@ export default function StartScreen() {
   // entry point — Start CTA, QM/SM list ContentCard, etc.). No
   // per-screen subscription needed here.
 
-  // Shader theme state lives in a tiny shared store so the
-  // ShaderBackground (now rendered at the root layout, behind the
-  // audio Player) and this dev pill can both reach it.
-  const themeOverride = useShaderThemeStore(s => s.override);
-  const setThemeOverride = useShaderThemeStore(s => s.setOverride);
-  const autoTheme = themeForNextTrack(nextId);
-  const cycleTheme = () => {
-    const order: (ShaderTheme | null)[] = [null, 'earth', 'sky', 'space', 'lake', 'default'];
-    const i = order.indexOf(themeOverride);
-    setThemeOverride(order[(i + 1) % order.length]);
-  };
-
   return (
     <View style={styles.root}>
       <SwipeTabs current="index">
@@ -290,50 +276,11 @@ export default function StartScreen() {
       </SwipeTabs>
 
       <AccountSheet visible={accountOpen} onClose={() => setAccountOpen(false)} />
-
-      {/* Dev-only theme cycler — floating pill in the bottom-right
-          corner that cycles through the four shader themes (auto +
-          three overrides). Hidden in production builds via __DEV__. */}
-      {__DEV__ ? (
-        <Pressable
-          onPress={cycleTheme}
-          style={({ pressed }) => [styles.themePill, pressed && { opacity: 0.7 }]}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={`Cycle shader theme — current: ${themeOverride ?? 'auto'}`}
-        >
-          <Text style={styles.themePillText}>
-            {themeOverride ? themeOverride.toUpperCase() : `AUTO · ${autoTheme}`}
-          </Text>
-        </Pressable>
-      ) : null}
     </View>
   );
 }
 
-const themePillStyles = {
-  themePill: {
-    position: 'absolute' as const,
-    bottom: 90,
-    right: 16,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.10)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    zIndex: 100,
-  },
-  themePillText: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 10,
-    letterSpacing: 1.2,
-    fontWeight: '600' as const,
-  },
-};
-
 const styles = StyleSheet.create({
-  ...themePillStyles,
   root: { flex: 1 },
   scrollContainer: { flexGrow: 1, alignItems: 'center' },
   content: {
