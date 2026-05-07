@@ -80,14 +80,24 @@ export default function QMTrainingScreen() {
   const { columnMax, playSize } = useLayout();
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
-  // Fixed Y for the CircleButton centre — pinned absolutely on both
-  // the pre-play (config) and play (in-session) screens so the round
-  // button stays in the exact same spot regardless of the variable
-  // content above it (totalLine vs the much taller round/dots/timer
-  // stack). 0.52 of the usable height matches the play position the
-  // flex-based Start tab and Player land at.
+  // Fixed Y for the CircleButton centre — 0.52 of usableH to match
+  // the play position used by the Start tab and audio Player. The
+  // flex ratio below is computed so the playSize-tall reserved gap
+  // in the layout lands EXACTLY where the absolute button sits —
+  // no overlap above (totalLine / timer would clash) and no gap
+  // below (launchHint / controls stay flush).
+  //
+  // Solving "gap top + playSize/2 = 0.52 * usableH" with
+  //   gap top   = TOP_FLEX / (TOP_FLEX + BOTTOM_FLEX) * (usableH - playSize)
+  //   BOTTOM_FLEX fixed at 1
+  // gives a TOP_FLEX that depends slightly on playSize / usableH —
+  // ~1.10 for typical phones. Computed live so it tracks correctly
+  // on every device.
   const usableH = Math.max(360, winH - insets.top - insets.bottom);
   const playCenterY = insets.top + Math.round(usableH * 0.52);
+  const gapTop = playCenterY - insets.top - playSize / 2;
+  const TOP_FLEX = Math.max(0.1, gapTop) / Math.max(1, usableH - playSize - gapTop);
+  const BOTTOM_FLEX = 1;
 
   // User-selected bell variant from Session Sounds. `null` means the
   // user picked "None" — every `playBell()` becomes a no-op. We bind
@@ -290,7 +300,7 @@ export default function QMTrainingScreen() {
               {/* Top region — header anchored to top, total line
                   pushed to the bottom so it sits right above the
                   play circle. Flex 1.7 / 1 ratio matches Start. */}
-              <View style={{ flex: 1.7, alignItems: 'center' }}>
+              <View style={{ flex: TOP_FLEX, alignItems: 'center' }}>
                 <ProgramHeader
                   eyebrow={qmProgram.eyebrow}
                   title="Self-guided training"
@@ -308,10 +318,9 @@ export default function QMTrainingScreen() {
                   below so it lines up with the in-session play. */}
               <View style={{ height: playSize }} />
 
-              {/* Bottom region — hint sits just under the play, then
-                  presets fill the remaining space. */}
+              {/* Bottom region — presets fill the available space
+                  starting just below the play. */}
               <View style={{ flex: 1, alignItems: 'center', width: '100%' }}>
-                <Text style={styles.launchHint}>Start when you are ready</Text>
                 <View style={{ flex: 1 }} />
                 <View style={styles.presetBlock}>
                 <Text style={styles.pickerLabel}>Choose a format</Text>
@@ -494,7 +503,7 @@ export default function QMTrainingScreen() {
             {/* Top region — round label + dots anchored at top, timer
                 pushed to bottom so it sits right above the play. Flex
                 1.7 / 1 ratio matches Start. */}
-            <View style={{ flex: 1.7, alignItems: 'center', width: '100%' }}>
+            <View style={{ flex: TOP_FLEX, alignItems: 'center', width: '100%' }}>
               <Text style={[styles.roundBarText, { color: colors.accentAlt }, phase === 'break' && styles.roundBarBreak]}>
                 {phase === 'done'
                   ? 'SESSION COMPLETE'
