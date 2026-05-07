@@ -152,19 +152,19 @@ export default function SilentMindTreeScreen() {
     return y + ROW_PITCH / 2;
   }, [layers]);
 
-  // For each divider, the part it precedes (in display = the part
-  // below it). The divider doubles as a section header for that part:
-  // its dashed line spans the tree, with the part name centred over
-  // it — labelling the WHOLE zone you're entering when you cross the
-  // boundary from below going up.
+  // For each divider, label the part DIRECTLY ABOVE it in display
+  // order. Reading goes bottom-up (Welcome at the bottom is what the
+  // user sees first), so the label sitting on a divider should label
+  // the section you're about to enter going UP — i.e. the part whose
+  // tracks sit ABOVE the divider in display.
   const dividerLabels = useMemo(() => {
     const out: { idx: number; partId: StageId }[] = [];
     for (let i = 0; i < layers.length; i++) {
       if (layers[i].kind !== 'divider') continue;
-      for (let j = i + 1; j < layers.length; j++) {
-        const next = layers[j];
-        if (next.kind === 'row') {
-          out.push({ idx: i, partId: next.partId });
+      for (let j = i - 1; j >= 0; j--) {
+        const prev = layers[j];
+        if (prev.kind === 'row') {
+          out.push({ idx: i, partId: prev.partId });
           break;
         }
       }
@@ -172,10 +172,12 @@ export default function SilentMindTreeScreen() {
     return out;
   }, [layers]);
 
-  // The top part (Part 3) has no divider above it; render its label
-  // separately at the very top of the tree.
-  const topPartId: StageId | null = useMemo(() => {
-    for (const l of layers) {
+  // The bottommost part (Introduction) has no divider below it, so we
+  // render its label as a footer just below the last row, completing
+  // the same "label-then-section going up" rhythm.
+  const bottomPartId: StageId | null = useMemo(() => {
+    for (let i = layers.length - 1; i >= 0; i--) {
+      const l = layers[i];
       if (l.kind === 'row') return l.partId;
     }
     return null;
@@ -278,25 +280,37 @@ export default function SilentMindTreeScreen() {
             );
           })}
 
-          {/* Top-most part has no divider above it — render its label
-              at the very top of the tree as a section start marker. */}
-          {topPartId ? (
-            <View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                top: 4,
-                left: 0,
-                right: 0,
-                alignItems: 'center',
-              }}
-            >
-              <View style={styles.partTag}>
-                <Text style={styles.partName} numberOfLines={1}>
-                  {partLabel(topPartId)}
-                </Text>
+          {/* Bottommost part has no divider below it — render its label
+              as a footer just below the last row (with the same dashed
+              section-break treatment as the inter-part dividers, so
+              reading bottom-up the user sees the part name BEFORE its
+              first track). */}
+          {bottomPartId ? (
+            <>
+              <View
+                style={[
+                  styles.divider,
+                  { bottom: 18, width: totalW + 24, left: -12 },
+                ]}
+                pointerEvents="none"
+              />
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  bottom: 6,
+                  left: 0,
+                  right: 0,
+                  alignItems: 'center',
+                }}
+              >
+                <View style={styles.partTag}>
+                  <Text style={styles.partName} numberOfLines={1}>
+                    {partLabel(bottomPartId)}
+                  </Text>
+                </View>
               </View>
-            </View>
+            </>
           ) : null}
 
           {layers.map((l, i) => {
@@ -411,26 +425,38 @@ function CircleNode({
   const D = NODE_R * 2;
   const HIT = D + 16;
 
-  // Pulse the next-up node so the user's eye lands on it. Reanimated
-  // keeps the breath silky on the UI thread; the loop only runs while
+  // Slow, sin-eased breath on the next-up node. Tiny scale change
+  // paired with a halo opacity ripple so the motion reads as gentle
+  // breathing rather than a bouncing dot. Loop only runs while
   // isNext stays true.
   const pulse = useSharedValue(1);
+  const haloOpacity = useSharedValue(0.5);
   useEffect(() => {
     if (isNext) {
       pulse.value = withRepeat(
         withSequence(
-          withTiming(1.18, { duration: 900, easing: Easing.inOut(Easing.cubic) }),
-          withTiming(1.0, { duration: 900, easing: Easing.inOut(Easing.cubic) }),
+          withTiming(1.06, { duration: 1700, easing: Easing.inOut(Easing.sin) }),
+          withTiming(1.0, { duration: 1700, easing: Easing.inOut(Easing.sin) }),
+        ),
+        -1,
+        false,
+      );
+      haloOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.95, { duration: 1700, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0.45, { duration: 1700, easing: Easing.inOut(Easing.sin) }),
         ),
         -1,
         false,
       );
     } else {
-      pulse.value = withTiming(1, { duration: 200 });
+      pulse.value = withTiming(1, { duration: 240 });
+      haloOpacity.value = withTiming(0, { duration: 240 });
     }
   }, [isNext]);
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulse.value }],
+    shadowOpacity: isNext ? haloOpacity.value : 0,
   }));
 
   return (
@@ -468,13 +494,14 @@ function CircleNode({
                 : colors.bgTab,
             alignItems: 'center',
             justifyContent: 'center',
-            // Soft accent halo on the up-next node so it stays visually
-            // distinct even at the resting frame of the pulse cycle.
+            // Soft accent halo on the up-next node — its opacity is
+            // animated by the breath loop above; this just declares the
+            // colour and radius. shadowOpacity defaults to 0 when not
+            // next so the rest of the chain stays clean.
             ...(isNext
               ? {
                   shadowColor: accent,
-                  shadowOpacity: 0.85,
-                  shadowRadius: 14,
+                  shadowRadius: 16,
                   shadowOffset: { width: 0, height: 0 },
                   elevation: 10,
                 }
