@@ -294,11 +294,20 @@ export default function SilentMindTreeScreen() {
     isSnapping.current = true;
     settledPage.current = targetPage;
     setScrollLocked(true);
-    scrollRef.current?.scrollTo({ y: targetPage * pageH, animated: true });
+    const targetY = targetPage * pageH;
+    scrollRef.current?.scrollTo({ y: targetY, animated: true });
     setTimeout(() => {
+      // Hard-clamp to the target page on lock release. Some scroll
+      // sources on web (mouse wheel, trackpad) keep firing events
+      // even with scrollEnabled=false — without this, a second wheel
+      // tick during the animation would land us mid-way to the
+      // PAGE-AFTER-TARGET, and the next onScroll tick would advance
+      // again ("two pages at once"). Forcing the position back here
+      // means one gesture = one page, full stop.
+      scrollRef.current?.scrollTo({ y: targetY, animated: false });
       isSnapping.current = false;
       setScrollLocked(false);
-    }, 460);
+    }, 480);
   };
 
   // Page boundaries (= page index × pageH) drive the shader crossfade
