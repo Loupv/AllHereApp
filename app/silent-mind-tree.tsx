@@ -261,36 +261,44 @@ export default function SilentMindTreeScreen() {
   // a fade window centred on each boundary's Y in scroll content.
   const scrollY = useSharedValue(0);
 
-  // Hard snap-per-page: ANY scroll movement past a small threshold
-  // from the current page's centre triggers a single-page advance in
-  // that direction, ignoring velocity / distance. After scroll stops
-  // (100 ms idle) we lock onto the chosen page exactly. This gives a
-  // discrete Stories-style pager that works for touch drags AND
-  // mouse-wheel / trackpad gestures (which never fire Begin/EndDrag
-  // events on web).
+  // Hard snap-per-page: as soon as the scroll position drifts more
+  // than a few px from the current settled page, we IMMEDIATELY commit
+  // to the next page in the drag direction — no debounce, no waiting
+  // for the gesture to settle. The scroll is also locked
+  // (scrollEnabled=false) for the duration of the smooth scrollTo so
+  // continued user input doesn't drag the position past the target.
+  // Result: one continuous motion that lands on the next page centre.
   const settledPage = useRef(0);
   const isSnapping = useRef(false);
-  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const setScrollLocked = (locked: boolean) => {
+    try {
+      // setNativeProps is the cheapest way to toggle scrollEnabled on
+      // a live ScrollView ref without re-rendering the whole subtree.
+      (scrollRef.current as any)?.setNativeProps?.({ scrollEnabled: !locked });
+    } catch {
+      /* native may not expose the prop — animation still runs */
+    }
+  };
   const onScrollNative = (e: any) => {
     const y = e?.nativeEvent?.contentOffset?.y ?? 0;
     scrollY.value = y;
     if (isSnapping.current) return;
-    if (settleTimer.current) clearTimeout(settleTimer.current);
-    settleTimer.current = setTimeout(() => {
-      const settledY = settledPage.current * pageH;
-      const delta = y - settledY;
-      let targetPage = settledPage.current;
-      if (Math.abs(delta) > 10) {
-        targetPage = Math.max(
-          0,
-          Math.min(pageOrder.length - 1, settledPage.current + Math.sign(delta)),
-        );
-      }
-      isSnapping.current = true;
-      settledPage.current = targetPage;
-      scrollRef.current?.scrollTo({ y: targetPage * pageH, animated: true });
-      setTimeout(() => { isSnapping.current = false; }, 420);
-    }, 100);
+    const settledY = settledPage.current * pageH;
+    const delta = y - settledY;
+    if (Math.abs(delta) <= 6) return; // ignore micro-jitter
+    const direction = Math.sign(delta);
+    const targetPage = Math.max(
+      0,
+      Math.min(pageOrder.length - 1, settledPage.current + direction),
+    );
+    isSnapping.current = true;
+    settledPage.current = targetPage;
+    setScrollLocked(true);
+    scrollRef.current?.scrollTo({ y: targetPage * pageH, animated: true });
+    setTimeout(() => {
+      isSnapping.current = false;
+      setScrollLocked(false);
+    }, 460);
   };
 
   // Page boundaries (= page index × pageH) drive the shader crossfade
