@@ -130,29 +130,65 @@ export default function SilentMindTreeScreen() {
   const QM_X = sideW + treeW * 0.7;
   const CENTER_X = sideW + treeW / 2;
 
-  // Per-layer Y positions (centre of each row's node, or the dashed
-  // line for divider layers).
-  const rowYs = useMemo(() => {
-    const ys: number[] = [];
-    let y = ROW_PITCH / 2;
-    for (let i = 0; i < layers.length; i++) {
-      const l = layers[i];
-      if (l.kind === 'row') {
-        ys.push(y);
-        y += ROW_PITCH;
-      } else {
-        ys.push(y - ROW_PITCH / 2 + DIVIDER_GAP / 2); // sit between the rows
-        y += DIVIDER_GAP;
-      }
+  // Snap-per-part page layout — each part fills exactly one viewport
+  // height, the user snaps from one part to the next while scrolling.
+  // Padding inside each page leaves room for the safe-area top, the
+  // floating BackButton, and the dashed section header at the bottom.
+  const pageH = winH;
+  const TOP_PAD = Math.max(60, insets.top + 28);
+  const BOTTOM_PAD = Math.max(56, insets.bottom + 32);
+  const DIVIDER_OFFSET = 28; // distance from page bottom to the dashed line
+
+  // Order in which parts appear top-down in display (one page each).
+  const pageOrder = useMemo(() => {
+    const seen: StageId[] = [];
+    for (const l of layers) {
+      if (l.kind === 'row' && !seen.includes(l.partId)) seen.push(l.partId);
     }
-    return ys;
+    return seen;
   }, [layers]);
 
-  const totalH = useMemo(() => {
-    let y = ROW_PITCH / 2;
-    for (const l of layers) y += l.kind === 'row' ? ROW_PITCH : DIVIDER_GAP;
-    return y + ROW_PITCH / 2;
-  }, [layers]);
+  // Per-layer Y positions. Tracks of each part are evenly distributed
+  // within that part's page; dividers sit near the bottom of the part
+  // they belong to (the part DIRECTLY ABOVE in display order).
+  const rowYs = useMemo(() => {
+    const ys: number[] = new Array(layers.length).fill(0);
+    // Group row layer indices by part, in display order.
+    const partRows: Partial<Record<StageId, number[]>> = {};
+    for (let i = 0; i < layers.length; i++) {
+      const l = layers[i];
+      if (l.kind !== 'row') continue;
+      (partRows[l.partId] ??= []).push(i);
+    }
+    // Place rows page-by-page, evenly spread between top/bottom pad.
+    pageOrder.forEach((partId, pageIdx) => {
+      const indices = partRows[partId] ?? [];
+      const n = indices.length;
+      if (n === 0) return;
+      const pageStartY = pageIdx * pageH;
+      const trackArea = pageH - TOP_PAD - BOTTOM_PAD;
+      const trackPitch = trackArea / n;
+      indices.forEach((layerIdx, trackIdxInPage) => {
+        ys[layerIdx] = pageStartY + TOP_PAD + (trackIdxInPage + 0.5) * trackPitch;
+      });
+    });
+    // Dividers: position each near the bottom of the page belonging
+    // to the part they label (= the part DIRECTLY ABOVE in display).
+    for (let i = 0; i < layers.length; i++) {
+      if (layers[i].kind !== 'divider') continue;
+      let partAbove: StageId | null = null;
+      for (let j = i - 1; j >= 0; j--) {
+        const r = layers[j];
+        if (r.kind === 'row') { partAbove = r.partId; break; }
+      }
+      if (!partAbove) continue;
+      const pageIdx = pageOrder.indexOf(partAbove);
+      ys[i] = pageIdx * pageH + pageH - DIVIDER_OFFSET;
+    }
+    return ys;
+  }, [layers, pageH, pageOrder, TOP_PAD, BOTTOM_PAD]);
+
+  const totalH = useMemo(() => pageOrder.length * pageH, [pageOrder.length, pageH]);
 
   // For each divider, label the part DIRECTLY ABOVE it in display
   // order. Reading goes bottom-up (Welcome at the bottom is what the
@@ -198,31 +234,17 @@ export default function SilentMindTreeScreen() {
     onScroll: e => { scrollY.value = e.contentOffset.y; },
   });
 
-  // Y positions of the P2↔P3 and P1↔P2 boundaries within scroll
-  // content. Used by the opacity worklets below; recomputed when the
-  // layer layout changes.
+  // Page boundaries (= page index × pageH) drive the shader crossfade
+  // worklets. The boundary between P3 and P2 sits at the bottom of P3's
+  // page; same for P2 ↔ P1.
   const { yP2P3, yP1P2 } = useMemo(() => {
-    let yP2P3 = 0;
-    let yP1P2 = 0;
-    for (let i = 0; i < layers.length; i++) {
-      const l = layers[i];
-      if (l.kind !== 'divider') continue;
-      // The divider sits between two parts; find both neighbour rows.
-      let above: StageId | null = null;
-      let below: StageId | null = null;
-      for (let j = i - 1; j >= 0; j--) {
-        const r = layers[j];
-        if (r.kind === 'row') { above = r.partId; break; }
-      }
-      for (let j = i + 1; j < layers.length; j++) {
-        const r = layers[j];
-        if (r.kind === 'row') { below = r.partId; break; }
-      }
-      if (above === 'part3' && below === 'part2') yP2P3 = rowYs[i];
-      else if (above === 'part2' && below === 'part1') yP1P2 = rowYs[i];
-    }
-    return { yP2P3, yP1P2 };
-  }, [layers, rowYs]);
+    const idxP3 = pageOrder.indexOf('part3');
+    const idxP2 = pageOrder.indexOf('part2');
+    return {
+      yP2P3: idxP3 >= 0 ? (idxP3 + 1) * pageH : 0,
+      yP1P2: idxP2 >= 0 ? (idxP2 + 1) * pageH : 0,
+    };
+  }, [pageOrder, pageH]);
 
   const FADE_PX = 220;
   const skyAnimStyle = useAnimatedStyle(() => {
@@ -236,13 +258,30 @@ export default function SilentMindTreeScreen() {
     return { opacity: t };
   });
 
-  // Land the user on the bottom of the tree (Welcome) at first mount.
+  // Land the user on the page that contains the next track they have
+  // to listen to — bottom (Welcome's page) for a first connection,
+  // P1 once the intro is finished, etc. nextId is read at mount time
+  // only so the screen doesn't restlessly scroll on every state change.
+  const initialNextId = useRef(nextId).current;
   useEffect(() => {
     const id = setTimeout(() => {
-      scrollRef.current?.scrollToEnd({ animated: false });
+      let pageIdx = pageOrder.length - 1; // default = bottommost page
+      if (initialNextId) {
+        const layer = layers.find(
+          l =>
+            l.kind === 'row' &&
+            ((l.smTrack && l.smTrack.id === initialNextId) ||
+              (l.qmTrack && l.qmTrack.id === initialNextId)),
+        );
+        if (layer && layer.kind === 'row') {
+          const idx = pageOrder.indexOf(layer.partId);
+          if (idx >= 0) pageIdx = idx;
+        }
+      }
+      scrollRef.current?.scrollTo({ y: pageIdx * pageH, animated: false });
     }, 50);
     return () => clearTimeout(id);
-  }, [totalH]);
+  }, [pageH, pageOrder, layers, initialNextId]);
 
   const playTrack = (lane: Lane, partId: StageId, t: AudioTrack) => {
     if (t.comingSoon || !isTrackUnlocked(t.id, listened)) return;
@@ -284,16 +323,16 @@ export default function SilentMindTreeScreen() {
 
       <Animated.ScrollView
         ref={scrollRef as never}
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: insets.top + 56, paddingBottom: insets.bottom + spacing.xl },
-        ]}
+        contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
+        // Snap-per-part — each part fills exactly one viewport so a
+        // single drag/flick advances the user from one zone to the next.
+        pagingEnabled
+        decelerationRate="fast"
+        snapToInterval={pageH}
       >
-        <Text style={styles.title}>Your Journey</Text>
-
         <View style={[styles.tree, { width: totalW, height: totalH }]}>
           <Svg
             width={totalW}
@@ -348,17 +387,15 @@ export default function SilentMindTreeScreen() {
             );
           })}
 
-          {/* Bottommost part has no divider below it — render its label
-              as a footer just below the last row (with the same dashed
-              section-break treatment as the inter-part dividers, so
-              reading bottom-up the user sees the part name BEFORE its
-              first track). */}
+          {/* Bottommost part has no divider layer below it — render its
+              section header at the same Y rhythm as the inter-part
+              dividers (DIVIDER_OFFSET from the page bottom). */}
           {bottomPartId ? (
             <>
               <View
                 style={[
                   styles.divider,
-                  { bottom: 18, width: totalW + 24, left: -12 },
+                  { top: totalH - DIVIDER_OFFSET - 0.5, width: totalW + 24, left: -12 },
                 ]}
                 pointerEvents="none"
               />
@@ -366,7 +403,7 @@ export default function SilentMindTreeScreen() {
                 pointerEvents="none"
                 style={{
                   position: 'absolute',
-                  bottom: 6,
+                  top: totalH - DIVIDER_OFFSET - 14,
                   left: 0,
                   right: 0,
                   alignItems: 'center',
@@ -462,8 +499,6 @@ export default function SilentMindTreeScreen() {
             );
           })}
         </View>
-
-        <Text style={styles.startCaption}>Welcome — your starting point</Text>
       </Animated.ScrollView>
     </View>
   );
