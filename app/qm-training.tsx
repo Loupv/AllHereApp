@@ -77,24 +77,13 @@ type Phase = 'config' | 'countdown' | 'round' | 'break' | 'done';
 
 export default function QMTrainingScreen() {
   const router = useRouter();
-  const { columnMax, playSize } = useLayout();
+  const { columnMax, playSize, playCenterY } = useLayout();
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
-  // Fixed Y for the CircleButton centre — 0.52 of usableH to match
-  // the play position used by the Start tab and audio Player. The
-  // flex ratio below is computed so the playSize-tall reserved gap
-  // in the layout lands EXACTLY where the absolute button sits —
-  // no overlap above (totalLine / timer would clash) and no gap
-  // below (launchHint / controls stay flush).
-  //
-  // Solving "gap top + playSize/2 = 0.52 * usableH" with
-  //   gap top   = TOP_FLEX / (TOP_FLEX + BOTTOM_FLEX) * (usableH - playSize)
-  //   BOTTOM_FLEX fixed at 1
-  // gives a TOP_FLEX that depends slightly on playSize / usableH —
-  // ~1.10 for typical phones. Computed live so it tracks correctly
-  // on every device.
+  // TOP_FLEX drives the flex spacer above the play circle so content
+  // above (header / timer) and below (controls) straddle the button
+  // at its fixed playCenterY without overlap.
   const usableH = Math.max(360, winH - insets.top - insets.bottom);
-  const playCenterY = insets.top + Math.round(usableH * 0.52);
   const gapTop = playCenterY - insets.top - playSize / 2;
   const TOP_FLEX = Math.max(0.1, gapTop) / Math.max(1, usableH - playSize - gapTop);
   const BOTTOM_FLEX = 1;

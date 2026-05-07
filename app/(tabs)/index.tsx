@@ -91,7 +91,7 @@ export default function StartScreen() {
   const user = useAuth(s => s.user);
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { isTablet, columnMax, playSize } = useLayout();
+  const { isTablet, columnMax, playSize, playCenterY } = useLayout();
   const usableH = Math.max(360, height - insets.top - insets.bottom);
   const isTall = !isTablet && usableH >= 820;
 
@@ -232,12 +232,11 @@ export default function StartScreen() {
                     ) : null}
                   </View>
                 ) : null}
-                <CircleButton
-                  mode="pre"
-                  size={playSize}
-                  accent="#9D8AE8"
-                  onPress={onPlayNext}
-                />
+                {/* Spacer reserves the CircleButton's vertical
+                    footprint; the button itself is pinned absolutely
+                    below so its centre sits at playCenterY — the same
+                    screen Y as QM Training and the Player. */}
+                <View style={{ height: playSize }} />
               </Animated.View>
 
               <View style={styles.spacerBottom} />
@@ -274,6 +273,20 @@ export default function StartScreen() {
           </ScrollView>
         </View>
       </SwipeTabs>
+
+      {/* Play button pinned at the shared playCenterY so it lands at
+          the same screen Y as QM Training and the Player overlay. */}
+      <View
+        pointerEvents="box-none"
+        style={{ position: 'absolute', left: 0, right: 0, top: playCenterY - playSize / 2, alignItems: 'center' }}
+      >
+        <CircleButton
+          mode="pre"
+          size={playSize}
+          accent="#9D8AE8"
+          onPress={onPlayNext}
+        />
+      </View>
 
       <AccountSheet visible={accountOpen} onClose={() => setAccountOpen(false)} />
     </View>

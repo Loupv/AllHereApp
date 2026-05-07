@@ -1,4 +1,5 @@
 import { useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
  * Shared layout breakpoints and derived caps so every tab reads the
@@ -29,18 +30,21 @@ export type LayoutInfo = {
    *  Training so the round play button is the same size on every
    *  screen. Pass to <CircleButton size={playSize} />. */
   playSize: number;
+  /** Absolute Y (from screen top) of the play button centre — shared
+   *  across Start, QM Training and the Player so the circle lands at
+   *  the same pixel on every screen. */
+  playCenterY: number;
 };
 
 export function useLayout(): LayoutInfo {
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isTablet = width >= TABLET_MIN_WIDTH;
-  // Single source-of-truth play diameter formula. Mirrored from the
-  // original Start-screen calc so existing layouts keep the same
-  // pixel size; importing from one place ensures Player + QM Training
-  // never drift out of sync again.
   const playSize = isTablet
     ? Math.max(180, Math.min(240, Math.round(height / 5.0)))
     : Math.max(120, Math.min(160, Math.round(height / 5.5)));
+  const usableH = Math.max(360, height - insets.top - insets.bottom);
+  const playCenterY = insets.top + Math.round(usableH * 0.52);
   return {
     width,
     height,
@@ -48,5 +52,6 @@ export function useLayout(): LayoutInfo {
     columnMax: Math.min(width, CONTENT_MAX_WIDTH),
     gridColumns: isTablet ? 2 : 1,
     playSize,
+    playCenterY,
   };
 }
