@@ -265,6 +265,25 @@ export default function SilentMindTreeScreen() {
     onScroll: e => { scrollY.value = e.contentOffset.y; },
   });
 
+  // Manual snap-on-drag: any drag past a small threshold advances
+  // exactly one page in the drag direction, regardless of velocity or
+  // distance. Below the threshold (= a tap or accidental nudge) we
+  // snap back to the current page. This gives a one-swipe-one-page
+  // feel (like Stories) instead of the default pagingEnabled which
+  // requires dragging past viewport/2.
+  const dragStartY = useRef(0);
+  const onScrollBeginDragCb = (e: any) => {
+    dragStartY.current = e?.nativeEvent?.contentOffset?.y ?? 0;
+  };
+  const onScrollEndDragCb = (e: any) => {
+    const endY = e?.nativeEvent?.contentOffset?.y ?? 0;
+    const delta = endY - dragStartY.current;
+    const startPage = Math.round(dragStartY.current / pageH);
+    const direction = Math.abs(delta) > 6 ? Math.sign(delta) : 0;
+    const targetPage = Math.max(0, Math.min(pageOrder.length - 1, startPage + direction));
+    scrollRef.current?.scrollTo({ y: targetPage * pageH, animated: true });
+  };
+
   // Page boundaries (= page index × pageH) drive the shader crossfade
   // worklets. The boundary between P3 and P2 sits at the bottom of P3's
   // page; same for P2 ↔ P1.
@@ -360,11 +379,15 @@ export default function SilentMindTreeScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
-        // Snap-per-part — each part fills exactly one viewport so a
-        // single drag/flick advances the user from one zone to the next.
-        pagingEnabled
+        // We handle snap manually in onScrollEndDrag (see above) so any
+        // drag advances exactly one page in its direction. We keep the
+        // snap interval as a safety net in case the manual handler
+        // misses an edge case (e.g. wheel scrolls on web that don't
+        // trigger Begin/EndDrag).
         decelerationRate="fast"
         snapToInterval={pageH}
+        onScrollBeginDrag={onScrollBeginDragCb}
+        onScrollEndDrag={onScrollEndDragCb}
       >
         <View style={[styles.tree, { width: totalW, height: totalH }]}>
           <Svg
