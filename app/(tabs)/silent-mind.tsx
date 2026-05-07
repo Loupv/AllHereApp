@@ -1,4 +1,5 @@
-import { View, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
@@ -7,9 +8,10 @@ import { ProgramHeader } from '../../src/components/ProgramHeader';
 import { silentMindVolets, silentMindProgram } from '../../src/content/catalog';
 import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
 import { useLayout } from '../../src/hooks/useLayout';
-import { colors, spacing } from '../../src/theme';
+import { colors, radius, spacing, type } from '../../src/theme';
 
 export default function SilentMindScreen() {
+  const router = useRouter();
   const tabPad = useTabBarPadding();
   const { columnMax } = useLayout();
   return (
@@ -23,6 +25,16 @@ export default function SilentMindScreen() {
           description={silentMindProgram.intro}
           accent={colors.accent}
         />
+
+        {/* Beta access to the new vertical journey tree. Will replace
+            this list view once the design is dialled in. */}
+        <Pressable
+          onPress={() => router.push('/silent-mind-tree' as never)}
+          style={({ pressed }) => [styles.treeLink, pressed && { opacity: 0.7 }]}
+        >
+          <Text style={styles.treeLinkLabel}>Try the journey tree (beta)</Text>
+          <Text style={styles.treeLinkChevron}>›</Text>
+        </Pressable>
 
         {/* Intro volet is back in the program stream: it's a natural
             prologue to Part 1. We render the intro first, then a
@@ -62,5 +74,31 @@ const styles = StyleSheet.create({
     marginVertical: spacing.lg,
     marginHorizontal: spacing.lg * 2,
     backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  treeLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.sm,
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(158,54,148,0.45)',
+    backgroundColor: 'rgba(158,54,148,0.08)',
+  },
+  treeLinkLabel: {
+    ...type.overline,
+    color: colors.accent,
+    fontSize: 10,
+    letterSpacing: 1.6,
+  },
+  treeLinkChevron: {
+    color: colors.accent,
+    fontSize: 16,
+    lineHeight: 16,
+    marginTop: -2,
   },
 });

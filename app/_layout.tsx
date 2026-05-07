@@ -236,6 +236,7 @@ export default function RootLayout() {
         <Stack.Screen name="silent-mind/[id]" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
         <Stack.Screen name="qm/[id]" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
         <Stack.Screen name="qm-training" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+        <Stack.Screen name="silent-mind-tree" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bgTab } }} />
         <Stack.Screen name="news/[id]" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
         <Stack.Screen name="video/[id]" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
       </Stack>
