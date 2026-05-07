@@ -1,63 +1,57 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { BackButton } from '../src/components/BackButton';
-import { silentMindVolets, introAudios, type AudioTrack } from '../src/content/catalog';
+import { silentMindVolets, introAudios, trackDuration, type AudioTrack } from '../src/content/catalog';
 import { useProgress, isTrackUnlocked } from '../src/player/progressStore';
 import { usePlayerStore } from '../src/player/store';
 import { colors, spacing, type as typo } from '../src/theme';
 
 /**
  * Continuous-tree visualisation of the Silent Mind program. Each track
- * is a small circle node; the tree climbs bottom-up from "Welcome" at
- * the bottom to the deepest Part 3 practice at the top. SM tracks sit
- * on the left lane, paired QM counterparts on the right lane (when one
- * exists), connected by a single curve through the part. Dashed
- * horizontal lines mark the transitions between Parts. Tap a node →
- * opens the Player on that track.
+ * is a circular node; the tree climbs bottom-up from "Welcome" at the
+ * bottom to the deepest Part 3 practice at the top. SM tracks sit on
+ * the left lane, paired QM counterparts on the right when one exists.
+ * Each node carries its track title alongside it. Dashed horizontal
+ * lines mark the transitions between Parts. Tap a node → opens the
+ * Player on that track.
  */
 
 type StageId = 'intro' | 'part1' | 'part2' | 'part3';
 type Lane = 'sm' | 'qm';
 type NodeState = 'locked' | 'available' | 'done' | 'soon';
 
-/**
- * QM ↔ SM track pairings — declared explicitly because catalog titles
- * diverge ("QM3 — Breathing Body" vs SM "Breath and Self-Observation").
- * Add new entries when QM rounds are added to a part.
- */
 const QM_TO_SM_PAIRING: Record<string, string> = {
   'qm1-2': 'p1-2',
   'qm1-4': 'p1-3',
   'qm2-3': 'p2-3',
 };
 
-// Tree geometry — kept tight so the whole journey fits in one mobile
-// viewport without scrolling (target: Part 2 visible from rest).
-const ROW_H = 38;          // height of one row (node + connector segment)
-const NODE_R = 8;          // node radius
-const TREE_W = 220;        // logical tree width — drives lane positions
-const SM_X = TREE_W * 0.28;          //  ~62
-const QM_X = TREE_W * 0.72;          // ~158
-const CENTER_X = TREE_W / 2;         // 110
-const DIVIDER_H = 26;      // dashed-line height (between parts)
+// Vertical rhythm — pitch determines "how many stages per screen". At
+// ~150 px per row pitch, a typical mobile viewport (~700 usable px)
+// fits 4-5 rows + a couple of dashed-divider transitions.
+const ROW_PITCH = 150;
+const DIVIDER_GAP = 56;     // extra vertical space when a divider sits between rows
+
+// Node size — bigger now that each carries a label.
+const NODE_R = 16;
+
+// Maximum width of the whole layout (tree + labels). On narrow phones
+// we shrink to fit; on wider previews we cap so labels don't get
+// uselessly wide.
+const MAX_TOTAL_W = 420;
+const TARGET_TREE_W = 180;
+const MIN_TREE_W = 110;     // never shrink the tree below this — circles need room
+const LABEL_PAD = 8;        // gap between circle edge and label
 
 type Layer =
-  | { kind: 'row'; smTrack: AudioTrack | null; qmTrack: AudioTrack | null; hasQM: boolean; partId: StageId }
+  | { kind: 'row'; smTrack: AudioTrack | null; qmTrack: AudioTrack | null; partId: StageId }
   | { kind: 'divider' };
 
-/**
- * Build the flat top-down sequence of layers — Part 3 first (top), then
- * a dashed divider, Part 2, divider, Part 1, divider, Intro last
- * (bottom). Within each part the tracks are reversed (catalog order is
- * sequential up = entry track first, deeper tracks last) so the entry
- * track sits at the BOTTOM of its part section.
- */
 function buildLayers(): Layer[] {
   const layers: Layer[] = [];
-
   const processPart = (
     partId: StageId,
     sm: AudioTrack[],
@@ -73,15 +67,13 @@ function buildLayers(): Layer[] {
     for (const q of qm) {
       if (!used.has(q.id)) rows.push({ smTrack: null, qmTrack: q });
     }
-    const hasQM = qm.some(t => !t.comingSoon);
-    // Reverse so entry track ends up at the bottom of this part section
-    // when we render top-down.
+    // Reverse so the entry track ends up at the bottom of this part's
+    // section when the tree is rendered top-down.
     rows.reverse().forEach(r =>
-      layers.push({ kind: 'row', smTrack: r.smTrack, qmTrack: r.qmTrack, hasQM, partId }),
+      layers.push({ kind: 'row', smTrack: r.smTrack, qmTrack: r.qmTrack, partId }),
     );
   };
 
-  // Top-down order: Part 3, Part 2, Part 1, Intro
   const part3 = silentMindVolets.find(v => v.id === 'part3')!;
   processPart('part3', part3.tracks, part3.qmTracks ?? []);
   layers.push({ kind: 'divider' });
@@ -111,51 +103,66 @@ export default function SilentMindTreeScreen() {
   const { width: winW } = useWindowDimensions();
   const listened = useProgress(s => s.listened);
   const openPlayer = usePlayerStore(s => s.open);
+  const scrollRef = useRef<ScrollView>(null);
 
   const layers = useMemo(() => buildLayers(), []);
 
-  // Total drawn height for the connector SVG (everything that's not a row label is in here).
-  const totalH = useMemo(() => {
-    let h = ROW_H / 2; // half-row of breathing space at the very top
-    for (const l of layers) {
-      if (l.kind === 'row') h += ROW_H;
-      else h += DIVIDER_H;
-    }
-    h += ROW_H / 2; // half-row at the bottom (so the bottom node sits clear of the edge)
-    return h;
-  }, [layers]);
+  // Responsive layout sizing. We clamp the total to the viewport, then
+  // scale the tree column down (within bounds) so the labels keep at
+  // least some breathing room on narrow phones.
+  const totalW = Math.min(MAX_TOTAL_W, Math.max(220, winW - 16));
+  const treeW = Math.max(MIN_TREE_W, Math.min(TARGET_TREE_W, totalW * 0.45));
+  const sideW = (totalW - treeW) / 2;
+  const SM_X = sideW + treeW * 0.3;
+  const QM_X = sideW + treeW * 0.7;
+  const CENTER_X = sideW + treeW / 2;
 
-  const playTrack = (lane: Lane, partId: StageId, t: AudioTrack) => {
-    if (t.comingSoon || !isTrackUnlocked(t.id, listened)) return;
-    // Build the lane's playlist within the relevant volet so the player's
-    // next/prev buttons walk the right list.
-    const v = silentMindVolets.find(s => s.id === partId);
-    let playlist: AudioTrack[] = [];
-    if (partId === 'intro') {
-      playlist = introAudios.filter(x => !x.comingSoon);
-    } else if (v) {
-      const list = lane === 'sm' ? v.tracks : (v.qmTracks ?? []);
-      playlist = list.filter(x => !x.comingSoon);
-    }
-    openPlayer(t, playlist, { autoStart: true });
-  };
-
-  // Compute Y positions for each row's node centre — drives both the
-  // SVG connector path and the absolute-positioned circle nodes.
+  // Per-layer Y positions (centre of each row's node, or the dashed
+  // line for divider layers).
   const rowYs = useMemo(() => {
     const ys: number[] = [];
-    let y = ROW_H / 2;
-    for (const l of layers) {
+    let y = ROW_PITCH / 2;
+    for (let i = 0; i < layers.length; i++) {
+      const l = layers[i];
       if (l.kind === 'row') {
-        ys.push(y + ROW_H / 2);
-        y += ROW_H;
+        ys.push(y);
+        y += ROW_PITCH;
       } else {
-        ys.push(y + DIVIDER_H / 2);
-        y += DIVIDER_H;
+        ys.push(y - ROW_PITCH / 2 + DIVIDER_GAP / 2); // sit between the rows
+        y += DIVIDER_GAP;
       }
     }
     return ys;
   }, [layers]);
+
+  const totalH = useMemo(() => {
+    let y = ROW_PITCH / 2;
+    for (const l of layers) y += l.kind === 'row' ? ROW_PITCH : DIVIDER_GAP;
+    return y + ROW_PITCH / 2;
+  }, [layers]);
+
+  // Land the user on the bottom of the tree (Welcome) at first mount.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: false });
+    }, 50);
+    return () => clearTimeout(id);
+  }, [totalH]);
+
+  const playTrack = (lane: Lane, partId: StageId, t: AudioTrack) => {
+    if (t.comingSoon || !isTrackUnlocked(t.id, listened)) return;
+    let playlist: AudioTrack[] = [];
+    if (partId === 'intro') {
+      playlist = introAudios.filter(x => !x.comingSoon);
+    } else {
+      const v = silentMindVolets.find(s => s.id === partId);
+      if (v) {
+        const list = lane === 'sm' ? v.tracks : (v.qmTracks ?? []);
+        playlist = list.filter(x => !x.comingSoon);
+      }
+    }
+    openPlayer(t, playlist, { autoStart: true });
+  };
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bgTab }]}>
@@ -163,6 +170,7 @@ export default function SilentMindTreeScreen() {
       <BackButton />
 
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.scroll,
           { paddingTop: insets.top + 56, paddingBottom: insets.bottom + spacing.xl },
@@ -171,20 +179,16 @@ export default function SilentMindTreeScreen() {
       >
         <Text style={styles.title}>Your Journey</Text>
 
-        <View style={[styles.tree, { width: TREE_W, height: totalH }]}>
-          {/* Continuous progression line connecting all rows. */}
+        <View style={[styles.tree, { width: totalW, height: totalH }]}>
           <Svg
-            width={TREE_W}
+            width={totalW}
             height={totalH}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           >
-            {buildPathSegments(layers, rowYs)}
+            {buildPathSegments(layers, rowYs, SM_X, QM_X, CENTER_X)}
           </Svg>
 
-          {/* Dashed dividers — drawn as Views so the dashed border style
-              renders consistently across web and native (SVG dasharray
-              is fine but a View is one less moving part). */}
           {layers.map((l, i) => {
             if (l.kind !== 'divider') return null;
             const y = rowYs[i];
@@ -193,22 +197,66 @@ export default function SilentMindTreeScreen() {
                 key={`div-${i}`}
                 style={[
                   styles.divider,
-                  { top: y - 0.5, width: TREE_W + 28, left: -14 },
+                  { top: y - 0.5, width: totalW + 24, left: -12 },
                 ]}
                 pointerEvents="none"
               />
             );
           })}
 
-          {/* Circular nodes per row. Single-lane rows (no QM pair) sit on
-              the centre axis so the connector line passes through them;
-              branched rows split the SM and QM nodes onto their lanes. */}
           {layers.map((l, i) => {
             if (l.kind !== 'row') return null;
             const y = rowYs[i];
             const branched = l.smTrack !== null && l.qmTrack !== null;
             const smCx = branched ? SM_X : CENTER_X;
-            const qmCx = branched ? QM_X : CENTER_X;
+            const qmCx = branched ? QM_X : CENTER_X; // unused when no QM
+            const smState = nodeState(l.smTrack, listened);
+            const qmState = nodeState(l.qmTrack, listened);
+
+            // Label x ranges: branched = label sits in the side gutter,
+            // single-lane = label sits to the right of the centred node.
+            const smLabel = l.smTrack ? (
+              branched ? (
+                <Label
+                  key={`sm-${i}`}
+                  text={l.smTrack.title}
+                  meta={trackDuration(l.smTrack)}
+                  state={smState}
+                  accent={colors.accent}
+                  align="right"
+                  cy={y}
+                  left={0}
+                  width={smCx - NODE_R - LABEL_PAD}
+                />
+              ) : (
+                <Label
+                  key={`sm-${i}`}
+                  text={l.smTrack.title}
+                  meta={trackDuration(l.smTrack)}
+                  state={smState}
+                  accent={colors.accent}
+                  align="left"
+                  cy={y}
+                  left={smCx + NODE_R + LABEL_PAD}
+                  width={totalW - (smCx + NODE_R + LABEL_PAD) - LABEL_PAD}
+                />
+              )
+            ) : null;
+
+            const qmLabel = l.qmTrack && branched ? (
+              <Label
+                key={`qm-${i}`}
+                text={l.qmTrack.title}
+                meta={trackDuration(l.qmTrack)}
+                state={qmState}
+                accent={colors.accentAlt}
+                align="left"
+                cy={y}
+                left={qmCx + NODE_R + LABEL_PAD}
+                width={totalW - (qmCx + NODE_R + LABEL_PAD) - LABEL_PAD}
+              />
+            ) : null;
+
             return (
               <View key={`row-${i}`} pointerEvents="box-none">
                 {l.smTrack ? (
@@ -216,7 +264,7 @@ export default function SilentMindTreeScreen() {
                     cx={smCx}
                     cy={y}
                     accent={colors.accent}
-                    state={nodeState(l.smTrack, listened)}
+                    state={smState}
                     onPress={() => playTrack('sm', l.partId, l.smTrack!)}
                   />
                 ) : null}
@@ -225,16 +273,18 @@ export default function SilentMindTreeScreen() {
                     cx={qmCx}
                     cy={y}
                     accent={colors.accentAlt}
-                    state={nodeState(l.qmTrack, listened)}
+                    state={qmState}
                     onPress={() => playTrack('qm', l.partId, l.qmTrack!)}
                   />
                 ) : null}
+                {smLabel}
+                {qmLabel}
               </View>
             );
           })}
         </View>
 
-        <Text style={styles.startCaption}>Start with Welcome ↓</Text>
+        <Text style={styles.startCaption}>Welcome — your starting point</Text>
       </ScrollView>
     </View>
   );
@@ -260,7 +310,7 @@ function CircleNode({
   const done = state === 'done';
   const dimmed = locked || soon;
   const D = NODE_R * 2;
-  const HIT = D + 16; // generous tap target
+  const HIT = D + 12;
   return (
     <Pressable
       onPress={onPress}
@@ -284,35 +334,110 @@ function CircleNode({
           width: D,
           height: D,
           borderRadius: NODE_R,
-          borderWidth: 2,
+          borderWidth: 2.5,
           borderColor: dimmed ? 'rgba(255,255,255,0.30)' : accent,
           backgroundColor: dimmed
             ? 'transparent'
             : done
               ? accent
-              : `${accent}40`, // ~25% alpha fill so available reads as "ready"
+              : `${accent}33`, // ~20% alpha so the connector glides through
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
-      />
+      >
+        {done ? (
+          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>✓</Text>
+        ) : null}
+      </View>
     </Pressable>
   );
 }
 
 // ---------------------------------------------------------------------------
 
-/**
- * Build the SVG <Path> elements that draw the continuous progression
- * line. We walk consecutive PAIRS of *row* layers (skipping dividers)
- * and emit a curve between them. The shape depends on whether each row
- * is single-lane or branched, and on whether the QM/SM lane is filled
- * on either side.
- */
-function buildPathSegments(layers: Layer[], rowYs: number[]) {
+function Label({
+  text,
+  meta,
+  state,
+  accent,
+  align,
+  cy,
+  left,
+  width,
+}: {
+  text: string;
+  meta?: string;
+  state: NodeState;
+  accent: string;
+  align: 'left' | 'right';
+  cy: number;
+  left: number;
+  width: number;
+}) {
+  const locked = state === 'locked';
+  const soon = state === 'soon';
+  const done = state === 'done';
+  const dimmed = locked || soon;
+  // Estimated label vertical footprint — used to centre vertically on
+  // the node without measuring at runtime. Up to 2 lines title + meta.
+  const ESTIMATED_H = 60;
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        left,
+        top: cy - ESTIMATED_H / 2,
+        width,
+        height: ESTIMATED_H,
+        justifyContent: 'center',
+        alignItems: align === 'right' ? 'flex-end' : 'flex-start',
+      }}
+    >
+      <Text
+        numberOfLines={2}
+        style={{
+          ...typo.h3,
+          fontSize: 13,
+          lineHeight: 17,
+          color: dimmed ? colors.textDim : (done ? accent : colors.text),
+          textAlign: align,
+        }}
+      >
+        {text}
+      </Text>
+      {meta || soon || locked ? (
+        <Text
+          numberOfLines={1}
+          style={{
+            ...typo.caption,
+            fontSize: 10,
+            color: dimmed ? colors.textDim : colors.textMuted,
+            marginTop: 2,
+            textAlign: align,
+          }}
+        >
+          {soon ? 'SOON' : locked ? 'LOCKED' : meta}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function buildPathSegments(
+  layers: Layer[],
+  rowYs: number[],
+  SM_X: number,
+  QM_X: number,
+  CENTER_X: number,
+) {
   const elements: React.ReactNode[] = [];
   let prevRowIdx: number | null = null;
 
   layers.forEach((layer, i) => {
     if (layer.kind !== 'row') return;
-    const y = rowYs[i];
     if (prevRowIdx === null) {
       prevRowIdx = i;
       return;
@@ -323,43 +448,29 @@ function buildPathSegments(layers: Layer[], rowYs: number[]) {
       return;
     }
     const yPrev = rowYs[prevRowIdx];
-    const yCur = y;
+    const yCur = rowYs[i];
 
-    // Lane "occupancy" for this segment: which lanes have a node at
-    // each end. We draw a sub-path per lane that's present at both
-    // ends, plus a centre stem when only one end is single-lane.
-    const prevSm = prev.smTrack !== null;
-    const prevQm = prev.qmTrack !== null;
-    const curSm = layer.smTrack !== null;
-    const curQm = layer.qmTrack !== null;
+    const prevBranched = prev.smTrack !== null && prev.qmTrack !== null;
+    const curBranched = layer.smTrack !== null && layer.qmTrack !== null;
+    const prevAnchorX = prevBranched ? null : CENTER_X;
+    const curAnchorX = curBranched ? null : CENTER_X;
 
-    // Single-lane row uses CENTER_X for connection; paired rows use SM_X / QM_X.
-    const prevSingle = !(prevSm && prevQm);
-    const curSingle = !(curSm && curQm);
-
-    const prevAnchorX = prevSingle ? CENTER_X : null; // null = both lanes
-    const curAnchorX = curSingle ? CENTER_X : null;
-
-    const segments: { x1: number; y1: number; x2: number; y2: number }[] = [];
+    type Seg = { x1: number; y1: number; x2: number; y2: number };
+    const segs: Seg[] = [];
     if (prevAnchorX !== null && curAnchorX !== null) {
-      segments.push({ x1: prevAnchorX, y1: yPrev, x2: curAnchorX, y2: yCur });
+      segs.push({ x1: prevAnchorX, y1: yPrev, x2: curAnchorX, y2: yCur });
     } else if (prevAnchorX !== null && curAnchorX === null) {
-      // single (prev = above) → branched (cur = below): split going down
-      segments.push({ x1: prevAnchorX, y1: yPrev, x2: SM_X, y2: yCur });
-      segments.push({ x1: prevAnchorX, y1: yPrev, x2: QM_X, y2: yCur });
+      segs.push({ x1: prevAnchorX, y1: yPrev, x2: SM_X, y2: yCur });
+      segs.push({ x1: prevAnchorX, y1: yPrev, x2: QM_X, y2: yCur });
     } else if (prevAnchorX === null && curAnchorX !== null) {
-      // branched (prev = above) → single (cur = below): merge going down
-      segments.push({ x1: SM_X, y1: yPrev, x2: curAnchorX, y2: yCur });
-      segments.push({ x1: QM_X, y1: yPrev, x2: curAnchorX, y2: yCur });
+      segs.push({ x1: SM_X, y1: yPrev, x2: curAnchorX, y2: yCur });
+      segs.push({ x1: QM_X, y1: yPrev, x2: curAnchorX, y2: yCur });
     } else {
-      // branched → branched: parallel rails
-      segments.push({ x1: SM_X, y1: yPrev, x2: SM_X, y2: yCur });
-      segments.push({ x1: QM_X, y1: yPrev, x2: QM_X, y2: yCur });
+      segs.push({ x1: SM_X, y1: yPrev, x2: SM_X, y2: yCur });
+      segs.push({ x1: QM_X, y1: yPrev, x2: QM_X, y2: yCur });
     }
 
-    segments.forEach((s, j) => {
-      // Slight cubic bezier on diagonal segments so the splits / merges
-      // read as gentle curves rather than straight angles.
+    segs.forEach((s, j) => {
       const isDiagonal = s.x1 !== s.x2;
       const d = isDiagonal
         ? `M ${s.x1} ${s.y1} C ${s.x1} ${(s.y1 + s.y2) / 2}, ${s.x2} ${(s.y1 + s.y2) / 2}, ${s.x2} ${s.y2}`
@@ -387,7 +498,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   scroll: {
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   title: {
     ...typo.display,
@@ -405,7 +516,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     height: 0,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.22)',
+    borderTopColor: 'rgba(255,255,255,0.20)',
     borderStyle: 'dashed',
   },
   startCaption: {
@@ -413,6 +524,6 @@ const styles = StyleSheet.create({
     color: colors.textDim,
     fontSize: 9,
     letterSpacing: 1.6,
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
   },
 });
