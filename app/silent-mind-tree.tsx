@@ -226,6 +226,32 @@ export default function SilentMindTreeScreen() {
   const nextTrackIdFn = useProgress(s => s.nextTrackId);
   const nextId = nextTrackIdFn();
 
+  // Rainbow positions: walking BOTTOM-UP through the layers, the first
+  // row encountered is position 0 (red), each subsequent row higher in
+  // the journey gets a hue closer to violet. SM and QM tracks on the
+  // same row share a position (= same hue), since they're at the same
+  // beat in the journey.
+  const { trackHues, tracksTotal } = useMemo(() => {
+    const hues: Record<string, number> = {};
+    let pos = 0;
+    for (let i = layers.length - 1; i >= 0; i--) {
+      const l = layers[i];
+      if (l.kind !== 'row') continue;
+      if (l.smTrack) hues[l.smTrack.id] = pos;
+      if (l.qmTrack) hues[l.qmTrack.id] = pos;
+      pos++;
+    }
+    return { trackHues: hues, tracksTotal: pos };
+  }, [layers]);
+
+  const trackColor = (id: string): string => {
+    const pos = trackHues[id];
+    if (pos === undefined) return colors.accent;
+    const denom = Math.max(1, tracksTotal - 1);
+    const hue = (pos / denom) * 282; // red 0° → violet ~282°
+    return `hsl(${hue}, 70%, 62%)`;
+  };
+
   // Scroll-driven background fades. lake (Intro + P1) ↔ sky (P2) ↔
   // space (P3) crossfades happen across the inter-part dividers, with
   // a fade window centred on each boundary's Y in scroll content.
@@ -343,80 +369,11 @@ export default function SilentMindTreeScreen() {
             {buildPathSegments(layers, rowYs, SM_X, QM_X, CENTER_X, listened)}
           </Svg>
 
-          {/* Dashed dividers spanning the tree width — drawn first so
-              the part-name label below sits on top with a dark mask. */}
-          {layers.map((l, i) => {
-            if (l.kind !== 'divider') return null;
-            const y = rowYs[i];
-            return (
-              <View
-                key={`div-${i}`}
-                style={[
-                  styles.divider,
-                  { top: y - 0.5, width: totalW + 24, left: -12 },
-                ]}
-                pointerEvents="none"
-              />
-            );
-          })}
-
-          {/* Part-name labels at each divider — section header for the
-              part you're ENTERING going up. The opaque pill cuts the
-              dashed line, making the boundary feel like a clear "you
-              are now in EARTH" beat. */}
-          {dividerLabels.map(({ idx, partId }) => {
-            const y = rowYs[idx];
-            return (
-              <View
-                key={`pl-${idx}`}
-                pointerEvents="none"
-                style={{
-                  position: 'absolute',
-                  top: y - 14,
-                  left: 0,
-                  right: 0,
-                  alignItems: 'center',
-                }}
-              >
-                <View style={styles.partTag}>
-                  <Text style={styles.partName} numberOfLines={1}>
-                    {partLabel(partId)}
-                  </Text>
-                </View>
-              </View>
-            );
-          })}
-
-          {/* Bottommost part has no divider layer below it — render its
-              section header at the same Y rhythm as the inter-part
-              dividers (DIVIDER_OFFSET from the page bottom). */}
-          {bottomPartId ? (
-            <>
-              <View
-                style={[
-                  styles.divider,
-                  { top: totalH - DIVIDER_OFFSET - 0.5, width: totalW + 24, left: -12 },
-                ]}
-                pointerEvents="none"
-              />
-              <View
-                pointerEvents="none"
-                style={{
-                  position: 'absolute',
-                  top: totalH - DIVIDER_OFFSET - 14,
-                  left: 0,
-                  right: 0,
-                  alignItems: 'center',
-                }}
-              >
-                <View style={styles.partTag}>
-                  <Text style={styles.partName} numberOfLines={1}>
-                    {partLabel(bottomPartId)}
-                  </Text>
-                </View>
-              </View>
-            </>
-          ) : null}
+          {/* Section headers used to live inside the scroll content;
+              they're now rendered as a FIXED footer below (outside
+              this scrollable container) so they don't move while the
+              user scrolls — instead the part name crossfades from one
+              to the next. */}
 
           {layers.map((l, i) => {
             if (l.kind !== 'row') return null;
@@ -477,7 +434,7 @@ export default function SilentMindTreeScreen() {
                   <CircleNode
                     cx={smCx}
                     cy={y}
-                    accent={colors.accent}
+                    accent={trackColor(l.smTrack.id)}
                     state={smState}
                     isNext={l.smTrack.id === nextId}
                     onPress={() => playTrack('sm', l.partId, l.smTrack!)}
@@ -487,7 +444,7 @@ export default function SilentMindTreeScreen() {
                   <CircleNode
                     cx={qmCx}
                     cy={y}
-                    accent={colors.accentAlt}
+                    accent={trackColor(l.qmTrack.id)}
                     state={qmState}
                     isNext={l.qmTrack.id === nextId}
                     onPress={() => playTrack('qm', l.partId, l.qmTrack!)}
@@ -500,7 +457,57 @@ export default function SilentMindTreeScreen() {
           })}
         </View>
       </Animated.ScrollView>
+
+      {/* Fixed footer — section header for the part the user is
+          currently looking at. Crossfades smoothly between part names
+          as the user scrolls between snap-pages. The dashed line stays
+          put; only the label inside it changes. */}
+      <View
+        pointerEvents="none"
+        style={[styles.fixedFooter, { paddingBottom: insets.bottom + 12 }]}
+      >
+        <View style={[styles.fixedFooterDashedLine, { width: '100%' }]} />
+        <View style={styles.fixedFooterLabelArea}>
+          {pageOrder.map((partId, idx) => (
+            <FooterPartLabel
+              key={partId}
+              partId={partId}
+              pageIdx={idx}
+              scrollY={scrollY}
+              pageH={pageH}
+            />
+          ))}
+        </View>
+      </View>
     </View>
+  );
+}
+
+function FooterPartLabel({
+  partId,
+  pageIdx,
+  scrollY,
+  pageH,
+}: {
+  partId: StageId;
+  pageIdx: number;
+  scrollY: { value: number };
+  pageH: number;
+}) {
+  const animStyle = useAnimatedStyle(() => {
+    const t = scrollY.value / pageH;
+    // Linear-interpolated opacity: 1 when this page is centred, 0
+    // when an adjacent page is centred, smooth in between.
+    return { opacity: Math.max(0, 1 - Math.abs(t - pageIdx)) };
+  });
+  return (
+    <Animated.View style={[styles.footerLabelLayer, animStyle]}>
+      <View style={styles.partTag}>
+        <Text style={styles.partName} numberOfLines={1}>
+          {partLabel(partId)}
+        </Text>
+      </View>
+    </Animated.View>
   );
 }
 
@@ -587,7 +594,11 @@ function CircleNode({
             height: D,
             borderRadius: NODE_R,
             borderWidth: 2.5,
-            borderColor: dimmed ? 'rgba(255,255,255,0.30)' : accent,
+            // Border keeps its rainbow hue even when locked/soon, just
+            // with the whole node faded so the journey's progressive
+            // colour spectrum stays visible from red at the bottom to
+            // violet at the top.
+            borderColor: accent,
             // Fully opaque fill — hides the connector path passing
             // behind so the "tree behind the dot" never shows through.
             backgroundColor: dimmed
@@ -595,6 +606,7 @@ function CircleNode({
               : done
                 ? accent
                 : colors.bgTab,
+            opacity: dimmed ? 0.45 : 1,
             alignItems: 'center',
             justifyContent: 'center',
             // Soft accent halo on the up-next node — its opacity is
@@ -830,5 +842,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgTab,
     paddingHorizontal: spacing.md,
     paddingVertical: 4,
+  },
+  fixedFooter: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+  },
+  fixedFooterDashedLine: {
+    height: 0,
+    borderTopWidth: 1.5,
+    borderTopColor: 'rgba(255,255,255,0.32)',
+    borderStyle: 'dashed',
+  },
+  fixedFooterLabelArea: {
+    height: 24,
+    marginTop: -12, // overlap the dashed line so the partTag bg cuts it
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerLabelLayer: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
