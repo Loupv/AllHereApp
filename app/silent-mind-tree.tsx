@@ -1,5 +1,13 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -27,7 +35,7 @@ type NodeState = 'locked' | 'available' | 'done' | 'soon';
 // ~150 px per row pitch, a typical mobile viewport (~700 usable px)
 // fits 4-5 rows + a couple of dashed-divider transitions.
 const ROW_PITCH = 150;
-const DIVIDER_GAP = 56;     // extra vertical space when a divider sits between rows
+const DIVIDER_GAP = 96;     // generous breathing room at part boundaries
 
 // Node size — bigger now that each carries a label.
 const NODE_R = 16;
@@ -144,21 +152,39 @@ export default function SilentMindTreeScreen() {
     return y + ROW_PITCH / 2;
   }, [layers]);
 
-  // Anchor index for each part = its bottom-most row in display order
-  // (the entry track going UP). Drives where the "Introduction / Earth /
-  // Sky / Space" part-name label sits next to the tree.
-  const partAnchors = useMemo(() => {
-    const out: { partId: StageId; layerIdx: number }[] = [];
+  // For each divider, the part it precedes (in display = the part
+  // below it). The divider doubles as a section header for that part:
+  // its dashed line spans the tree, with the part name centred over
+  // it — labelling the WHOLE zone you're entering when you cross the
+  // boundary from below going up.
+  const dividerLabels = useMemo(() => {
+    const out: { idx: number; partId: StageId }[] = [];
     for (let i = 0; i < layers.length; i++) {
-      const l = layers[i];
-      if (l.kind !== 'row') continue;
-      const next = layers[i + 1];
-      if (!next || next.kind === 'divider') {
-        out.push({ partId: l.partId, layerIdx: i });
+      if (layers[i].kind !== 'divider') continue;
+      for (let j = i + 1; j < layers.length; j++) {
+        const next = layers[j];
+        if (next.kind === 'row') {
+          out.push({ idx: i, partId: next.partId });
+          break;
+        }
       }
     }
     return out;
   }, [layers]);
+
+  // The top part (Part 3) has no divider above it; render its label
+  // separately at the very top of the tree.
+  const topPartId: StageId | null = useMemo(() => {
+    for (const l of layers) {
+      if (l.kind === 'row') return l.partId;
+    }
+    return null;
+  }, [layers]);
+
+  // The "next" track to listen to (drives the pulse animation on its
+  // CircleNode). Re-evaluated each render, picking up live state.
+  const nextTrackIdFn = useProgress(s => s.nextTrackId);
+  const nextId = nextTrackIdFn();
 
   // Land the user on the bottom of the tree (Welcome) at first mount.
   useEffect(() => {
@@ -205,9 +231,11 @@ export default function SilentMindTreeScreen() {
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           >
-            {buildPathSegments(layers, rowYs, SM_X, QM_X, CENTER_X)}
+            {buildPathSegments(layers, rowYs, SM_X, QM_X, CENTER_X, listened)}
           </Svg>
 
+          {/* Dashed dividers spanning the tree width — drawn first so
+              the part-name label below sits on top with a dark mask. */}
           {layers.map((l, i) => {
             if (l.kind !== 'divider') return null;
             const y = rowYs[i];
@@ -223,33 +251,53 @@ export default function SilentMindTreeScreen() {
             );
           })}
 
-          {/* Part-name labels — sit on the LEFT of each part's bottom
-              row (the entry track going up). Bottom rows are always
-              single-lane today, so the left gutter is free for the
-              part-name label without colliding with track labels. */}
-          {partAnchors.map(({ partId, layerIdx }) => {
-            const y = rowYs[layerIdx];
-            const labelRight = CENTER_X - NODE_R - LABEL_PAD - 4;
+          {/* Part-name labels at each divider — section header for the
+              part you're ENTERING going up. The opaque pill cuts the
+              dashed line, making the boundary feel like a clear "you
+              are now in EARTH" beat. */}
+          {dividerLabels.map(({ idx, partId }) => {
+            const y = rowYs[idx];
             return (
               <View
-                key={`part-${partId}`}
+                key={`pl-${idx}`}
                 pointerEvents="none"
                 style={{
                   position: 'absolute',
+                  top: y - 14,
                   left: 0,
-                  top: y - 12,
-                  width: labelRight,
-                  height: 24,
-                  justifyContent: 'center',
-                  alignItems: 'flex-end',
+                  right: 0,
+                  alignItems: 'center',
                 }}
               >
-                <Text style={styles.partName} numberOfLines={1}>
-                  {partLabel(partId)}
-                </Text>
+                <View style={styles.partTag}>
+                  <Text style={styles.partName} numberOfLines={1}>
+                    {partLabel(partId)}
+                  </Text>
+                </View>
               </View>
             );
           })}
+
+          {/* Top-most part has no divider above it — render its label
+              at the very top of the tree as a section start marker. */}
+          {topPartId ? (
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                top: 4,
+                left: 0,
+                right: 0,
+                alignItems: 'center',
+              }}
+            >
+              <View style={styles.partTag}>
+                <Text style={styles.partName} numberOfLines={1}>
+                  {partLabel(topPartId)}
+                </Text>
+              </View>
+            </View>
+          ) : null}
 
           {layers.map((l, i) => {
             if (l.kind !== 'row') return null;
@@ -312,6 +360,7 @@ export default function SilentMindTreeScreen() {
                     cy={y}
                     accent={colors.accent}
                     state={smState}
+                    isNext={l.smTrack.id === nextId}
                     onPress={() => playTrack('sm', l.partId, l.smTrack!)}
                   />
                 ) : null}
@@ -321,6 +370,7 @@ export default function SilentMindTreeScreen() {
                     cy={y}
                     accent={colors.accentAlt}
                     state={qmState}
+                    isNext={l.qmTrack.id === nextId}
                     onPress={() => playTrack('qm', l.partId, l.qmTrack!)}
                   />
                 ) : null}
@@ -344,12 +394,14 @@ function CircleNode({
   cy,
   accent,
   state,
+  isNext,
   onPress,
 }: {
   cx: number;
   cy: number;
   accent: string;
   state: NodeState;
+  isNext: boolean;
   onPress: () => void;
 }) {
   const locked = state === 'locked';
@@ -357,7 +409,30 @@ function CircleNode({
   const done = state === 'done';
   const dimmed = locked || soon;
   const D = NODE_R * 2;
-  const HIT = D + 12;
+  const HIT = D + 16;
+
+  // Pulse the next-up node so the user's eye lands on it. Reanimated
+  // keeps the breath silky on the UI thread; the loop only runs while
+  // isNext stays true.
+  const pulse = useSharedValue(1);
+  useEffect(() => {
+    if (isNext) {
+      pulse.value = withRepeat(
+        withSequence(
+          withTiming(1.18, { duration: 900, easing: Easing.inOut(Easing.cubic) }),
+          withTiming(1.0, { duration: 900, easing: Easing.inOut(Easing.cubic) }),
+        ),
+        -1,
+        false,
+      );
+    } else {
+      pulse.value = withTiming(1, { duration: 200 });
+    }
+  }, [isNext]);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+  }));
+
   return (
     <Pressable
       onPress={onPress}
@@ -376,26 +451,31 @@ function CircleNode({
         pressed && !dimmed && { opacity: 0.7 },
       ]}
     >
-      <View
-        style={{
-          width: D,
-          height: D,
-          borderRadius: NODE_R,
-          borderWidth: 2.5,
-          borderColor: dimmed ? 'rgba(255,255,255,0.30)' : accent,
-          backgroundColor: dimmed
-            ? 'transparent'
-            : done
-              ? accent
-              : `${accent}33`, // ~20% alpha so the connector glides through
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
+      <Animated.View
+        style={[
+          {
+            width: D,
+            height: D,
+            borderRadius: NODE_R,
+            borderWidth: 2.5,
+            borderColor: dimmed ? 'rgba(255,255,255,0.30)' : accent,
+            // Fully opaque fill — hides the connector path passing
+            // behind so the "tree behind the dot" never shows through.
+            backgroundColor: dimmed
+              ? colors.bgTab
+              : done
+                ? accent
+                : colors.bgTab,
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+          animStyle,
+        ]}
       >
         {done ? (
           <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>✓</Text>
         ) : null}
-      </View>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -479,9 +559,20 @@ function buildPathSegments(
   SM_X: number,
   QM_X: number,
   CENTER_X: number,
+  listened: Record<string, true>,
 ) {
   const elements: React.ReactNode[] = [];
   let prevRowIdx: number | null = null;
+
+  // Helper: a row is "completed" when at least one of its tracks has
+  // been listened. Drives the traversed/remaining colour split below.
+  const rowDone = (l: Layer): boolean => {
+    if (l.kind !== 'row') return false;
+    return Boolean(
+      (l.smTrack && listened[l.smTrack.id]) ||
+      (l.qmTrack && listened[l.qmTrack.id]),
+    );
+  };
 
   layers.forEach((layer, i) => {
     if (layer.kind !== 'row') return;
@@ -496,6 +587,14 @@ function buildPathSegments(
     }
     const yPrev = rowYs[prevRowIdx];
     const yCur = rowYs[i];
+
+    // Segment lights up as soon as the LOWER endpoint (= entry going
+    // up) is listened — that way, completing a track immediately
+    // illuminates the trail leaving it and the user feels their
+    // progress carrying upward into the unlistened section above.
+    // (`layer` is the lower endpoint here because we're walking
+    // top-down through layers and `prev` is the row ABOVE in display.)
+    const traversed = rowDone(layer);
 
     const prevBranched = prev.smTrack !== null && prev.qmTrack !== null;
     const curBranched = layer.smTrack !== null && layer.qmTrack !== null;
@@ -517,17 +616,24 @@ function buildPathSegments(
       segs.push({ x1: QM_X, y1: yPrev, x2: QM_X, y2: yCur });
     }
 
+    const stroke = traversed ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.18)';
+    const strokeWidth = traversed ? 2.5 : 2;
+
     segs.forEach((s, j) => {
+      // Trim each end by NODE_R so the path stops at the circle border
+      // rather than crossing through it.
+      const ty1 = s.y1 + NODE_R;
+      const ty2 = s.y2 - NODE_R;
       const isDiagonal = s.x1 !== s.x2;
       const d = isDiagonal
-        ? `M ${s.x1} ${s.y1} C ${s.x1} ${(s.y1 + s.y2) / 2}, ${s.x2} ${(s.y1 + s.y2) / 2}, ${s.x2} ${s.y2}`
-        : `M ${s.x1} ${s.y1} L ${s.x2} ${s.y2}`;
+        ? `M ${s.x1} ${ty1} C ${s.x1} ${(ty1 + ty2) / 2}, ${s.x2} ${(ty1 + ty2) / 2}, ${s.x2} ${ty2}`
+        : `M ${s.x1} ${ty1} L ${s.x2} ${ty2}`;
       elements.push(
         <Path
           key={`p-${i}-${j}`}
           d={d}
-          stroke="rgba(255,255,255,0.32)"
-          strokeWidth={2}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
           fill="none"
         />,
       );
@@ -562,8 +668,8 @@ const styles = StyleSheet.create({
   divider: {
     position: 'absolute',
     height: 0,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.20)',
+    borderTopWidth: 1.5,
+    borderTopColor: 'rgba(255,255,255,0.32)',
     borderStyle: 'dashed',
   },
   startCaption: {
@@ -575,8 +681,13 @@ const styles = StyleSheet.create({
   },
   partName: {
     ...typo.overline,
-    color: colors.textMuted,
+    color: colors.text,
     fontSize: 11,
-    letterSpacing: 2,
+    letterSpacing: 2.4,
+  },
+  partTag: {
+    backgroundColor: colors.bgTab,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
   },
 });
