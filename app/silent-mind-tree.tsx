@@ -90,6 +90,15 @@ function buildLayers(): Layer[] {
   return layers;
 }
 
+function partLabel(partId: StageId): string {
+  switch (partId) {
+    case 'intro': return 'Introduction';
+    case 'part1': return 'The Earth';
+    case 'part2': return 'The Sky';
+    case 'part3': return 'The Space';
+  }
+}
+
 function nodeState(t: AudioTrack | null, listened: Record<string, true>): NodeState {
   if (!t) return 'locked';
   if (t.comingSoon) return 'soon';
@@ -139,6 +148,22 @@ export default function SilentMindTreeScreen() {
     let y = ROW_PITCH / 2;
     for (const l of layers) y += l.kind === 'row' ? ROW_PITCH : DIVIDER_GAP;
     return y + ROW_PITCH / 2;
+  }, [layers]);
+
+  // Anchor index for each part = its bottom-most row in display order
+  // (the entry track going UP). Drives where the "Introduction / Earth /
+  // Sky / Space" part-name label sits next to the tree.
+  const partAnchors = useMemo(() => {
+    const out: { partId: StageId; layerIdx: number }[] = [];
+    for (let i = 0; i < layers.length; i++) {
+      const l = layers[i];
+      if (l.kind !== 'row') continue;
+      const next = layers[i + 1];
+      if (!next || next.kind === 'divider') {
+        out.push({ partId: l.partId, layerIdx: i });
+      }
+    }
+    return out;
   }, [layers]);
 
   // Land the user on the bottom of the tree (Welcome) at first mount.
@@ -201,6 +226,34 @@ export default function SilentMindTreeScreen() {
                 ]}
                 pointerEvents="none"
               />
+            );
+          })}
+
+          {/* Part-name labels — sit on the LEFT of each part's bottom
+              row (the entry track going up). Bottom rows are always
+              single-lane today, so the left gutter is free for the
+              part-name label without colliding with track labels. */}
+          {partAnchors.map(({ partId, layerIdx }) => {
+            const y = rowYs[layerIdx];
+            const labelRight = CENTER_X - NODE_R - LABEL_PAD - 4;
+            return (
+              <View
+                key={`part-${partId}`}
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: y - 12,
+                  width: labelRight,
+                  height: 24,
+                  justifyContent: 'center',
+                  alignItems: 'flex-end',
+                }}
+              >
+                <Text style={styles.partName} numberOfLines={1}>
+                  {partLabel(partId)}
+                </Text>
+              </View>
             );
           })}
 
@@ -525,5 +578,11 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 1.6,
     marginTop: spacing.lg,
+  },
+  partName: {
+    ...typo.overline,
+    color: colors.textMuted,
+    fontSize: 11,
+    letterSpacing: 2,
   },
 });
