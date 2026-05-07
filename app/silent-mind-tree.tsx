@@ -4,7 +4,7 @@ import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { BackButton } from '../src/components/BackButton';
-import { silentMindVolets, introAudios, trackDuration, type AudioTrack } from '../src/content/catalog';
+import { silentMindVolets, introAudios, trackDuration, QM_TO_SM_PAIRING, type AudioTrack } from '../src/content/catalog';
 import { useProgress, isTrackUnlocked } from '../src/player/progressStore';
 import { usePlayerStore } from '../src/player/store';
 import { colors, spacing, type as typo } from '../src/theme';
@@ -22,12 +22,6 @@ import { colors, spacing, type as typo } from '../src/theme';
 type StageId = 'intro' | 'part1' | 'part2' | 'part3';
 type Lane = 'sm' | 'qm';
 type NodeState = 'locked' | 'available' | 'done' | 'soon';
-
-const QM_TO_SM_PAIRING: Record<string, string> = {
-  'qm1-2': 'p1-2',
-  'qm1-4': 'p1-3',
-  'qm2-3': 'p2-3',
-};
 
 // Vertical rhythm — pitch determines "how many stages per screen". At
 // ~150 px per row pitch, a typical mobile viewport (~700 usable px)

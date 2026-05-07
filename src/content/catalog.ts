@@ -162,6 +162,21 @@ export const introAudios: AudioTrack[] = [
   },
 ];
 
+/**
+ * Explicit QM-id → SM-id pairings within a Part. Used by the unlock
+ * walker (`isTrackUnlocked`) and the journey-tree renderer to know
+ * which SM track gates a given QM track. Title-based matching doesn't
+ * work here because catalog titles diverge across the two formats
+ * ("QM3 — Breathing Body" vs SM "Breath and Self-Observation"), so we
+ * declare the semantic pair by id. Add new entries when QM rounds are
+ * added to a part.
+ */
+export const QM_TO_SM_PAIRING: Record<string, string> = {
+  'qm1-2': 'p1-2',
+  'qm1-4': 'p1-3',
+  'qm2-3': 'p2-3',
+};
+
 export const silentMindVolets: Volet[] = [
   // Intro volet — wraps the introAudios array so the prologue lives
   // inside the Silent Mind program tree (same data shape as parts).

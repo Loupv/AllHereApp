@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { silentMindVolets, qmVolets, introAudios, type AudioTrack } from '../content/catalog';
+import { silentMindVolets, qmVolets, introAudios, QM_TO_SM_PAIRING } from '../content/catalog';
 import { kv } from '../content/kv';
 
 type State = {
@@ -40,10 +40,12 @@ const orderedTrackIds = (): string[] => {
  *    track of every Part (p1-1, p2-1, p3-1) is unlocked at start; SM
  *    track N+1 inside the same Part unlocks once SM track N has been
  *    listened to (the "≥ 80%" threshold elsewhere in the player).
- *  - QM tracks unlock alongside their matching SM track — matched by
- *    case-insensitive title within the same Part. Listening to the SM
- *    that gates a SM track also unlocks any matching QM, so the user
- *    sees both Center of Gravity (SM + QM) come alive on the same beat.
+ *  - QM tracks unlock alongside their matching SM track — matched via
+ *    the explicit `QM_TO_SM_PAIRING` table in catalog.ts (titles can't
+ *    be relied on because the QM versions are renamed, e.g. "QM3 —
+ *    Breathing Body" pairs with the SM "Breath and Self-Observation").
+ *    A QM with a paired SM inherits its lock state; a QM with no pair
+ *    declared (or the SM doesn't exist) stays unlocked as an orphan.
  *  - Coming-soon tracks stay locked regardless (they're rendered with
  *    a separate "SOON" treatment in the list).
  *
@@ -77,42 +79,27 @@ export function isTrackUnlocked(
     const qmList = (v.qmTracks ?? []).filter(t => !t.comingSoon);
     const qmTrack = qmList.find(t => t.id === trackId);
     if (qmTrack) {
-      const matchingSm = matchSmByTitle(smList, qmTrack);
-      // No SM counterpart → treat as unlocked (orphan QM, e.g. a
-      // standalone session). Otherwise inherit the SM's unlock state.
-      if (!matchingSm) return true;
-      return isTrackUnlocked(matchingSm.id, listened);
+      const pairedSmId = QM_TO_SM_PAIRING[qmTrack.id];
+      // No paired SM declared → orphan QM, treat as unlocked.
+      if (!pairedSmId) return true;
+      return isTrackUnlocked(pairedSmId, listened);
     }
   }
 
   // Some QM volets aren't perfectly mirrored from SM (Part 3 is locked
   // with its own coming-soon list). Resolve those via the qmVolets
-  // table directly — same matching by title against the same-id SM
-  // volet when one exists.
+  // table directly — using the same explicit pairing.
   for (const v of qmVolets) {
     const qmTrack = v.tracks.find(t => t.id === trackId);
     if (!qmTrack) continue;
-    const smTwin = silentMindVolets.find(sv => sv.id === v.id);
-    if (!smTwin) return true;
-    const matchingSm = matchSmByTitle(
-      smTwin.tracks.filter(t => !t.comingSoon),
-      qmTrack,
-    );
-    if (!matchingSm) return true;
-    return isTrackUnlocked(matchingSm.id, listened);
+    const pairedSmId = QM_TO_SM_PAIRING[qmTrack.id];
+    if (!pairedSmId) return true;
+    return isTrackUnlocked(pairedSmId, listened);
   }
 
   // Unknown id (Start screen quick-meditation pills, etc.) — be
   // permissive; the lock model is for the journey volets only.
   return true;
-}
-
-function matchSmByTitle(
-  smList: AudioTrack[],
-  qmTrack: AudioTrack,
-): AudioTrack | undefined {
-  const target = qmTrack.title.trim().toLowerCase();
-  return smList.find(s => s.title.trim().toLowerCase() === target);
 }
 
 const STORAGE_KEY = 'ah_progress_v1';
