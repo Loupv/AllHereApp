@@ -306,6 +306,14 @@ function PlayerInner() {
   const userScrollingUntil = useRef(0);
   const expectedScrollY = useRef(0);
   const nextScrollAnimated = useRef(false);
+  // Timestamp of the most recent programmatic auto-scroll. While the
+  // smooth scroll is still travelling toward `expectedScrollY`, the
+  // intermediate `onScroll` ticks would otherwise look like manual
+  // gestures (offset diverges from expected by hundreds of px), and
+  // would suspend auto-scroll for 5 s right after every cue change —
+  // which is what was causing the transcript to "stop following" and
+  // then jump several cues later.
+  const autoScrollAt = useRef(0);
 
   // Resolve audio source (bundled or remote with download)
   useEffect(() => {
@@ -724,6 +732,7 @@ function PlayerInner() {
     if (Math.abs(targetY - expectedScrollY.current) < 1) return;
     expectedScrollY.current = targetY;
     nextScrollAnimated.current = false;
+    autoScrollAt.current = Date.now();
     scrollRef.current?.scrollTo({ y: targetY, animated: true });
   }, [currentCueIdx, hasStarted, inBreak, scrubbing, pendingSeekTo]);
 
@@ -733,6 +742,11 @@ function PlayerInner() {
     nextScrollAnimated.current = true;
   };
   const handleUserScroll = (e: any) => {
+    // Suppress divergence detection while the smooth auto-scroll is
+    // still in motion: during the animation, offset legitimately differs
+    // from `expectedScrollY` (it's en-route). 800 ms covers the typical
+    // RN smooth-scroll duration with a comfortable margin.
+    if (Date.now() - autoScrollAt.current < 800) return;
     const offset = e?.nativeEvent?.contentOffset?.y ?? 0;
     if (Math.abs(offset - expectedScrollY.current) > 30) markUserScrolling();
   };

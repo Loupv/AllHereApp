@@ -17,7 +17,7 @@ import { colors, spacing } from '../../src/theme';
 const QM_TRAINING_ENTRY: Volet = {
   id: 'qm-training',
   title: '',
-  subtitle: 'Self-guided training in Quantified Meditation',
+  subtitle: 'QM Training Timer',
   description: 'Pick a preset matching one of our QM formats, or set up your own — timed rounds with bell cues, no spoken guidance.',
   tracks: [],
 };

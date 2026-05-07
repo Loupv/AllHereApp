@@ -289,8 +289,8 @@ export const silentMindVolets: Volet[] = [
       },
       { id: 'p3-2', title: 'The Dark Practice & Vertical Axis', comingSoon: true },
       { id: 'p3-3', title: 'The Light Practice', comingSoon: true },
-      { id: 'p3-4', title: 'In the Black Hall', comingSoon: true },
-      { id: 'p3-5', title: 'The Light & Dark Practice', comingSoon: true },
+      { id: 'p3-4', title: 'The Light & Dark Practice', comingSoon: true },
+      { id: 'p3-5', title: 'In the Black Hall', comingSoon: true },
     ],
   },
 ];

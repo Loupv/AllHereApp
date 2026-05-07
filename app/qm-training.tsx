@@ -30,7 +30,7 @@ const PRESETS: Preset[] = [
   { id: 'beginner', rounds: 3, lengthMin: 3, breakSec: 60, label: '3 × 3 min', sub: 'A first taste' },
   { id: 'standard', rounds: 5, lengthMin: 3, breakSec: 60, label: '5 × 3 min', sub: 'Standard format' },
   { id: 'qm3-6',    rounds: 6, lengthMin: 3, breakSec: 60, label: '6 × 3 min', sub: 'QM3 — Unfollow & Witness' },
-  { id: 'qm3-7',    rounds: 7, lengthMin: 3, breakSec: 60, label: '7 × 3 min', sub: 'QM3 — Breathing Body' },
+  { id: 'qm3-12',   rounds: 12, lengthMin: 3, breakSec: 60, label: '12 × 3 min', sub: 'Extended QM3' },
   { id: 'qm5',      rounds: 5, lengthMin: 5, breakSec: 60, label: '5 × 5 min', sub: 'QM5 — Center of Gravity' },
 ];
 
@@ -292,7 +292,7 @@ export default function QMTrainingScreen() {
               <View style={{ flex: TOP_FLEX, alignItems: 'center' }}>
                 <ProgramHeader
                   eyebrow={qmProgram.eyebrow}
-                  title="Self-guided training"
+                  title="QM Training Timer"
                   description="Pick a format matching one of our QM sessions, or set up your own. Bell cues only — no spoken guidance."
                   accent={colors.accentAlt}
                 />
