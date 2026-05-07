@@ -29,7 +29,6 @@ import {
   Montserrat_900Black,
 } from '@expo-google-fonts/montserrat';
 import { IntroSplash } from '../src/components/IntroSplash';
-import { LoginScreen } from '../src/components/LoginScreen';
 import { setAudioModeAsync } from 'expo-audio';
 import { Player } from '../src/components/Player';
 import { VideoPlayerModal } from '../src/components/VideoPlayerModal';
@@ -40,7 +39,6 @@ import { VideoBackground } from '../src/components/VideoBackground';
 import { useShaderThemeStore } from '../src/shaders/themeStore';
 import { WebSwipeBack } from '../src/components/WebSwipeBack';
 import { usePlayerStore } from '../src/player/store';
-import { useAuth } from '../src/auth/authStore';
 import { AppState } from 'react-native';
 import { colors } from '../src/theme';
 import { ThemeProvider, DarkTheme } from '@react-navigation/native';
@@ -63,7 +61,6 @@ const LAUNCH_THEME = LAUNCH_POOL[Math.floor(Math.random() * LAUNCH_POOL.length)]
 
 export default function RootLayout() {
   const [introDone, setIntroDone] = useState(false);
-  const user = useAuth(s => s.user);
   // Shader theme: auto-derived from progress, optionally overridden
   // by the dev pill on the home tab (via the shared store), and
   // forced to the slow-lake variant on Media + About where the
@@ -247,7 +244,6 @@ export default function RootLayout() {
       </Animated.View>
       <Player />
       <VideoPlayerModal />
-      {!user ? <LoginScreen /> : null}
       {!introDone && <IntroSplash onDone={() => setIntroDone(true)} />}
     </View>
     </GestureHandlerRootView>
