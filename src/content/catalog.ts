@@ -210,12 +210,12 @@ export const silentMindVolets: Volet[] = [
       {
         id: 'p1-2', title: 'Breath and Self-Observation',
         durationHint: '20:54',
-        description: 'Turn the attention of the mind towards the breathing body — moving from thoughts to the breath, then to observing the breath itself.',
+        description: 'Turn the attention from thoughts to the breathing process and the breathing body.',
       },
       {
         id: 'p1-3', title: 'Center of Gravity',
         durationHint: '23:48',
-        description: 'The Center of Gravity practice — strongly related to the sense of self, developing internal presence and stable anchoring of attention.',
+        description: 'Developing vertical internal presence and stable anchoring of inner attention.',
       },
     ],
     qmTracks: [
@@ -240,23 +240,23 @@ export const silentMindVolets: Volet[] = [
     title: 'Part 2',
     subtitle: 'Stability & Equanimity',
     tagline: 'The Sky',
-    description: 'Towards the breathing body observation.',
+    description: 'Transition beyond breath',
     image: require('../../assets/images/hero/sky.jpg'),
     tracks: [
       {
         id: 'p2-1', title: 'Follow the Air',
         durationHint: '13:42',
-        description: 'Follow the air coming in and going out of your body. Feel the flow and settle into the natural rhythm of breathing.',
+        description: 'From breathing body to the element of Air, attention shifts towards a subtler object of meditation.',
       },
       {
         id: 'p2-2', title: 'Follow and witness the Air',
         durationHint: '26:35',
-        description: 'Follow the airflow, then step back and witness its movement. A transition from active following to quiet observation.',
+        description: 'Follow the airflow, then step back and witness its movement. A transition from active following to equanimous observation.',
       },
       {
         id: 'p2-3', title: 'Unfollow and witness the air',
         durationHint: '21:00',
-        description: 'Stabilize the mind and its attention on a single, very subtle object: the air. Observe the airflow without trying to follow it.',
+        description: 'Withdraw from following the air, and the breathing body. Without participating in any process, remain unmoved and stable.',
       },
     ],
     qmTracks: [
@@ -279,13 +279,13 @@ export const silentMindVolets: Volet[] = [
     title: 'Part 3',
     subtitle: 'Towards Silence',
     tagline: 'The Space',
-    description: 'Anchoring of internal attention.',
+    description: 'Transition from air to emptiness.',
     image: require('../../assets/images/hero/space.jpg'),
     tracks: [
       {
         id: 'p3-1', title: 'Emptiness',
         durationHint: '20:58',
-        description: 'Building on the breathing body and presence of air, open to the practice of emptiness — witnessing the space between and behind experience.',
+        description: 'Training the mind on the presence of emptiness, within and without.',
       },
       { id: 'p3-2', title: 'The Dark Practice & Vertical Axis', comingSoon: true },
       { id: 'p3-3', title: 'The Light Practice', comingSoon: true },
