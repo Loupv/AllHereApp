@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, Pressable, ScrollView, StyleSheet, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -9,17 +9,11 @@ import { useProgress } from '../src/player/progressStore';
 import { colors, radius, spacing, type as typo } from '../src/theme';
 
 /**
- * Alternative visualization of the Silent Mind program: a vertical
- * journey tree the user climbs from bottom (Introduction · underground)
- * to top (Part 3 · the Space). Each part where a QM track is available
- * forks into two parallel lanes (Silent Mind on the left, QM on the
- * right) which re-merge below if the next stage is single-lane.
- *
- * Unlock rule (per user spec, may evolve): completing ANY one branch
- * unlocks the next stage — i.e. SM-or-QM, not SM-and-QM.
- *
- * Plain navy background for now; visual zones (earth/sky/space) will
- * be layered in later, possibly through the existing shader system.
+ * Vertical journey tree as a per-stage pager. Each viewport-height page
+ * focuses on one zone (Introduction · Earth · Sky · Space) so the user
+ * climbs the tree stage by stage. Pages snap; landing scrolls to the
+ * Introduction page (the starting point); pagination rail on the right
+ * shows position + lock state.
  */
 
 type StageId = 'intro' | 'part1' | 'part2' | 'part3';
@@ -32,24 +26,25 @@ type StageDef = {
   smTitle: string;
   smCount: number;     // playable SM tracks (excl. comingSoon)
   qmCount: number;     // playable QM tracks
+  description?: string;
 };
 
-// Tree geometry — kept conservative so the branched stages still fit
-// on narrow phones (≤320 px). All connector + node positions derive
-// from these constants so the SVG paths and the absolute-positioned
-// nodes always line up.
-const NODE_W = 130;
-const NODE_H = 76;
-const LANE_GAP = 30;
-const TREE_W = NODE_W * 2 + LANE_GAP;       // 290
-const TREE_CENTER = TREE_W / 2;             // 145
-const SM_X = NODE_W / 2;                    // 65 — left lane centre
-const QM_X = TREE_W - NODE_W / 2;           // 225 — right lane centre
-const CONNECTOR_H = 84;
+const NODE_W = 150;
+const NODE_H = 92;
+const LANE_GAP = 36;
+const TREE_W = NODE_W * 2 + LANE_GAP;       // 336
+const TREE_CENTER = TREE_W / 2;             // 168
+const SM_X = NODE_W / 2;                    // 75
+const QM_X = TREE_W - NODE_W / 2;           // 261
+const HINT_H = 56;                          // small connector hint at top/bottom of a page
 
 function buildStages(): StageDef[] {
   const stages: StageDef[] = [
-    { id: 'intro', zone: 'Introduction', smTitle: 'Introduction', smCount: introAudios.length, qmCount: 0 },
+    {
+      id: 'intro', zone: 'Introduction', smTitle: 'Introduction',
+      smCount: introAudios.length, qmCount: 0,
+      description: 'Three short audios to get oriented before the journey begins.',
+    },
   ];
   for (const v of silentMindVolets) {
     if (v.id === 'intro') continue;
@@ -59,6 +54,7 @@ function buildStages(): StageDef[] {
       smTitle: v.subtitle ?? v.title,
       smCount: v.tracks.filter(t => !t.comingSoon).length,
       qmCount: (v.qmTracks ?? []).filter(t => !t.comingSoon).length,
+      description: v.description,
     });
   }
   return stages;
@@ -85,13 +81,12 @@ function branchState(
   listened: Record<string, true>,
 ): BranchState {
   const ids = trackIdsFor(stage, lane);
-  if (ids.length === 0) return 'locked'; // no playable tracks yet
+  if (ids.length === 0) return 'locked';
 
   if (stage === 'intro') {
     return ids.every(id => listened[id]) ? 'done' : 'available';
   }
 
-  // Unlock if ANY track from the previous stage (either lane) was listened.
   const prev = previousStage(stage)!;
   const prevSm = trackIdsFor(prev, 'sm');
   const prevQm = trackIdsFor(prev, 'qm');
@@ -103,23 +98,40 @@ function branchState(
 export default function SilentMindTreeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { height: winH } = useWindowDimensions();
   const listened = useProgress(s => s.listened);
   const scrollRef = useRef<ScrollView>(null);
 
   const stages = useMemo(() => buildStages(), []);
-  // Display order: top of scroll → bottom of scroll
-  // We want Part 3 at the top (Space), Intro at the bottom (start).
+  // Display order top → bottom of scroll: Space first, Introduction last,
+  // so swiping up the screen reveals the next stage *above* (climbing).
   const displayed = useMemo(() => [...stages].reverse(), [stages]);
 
-  // On first mount, scroll to the bottom so the user sees the
-  // Introduction node (their starting point) without having to scroll up.
+  // Use a fixed page height that matches the viewport so each stage
+  // takes the screen exactly. We cap below to leave room for safe-area
+  // insets without doing layout-time math per page.
+  const pageH = winH;
+
+  const [activeIdx, setActiveIdx] = useState(displayed.length - 1); // intro by default
+
+  // Land on Introduction (last page in display order = bottom of scroll)
+  // so the user starts at their actual entry point. iOS Safari needs a
+  // tick after layout before scrollTo lands correctly.
   useEffect(() => {
     const id = setTimeout(() => {
-      scrollRef.current?.scrollToEnd({ animated: false });
+      const introOffset = (displayed.length - 1) * pageH;
+      scrollRef.current?.scrollTo({ y: introOffset, animated: false });
     }, 50);
     return () => clearTimeout(id);
-  }, []);
+  }, [pageH, displayed.length]);
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = e.nativeEvent.contentOffset.y;
+    const idx = Math.round(y / pageH);
+    if (idx !== activeIdx && idx >= 0 && idx < displayed.length) {
+      setActiveIdx(idx);
+    }
+  };
 
   const navigate = (stage: StageId, lane: Lane, state: BranchState) => {
     if (state === 'locked') return;
@@ -131,105 +143,137 @@ export default function SilentMindTreeScreen() {
     <View style={[styles.root, { backgroundColor: colors.bgTab }]}>
       <Stack.Screen options={{ title: '' }} />
       <BackButton />
+
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: insets.top + 56, paddingBottom: insets.bottom + spacing.xxl },
-        ]}
+        pagingEnabled
         showsVerticalScrollIndicator={false}
+        snapToInterval={pageH}
+        decelerationRate="fast"
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       >
-        <Text style={styles.title}>Your Journey</Text>
-        <Text style={styles.subtitle}>From Introduction to Silence — climb at your own pace.</Text>
+        {displayed.map((stage, i) => {
+          const branched = stage.qmCount > 0;
+          const smState = branchState(stage.id, 'sm', listened);
+          const qmState = branched ? branchState(stage.id, 'qm', listened) : 'locked';
+          const prev = displayed[i - 1]; // page above (more advanced stage)
+          const next = displayed[i + 1]; // page below (earlier stage)
 
-        <View style={[styles.tree, { width: TREE_W }]}>
-          {displayed.map((stage, i) => {
-            const branched = stage.qmCount > 0;
-            const smState = branchState(stage.id, 'sm', listened);
-            const qmState = branched ? branchState(stage.id, 'qm', listened) : 'locked';
+          // Connector hints at top/bottom of the page so the user gets a
+          // visual cue of continuity even though stages are paged.
+          const fromShape: 'single' | 'branched' = branched ? 'branched' : 'single';
+          const aboveShape: 'single' | 'branched' | undefined =
+            prev ? (prev.qmCount > 0 ? 'branched' : 'single') : undefined;
+          const belowShape: 'single' | 'branched' | undefined =
+            next ? (next.qmCount > 0 ? 'branched' : 'single') : undefined;
 
-            // The stage immediately BELOW this one in display order.
-            const next = displayed[i + 1];
-            const fromShape: 'single' | 'branched' = branched ? 'branched' : 'single';
-            const toShape: 'single' | 'branched' | undefined =
-              next ? (next.qmCount > 0 ? 'branched' : 'single') : undefined;
+          return (
+            <View
+              key={stage.id}
+              style={[styles.page, { height: pageH, paddingTop: insets.top + 56, paddingBottom: insets.bottom + 24 }]}
+            >
+              {/* Top hint — connector entering this stage from the stage above */}
+              <View style={styles.hintTop}>
+                {aboveShape ? (
+                  <PageConnector edge="top" from={aboveShape} to={fromShape} />
+                ) : (
+                  <View style={{ height: HINT_H }} />
+                )}
+              </View>
 
-            return (
-              <View key={stage.id}>
-                <StageRow
-                  stage={stage}
-                  smState={smState}
-                  qmState={qmState}
-                  branched={branched}
-                  onPressLane={(lane, state) => navigate(stage.id, lane, state)}
-                />
-                {toShape ? (
-                  <Connector from={fromShape} to={toShape} />
+              {/* Centered stage block — zone label, node(s), description
+                  travel together so the visual centre of mass stays
+                  on the node, not pushed down by flex distribution. */}
+              <View style={styles.centerStage}>
+                <Text style={styles.zoneLabel}>{stage.zone}</Text>
+                <View style={styles.lanesRow}>
+                  {branched ? (
+                    <>
+                      <LaneNode
+                        title="Silent Mind"
+                        count={`${stage.smCount} ${stage.smCount === 1 ? 'practice' : 'practices'}`}
+                        accent={colors.accent}
+                        state={smState}
+                        onPress={() => navigate(stage.id, 'sm', smState)}
+                      />
+                      <View style={{ width: LANE_GAP }} />
+                      <LaneNode
+                        title="QM Training"
+                        count={`${stage.qmCount} ${stage.qmCount === 1 ? 'session' : 'sessions'}`}
+                        accent={colors.accentAlt}
+                        state={qmState}
+                        onPress={() => navigate(stage.id, 'qm', qmState)}
+                      />
+                    </>
+                  ) : (
+                    <LaneNode
+                      title={stage.id === 'intro' ? 'Introduction' : 'Silent Mind'}
+                      count={
+                        stage.id === 'intro'
+                          ? `${stage.smCount} ${stage.smCount === 1 ? 'audio' : 'audios'}`
+                          : `${stage.smCount} ${stage.smCount === 1 ? 'practice' : 'practices'}`
+                      }
+                      accent={colors.accent}
+                      state={smState}
+                      onPress={() => navigate(stage.id, 'sm', smState)}
+                    />
+                  )}
+                </View>
+                {stage.description ? (
+                  <Text style={styles.description} numberOfLines={3}>
+                    {stage.description}
+                  </Text>
                 ) : null}
               </View>
-            );
-          })}
-          <StartHere />
-        </View>
+
+              {/* Bottom hint — connector continuing down to the stage below */}
+              <View style={styles.hintBottom}>
+                {belowShape ? (
+                  <PageConnector edge="bottom" from={fromShape} to={belowShape} />
+                ) : (
+                  <StartHere />
+                )}
+              </View>
+            </View>
+          );
+        })}
       </ScrollView>
+
+      {/* Right-edge progress rail — one bullet per stage, current
+          highlighted. Tapping a bullet jumps to that page. */}
+      <View
+        pointerEvents="box-none"
+        style={[styles.rail, { top: insets.top + 80, bottom: insets.bottom + 80 }]}
+      >
+        {displayed.map((s, i) => {
+          const stageBranched = s.qmCount > 0;
+          const reachable =
+            branchState(s.id, 'sm', listened) !== 'locked' ||
+            (stageBranched && branchState(s.id, 'qm', listened) !== 'locked');
+          const active = i === activeIdx;
+          return (
+            <Pressable
+              key={s.id}
+              onPress={() => scrollRef.current?.scrollTo({ y: i * pageH, animated: true })}
+              hitSlop={8}
+              style={[
+                styles.railDot,
+                !reachable && styles.railDotLocked,
+                // Active wins over locked for the colour so the "you
+                // are here" indicator stays readable even on stages
+                // that are currently out of reach.
+                active && styles.railDotActive,
+              ]}
+            />
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 // ---------------------------------------------------------------------------
-
-function StageRow({
-  stage,
-  smState,
-  qmState,
-  branched,
-  onPressLane,
-}: {
-  stage: StageDef;
-  smState: BranchState;
-  qmState: BranchState;
-  branched: boolean;
-  onPressLane: (lane: Lane, state: BranchState) => void;
-}) {
-  return (
-    <View style={styles.stageRow}>
-      <Text style={styles.zoneLabel}>{stage.zone}</Text>
-      {branched ? (
-        <View style={styles.lanesRow}>
-          <LaneNode
-            title="Silent Mind"
-            count={`${stage.smCount} ${stage.smCount === 1 ? 'practice' : 'practices'}`}
-            accent={colors.accent}
-            state={smState}
-            onPress={() => onPressLane('sm', smState)}
-          />
-          <View style={{ width: LANE_GAP }} />
-          <LaneNode
-            title="QM Training"
-            count={`${stage.qmCount} ${stage.qmCount === 1 ? 'session' : 'sessions'}`}
-            accent={colors.accentAlt}
-            state={qmState}
-            onPress={() => onPressLane('qm', qmState)}
-          />
-        </View>
-      ) : (
-        <View style={styles.lanesRow}>
-          <LaneNode
-            title={stage.id === 'intro' ? 'Introduction' : 'Silent Mind'}
-            count={
-              stage.id === 'intro'
-                ? `${stage.smCount} ${stage.smCount === 1 ? 'audio' : 'audios'}`
-                : `${stage.smCount} ${stage.smCount === 1 ? 'practice' : 'practices'}`
-            }
-            accent={colors.accent}
-            state={smState}
-            onPress={() => onPressLane('sm', smState)}
-          />
-        </View>
-      )}
-    </View>
-  );
-}
 
 function LaneNode({
   title,
@@ -261,25 +305,19 @@ function LaneNode({
             ? 'rgba(255,255,255,0.025)'
             : done
               ? 'rgba(255,255,255,0.04)'
-              : `${accent}1F`, // ~12 % alpha tint
+              : `${accent}1F`,
         },
         pressed && !locked && { opacity: 0.85 },
       ]}
     >
       <Text
-        style={[
-          styles.nodeTitle,
-          { color: locked ? colors.textDim : colors.text },
-        ]}
+        style={[styles.nodeTitle, { color: locked ? colors.textDim : colors.text }]}
         numberOfLines={1}
       >
         {title}
       </Text>
       <Text
-        style={[
-          styles.nodeCount,
-          { color: locked ? colors.textDim : colors.textMuted },
-        ]}
+        style={[styles.nodeCount, { color: locked ? colors.textDim : colors.textMuted }]}
         numberOfLines={1}
       >
         {count}
@@ -295,46 +333,61 @@ function LaneNode({
 
 // ---------------------------------------------------------------------------
 
-function Connector({
+/**
+ * Connector hint stub at the top / bottom edge of a page. Conveys
+ * continuity (something is above / below) without pulling the next
+ * stage's nodes onto this page.
+ */
+function PageConnector({
+  edge,
   from,
   to,
 }: {
+  edge: 'top' | 'bottom';
   from: 'single' | 'branched';
   to: 'single' | 'branched';
 }) {
   const w = TREE_W;
-  const h = CONNECTOR_H;
+  const h = HINT_H;
   const c = TREE_CENTER;
   const sm = SM_X;
   const qm = QM_X;
 
+  // Top hint: line(s) come into the bottom edge of the hint area (where
+  // the node sits below). Bottom hint: line(s) leave from the top edge
+  // (where the node sat above). We model both as "incoming = the page's
+  // current stage shape" and "outgoing = the neighbour's shape".
+  const incoming = edge === 'top' ? to : from; // shape at the page-side
+  const outgoing = edge === 'top' ? from : to; // shape at the off-page side
+
+  // Positions: yClose = side closer to the page's nodes; yFar = off-page.
+  const yClose = edge === 'top' ? h : 0;
+  const yFar = edge === 'top' ? 0 : h;
+
   let d = '';
-  if (from === 'single' && to === 'single') {
-    d = `M ${c} 0 L ${c} ${h}`;
-  } else if (from === 'single' && to === 'branched') {
-    // Drop straight from above, then split smoothly into both lanes.
-    const mid = h * 0.35;
-    d = `M ${c} 0 L ${c} ${mid}
-         M ${c} ${mid} C ${c} ${(mid + h) / 2}, ${sm} ${(mid + h) / 2}, ${sm} ${h}
-         M ${c} ${mid} C ${c} ${(mid + h) / 2}, ${qm} ${(mid + h) / 2}, ${qm} ${h}`;
-  } else if (from === 'branched' && to === 'branched') {
-    // Two parallel rails — no merge, no split.
-    d = `M ${sm} 0 L ${sm} ${h}
-         M ${qm} 0 L ${qm} ${h}`;
+  if (incoming === 'single' && outgoing === 'single') {
+    d = `M ${c} ${yFar} L ${c} ${yClose}`;
+  } else if (incoming === 'single' && outgoing === 'branched') {
+    // page-side single, off-page branched — diverge toward the edge.
+    const yMid = (yFar + yClose) / 2;
+    d = `M ${c} ${yClose} L ${c} ${yMid}
+         M ${c} ${yMid} C ${c} ${(yMid + yFar) / 2}, ${sm} ${(yMid + yFar) / 2}, ${sm} ${yFar}
+         M ${c} ${yMid} C ${c} ${(yMid + yFar) / 2}, ${qm} ${(yMid + yFar) / 2}, ${qm} ${yFar}`;
+  } else if (incoming === 'branched' && outgoing === 'branched') {
+    d = `M ${sm} ${yFar} L ${sm} ${yClose}
+         M ${qm} ${yFar} L ${qm} ${yClose}`;
   } else {
-    // branched → single: two lanes converge then drop to centre.
-    const mid = h * 0.65;
-    d = `M ${sm} 0 C ${sm} ${mid / 2}, ${c} ${mid / 2}, ${c} ${mid}
-         M ${qm} 0 C ${qm} ${mid / 2}, ${c} ${mid / 2}, ${c} ${mid}
-         M ${c} ${mid} L ${c} ${h}`;
+    // page-side branched, off-page single — converge toward the edge.
+    const yMid = (yFar + yClose) / 2;
+    d = `M ${sm} ${yClose} C ${sm} ${(yMid + yClose) / 2}, ${c} ${(yMid + yClose) / 2}, ${c} ${yMid}
+         M ${qm} ${yClose} C ${qm} ${(yMid + yClose) / 2}, ${c} ${(yMid + yClose) / 2}, ${c} ${yMid}
+         M ${c} ${yMid} L ${c} ${yFar}`;
   }
 
   return (
-    <View style={{ width: w, height: h, alignSelf: 'center' }}>
-      <Svg width={w} height={h}>
-        <Path d={d} stroke="rgba(255,255,255,0.32)" strokeWidth={2} fill="none" />
-      </Svg>
-    </View>
+    <Svg width={w} height={h}>
+      <Path d={d} stroke="rgba(255,255,255,0.32)" strokeWidth={2} fill="none" />
+    </Svg>
   );
 }
 
@@ -353,38 +406,24 @@ function StartHere() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  scroll: {
+  page: {
+    width: '100%',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    justifyContent: 'space-between',
   },
-  title: {
+  hintTop: { alignItems: 'center', height: HINT_H },
+  hintBottom: { alignItems: 'center', minHeight: HINT_H, paddingBottom: spacing.lg },
+  centerStage: {
+    alignItems: 'center',
+    width: '100%',
+    gap: spacing.lg,
+    paddingHorizontal: spacing.xl,
+  },
+  zoneLabel: {
     ...typo.display,
     color: colors.text,
     fontSize: 22,
-    letterSpacing: 1.2,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    ...typo.caption,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-    paddingHorizontal: spacing.lg,
-  },
-  tree: {
-    alignSelf: 'center',
-    alignItems: 'center',
-  },
-  stageRow: {
-    alignItems: 'center',
-  },
-  zoneLabel: {
-    ...typo.overline,
-    color: colors.textDim,
-    fontSize: 10,
-    letterSpacing: 2.4,
-    marginBottom: spacing.sm,
+    letterSpacing: 1.6,
     textAlign: 'center',
   },
   lanesRow: {
@@ -402,7 +441,7 @@ const styles = StyleSheet.create({
   },
   nodeTitle: {
     ...typo.h3,
-    fontSize: 14,
+    fontSize: 15,
     textAlign: 'center',
   },
   nodeCount: {
@@ -418,10 +457,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textDim,
   },
+  description: {
+    ...typo.body,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+  },
   startHere: {
-    marginTop: spacing.md,
     alignItems: 'center',
     gap: spacing.xs,
+    marginTop: spacing.md,
   },
   startBullet: {
     width: 10,
@@ -434,5 +480,28 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 10,
     letterSpacing: 2,
+  },
+  rail: {
+    position: 'absolute',
+    right: spacing.md,
+    width: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  railDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.30)',
+  },
+  railDotActive: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.accent,
+  },
+  railDotLocked: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
 });
