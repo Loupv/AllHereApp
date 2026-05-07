@@ -958,9 +958,11 @@ function PlayerInner() {
   const canSeek = duration > 0;
   const description = track.description ?? (track.rounds ? QM_DESCRIPTION : DEFAULT_DESCRIPTION);
   const rounds = track.rounds;
-  // QM tracks (anything with a rounds config) carry the QM tab accent so the
-  // player feels visually consistent with where the user opened it from.
-  const accent = rounds ? colors.accentAlt : colors.accent;
+  // Default accent: QM = teal, SM = magenta. The journey-tree screen
+  // overrides this with the rainbow hue of the dot the user tapped, so
+  // the Player visually inherits the level's colour.
+  const accentOverride = usePlayerStore(s => s.accentOverride);
+  const accent = accentOverride ?? (rounds ? colors.accentAlt : colors.accent);
   const accentBg = rounds ? colors.accentAltSoft : colors.accentSoft;
 
   // Precomputed waveform peaks for the currently-playing audio source.

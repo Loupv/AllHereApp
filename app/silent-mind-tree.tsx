@@ -39,8 +39,10 @@ type NodeState = 'locked' | 'available' | 'done' | 'soon';
 const ROW_PITCH = 150;
 const DIVIDER_GAP = 96;     // generous breathing room at part boundaries
 
-// Node size — bigger now that each carries a label.
-const NODE_R = 16;
+// Node size — base radius is enlarged at runtime by the viewport-driven
+// scale below so the dots don't read as tiny on phones with bigger
+// screens or web previews.
+const BASE_NODE_R = 22;
 
 // Maximum width of the whole layout (tree + labels). On narrow phones
 // we shrink to fit; on wider previews we cap so labels don't get
@@ -129,6 +131,9 @@ export default function SilentMindTreeScreen() {
   const SM_X = sideW + treeW * 0.3;
   const QM_X = sideW + treeW * 0.7;
   const CENTER_X = sideW + treeW / 2;
+  // Node radius — gently scales up on wider viewports so the dots don't
+  // read as a faint ring on big phones / desktop preview.
+  const NODE_R = Math.min(30, Math.max(BASE_NODE_R, BASE_NODE_R + (winW - 360) * 0.03));
 
   // Snap-per-part page layout — each part fills exactly one viewport
   // height, the user snaps from one part to the next while scrolling.
@@ -321,7 +326,9 @@ export default function SilentMindTreeScreen() {
         playlist = list.filter(x => !x.comingSoon);
       }
     }
-    openPlayer(t, playlist, { autoStart: true });
+    // Pass the dot's rainbow colour to the Player so its play button
+    // and accent UI inherit the journey-stage hue.
+    openPlayer(t, playlist, { autoStart: true, accent: trackColor(t.id) });
   };
 
   return (
@@ -366,7 +373,7 @@ export default function SilentMindTreeScreen() {
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           >
-            {buildPathSegments(layers, rowYs, SM_X, QM_X, CENTER_X, listened)}
+            {buildPathSegments(layers, rowYs, SM_X, QM_X, CENTER_X, NODE_R, listened)}
           </Svg>
 
           {/* Section headers used to live inside the scroll content;
@@ -393,7 +400,7 @@ export default function SilentMindTreeScreen() {
                   text={l.smTrack.title}
                   meta={trackDuration(l.smTrack)}
                   state={smState}
-                  accent={colors.accent}
+                  accent={trackColor(l.smTrack.id)}
                   align="right"
                   cy={y}
                   left={0}
@@ -405,7 +412,7 @@ export default function SilentMindTreeScreen() {
                   text={l.smTrack.title}
                   meta={trackDuration(l.smTrack)}
                   state={smState}
-                  accent={colors.accent}
+                  accent={trackColor(l.smTrack.id)}
                   align="left"
                   cy={y}
                   left={smCx + NODE_R + LABEL_PAD}
@@ -420,7 +427,7 @@ export default function SilentMindTreeScreen() {
                 text={l.qmTrack.title}
                 meta={trackDuration(l.qmTrack)}
                 state={qmState}
-                accent={colors.accentAlt}
+                accent={trackColor(l.qmTrack.id)}
                 align="left"
                 cy={y}
                 left={qmCx + NODE_R + LABEL_PAD}
@@ -434,6 +441,7 @@ export default function SilentMindTreeScreen() {
                   <CircleNode
                     cx={smCx}
                     cy={y}
+                    radius={NODE_R}
                     accent={trackColor(l.smTrack.id)}
                     state={smState}
                     isNext={l.smTrack.id === nextId}
@@ -444,6 +452,7 @@ export default function SilentMindTreeScreen() {
                   <CircleNode
                     cx={qmCx}
                     cy={y}
+                    radius={NODE_R}
                     accent={trackColor(l.qmTrack.id)}
                     state={qmState}
                     isNext={l.qmTrack.id === nextId}
@@ -516,6 +525,7 @@ function FooterPartLabel({
 function CircleNode({
   cx,
   cy,
+  radius,
   accent,
   state,
   isNext,
@@ -523,6 +533,7 @@ function CircleNode({
 }: {
   cx: number;
   cy: number;
+  radius: number;
   accent: string;
   state: NodeState;
   isNext: boolean;
@@ -532,7 +543,8 @@ function CircleNode({
   const soon = state === 'soon';
   const done = state === 'done';
   const dimmed = locked || soon;
-  const D = NODE_R * 2;
+  const playable = !dimmed && !done;
+  const D = radius * 2;
   const HIT = D + 16;
 
   // Slow, sin-eased breath on the next-up node. Tiny scale change
@@ -592,7 +604,7 @@ function CircleNode({
           {
             width: D,
             height: D,
-            borderRadius: NODE_R,
+            borderRadius: radius,
             borderWidth: 2.5,
             // Border keeps its rainbow hue even when locked/soon, just
             // with the whole node faded so the journey's progressive
@@ -626,7 +638,21 @@ function CircleNode({
         ]}
       >
         {done ? (
-          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>✓</Text>
+          <Text style={{ color: '#fff', fontSize: radius * 0.85, fontWeight: '700' }}>✓</Text>
+        ) : playable ? (
+          // Play triangle for tappable tracks — slight right offset so
+          // the visual centre of the triangle lands on the dot's centre.
+          <Text
+            style={{
+              color: accent,
+              fontSize: radius * 0.95,
+              lineHeight: radius * 0.95,
+              marginLeft: radius * 0.2,
+              fontWeight: '700',
+            }}
+          >
+            ▶
+          </Text>
         ) : null}
       </Animated.View>
     </Pressable>
@@ -712,6 +738,7 @@ function buildPathSegments(
   SM_X: number,
   QM_X: number,
   CENTER_X: number,
+  nodeR: number,
   listened: Record<string, true>,
 ) {
   const elements: React.ReactNode[] = [];
@@ -773,10 +800,10 @@ function buildPathSegments(
     const strokeWidth = traversed ? 2.5 : 2;
 
     segs.forEach((s, j) => {
-      // Trim each end by NODE_R so the path stops at the circle border
+      // Trim each end by nodeR so the path stops at the circle border
       // rather than crossing through it.
-      const ty1 = s.y1 + NODE_R;
-      const ty2 = s.y2 - NODE_R;
+      const ty1 = s.y1 + nodeR;
+      const ty2 = s.y2 - nodeR;
       const isDiagonal = s.x1 !== s.x2;
       const d = isDiagonal
         ? `M ${s.x1} ${ty1} C ${s.x1} ${(ty1 + ty2) / 2}, ${s.x2} ${(ty1 + ty2) / 2}, ${s.x2} ${ty2}`

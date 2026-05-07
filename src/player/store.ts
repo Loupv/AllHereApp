@@ -9,6 +9,13 @@ type OpenOptions = {
    * big play button on the Start tab.
    */
   autoStart?: boolean;
+  /**
+   * Optional accent colour override. When passed, the Player tints
+   * its play button (and other accent UI) with this colour instead of
+   * the lane-derived default. Used by the journey tree to carry the
+   * rainbow hue of the tapped dot into the Player.
+   */
+  accent?: string;
 };
 
 type PlayerState = {
@@ -18,6 +25,8 @@ type PlayerState = {
   isOpen: boolean;
   /** Consumed once by the Player on mount / track swap, then cleared. */
   autoStart: boolean;
+  /** Optional accent override — see OpenOptions.accent. null when default. */
+  accentOverride: string | null;
   /**
    * Live "audio is currently playing" flag, mirrored from expo-audio's
    * status inside `Player`. Lives on the store so other parts of the
@@ -47,6 +56,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   index: -1,
   isOpen: true && false,
   autoStart: false,
+  accentOverride: null,
   playing: false,
   open: (track, playlist, opts) => {
     const pl = playable(playlist && playlist.length ? playlist : [track]);
@@ -57,6 +67,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       index: idx,
       isOpen: true,
       autoStart: !!opts?.autoStart,
+      accentOverride: opts?.accent ?? null,
     });
   },
   consumeAutoStart: () => {
@@ -65,7 +76,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     return v;
   },
   setPlaying: (p) => set({ playing: p }),
-  close: () => set({ isOpen: false, autoStart: false, playing: false }),
+  close: () => set({ isOpen: false, autoStart: false, playing: false, accentOverride: null }),
   playNext: () => {
     const { playlist, index } = get();
     if (index < 0 || index >= playlist.length - 1) return;
