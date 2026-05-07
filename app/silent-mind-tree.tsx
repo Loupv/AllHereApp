@@ -468,6 +468,17 @@ function CircleNode({
                 : colors.bgTab,
             alignItems: 'center',
             justifyContent: 'center',
+            // Soft accent halo on the up-next node so it stays visually
+            // distinct even at the resting frame of the pulse cycle.
+            ...(isNext
+              ? {
+                  shadowColor: accent,
+                  shadowOpacity: 0.85,
+                  shadowRadius: 14,
+                  shadowOffset: { width: 0, height: 0 },
+                  elevation: 10,
+                }
+              : null),
           },
           animStyle,
         ]}
