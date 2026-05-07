@@ -3,6 +3,7 @@ import { View, Text, Pressable, ScrollView, StyleSheet, useWindowDimensions } fr
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  useAnimatedScrollHandler,
   withRepeat,
   withSequence,
   withTiming,
@@ -12,6 +13,7 @@ import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { BackButton } from '../src/components/BackButton';
+import { AtmosphereBackground } from '../src/components/AtmosphereBackground';
 import { silentMindVolets, introAudios, trackDuration, QM_TO_SM_PAIRING, type AudioTrack } from '../src/content/catalog';
 import { useProgress, isTrackUnlocked } from '../src/player/progressStore';
 import { usePlayerStore } from '../src/player/store';
@@ -111,7 +113,7 @@ function nodeState(t: AudioTrack | null, listened: Record<string, true>): NodeSt
 
 export default function SilentMindTreeScreen() {
   const insets = useSafeAreaInsets();
-  const { width: winW } = useWindowDimensions();
+  const { width: winW, height: winH } = useWindowDimensions();
   const listened = useProgress(s => s.listened);
   const openPlayer = usePlayerStore(s => s.open);
   const scrollRef = useRef<ScrollView>(null);
@@ -188,6 +190,52 @@ export default function SilentMindTreeScreen() {
   const nextTrackIdFn = useProgress(s => s.nextTrackId);
   const nextId = nextTrackIdFn();
 
+  // Scroll-driven background fades. lake (Intro + P1) ↔ sky (P2) ↔
+  // space (P3) crossfades happen across the inter-part dividers, with
+  // a fade window centred on each boundary's Y in scroll content.
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: e => { scrollY.value = e.contentOffset.y; },
+  });
+
+  // Y positions of the P2↔P3 and P1↔P2 boundaries within scroll
+  // content. Used by the opacity worklets below; recomputed when the
+  // layer layout changes.
+  const { yP2P3, yP1P2 } = useMemo(() => {
+    let yP2P3 = 0;
+    let yP1P2 = 0;
+    for (let i = 0; i < layers.length; i++) {
+      const l = layers[i];
+      if (l.kind !== 'divider') continue;
+      // The divider sits between two parts; find both neighbour rows.
+      let above: StageId | null = null;
+      let below: StageId | null = null;
+      for (let j = i - 1; j >= 0; j--) {
+        const r = layers[j];
+        if (r.kind === 'row') { above = r.partId; break; }
+      }
+      for (let j = i + 1; j < layers.length; j++) {
+        const r = layers[j];
+        if (r.kind === 'row') { below = r.partId; break; }
+      }
+      if (above === 'part3' && below === 'part2') yP2P3 = rowYs[i];
+      else if (above === 'part2' && below === 'part1') yP1P2 = rowYs[i];
+    }
+    return { yP2P3, yP1P2 };
+  }, [layers, rowYs]);
+
+  const FADE_PX = 220;
+  const skyAnimStyle = useAnimatedStyle(() => {
+    const y = scrollY.value + winH / 2;
+    const t = Math.max(0, Math.min(1, (yP1P2 + FADE_PX - y) / (2 * FADE_PX)));
+    return { opacity: t };
+  });
+  const spaceAnimStyle = useAnimatedStyle(() => {
+    const y = scrollY.value + winH / 2;
+    const t = Math.max(0, Math.min(1, (yP2P3 + FADE_PX - y) / (2 * FADE_PX)));
+    return { opacity: t };
+  });
+
   // Land the user on the bottom of the tree (Welcome) at first mount.
   useEffect(() => {
     const id = setTimeout(() => {
@@ -212,17 +260,37 @@ export default function SilentMindTreeScreen() {
   };
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.bgTab }]}>
+    <View style={styles.root}>
       <Stack.Screen options={{ title: '' }} />
+
+      {/* Layered shader backgrounds — lake at the bottom (always full
+          opacity, covers Intro + P1), sky on top fading in across the
+          P1↔P2 boundary, space on top of sky fading in across the
+          P2↔P3 boundary. The result: smooth crossfade between three
+          atmospheres as the user scrolls through the journey. */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={StyleSheet.absoluteFill}>
+          <AtmosphereBackground theme="lake" />
+        </View>
+        <Animated.View style={[StyleSheet.absoluteFill, skyAnimStyle]}>
+          <AtmosphereBackground theme="sky" />
+        </Animated.View>
+        <Animated.View style={[StyleSheet.absoluteFill, spaceAnimStyle]}>
+          <AtmosphereBackground theme="space" />
+        </Animated.View>
+      </View>
+
       <BackButton />
 
-      <ScrollView
-        ref={scrollRef}
+      <Animated.ScrollView
+        ref={scrollRef as never}
         contentContainerStyle={[
           styles.scroll,
           { paddingTop: insets.top + 56, paddingBottom: insets.bottom + spacing.xl },
         ]}
         showsVerticalScrollIndicator={false}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
       >
         <Text style={styles.title}>Your Journey</Text>
 
@@ -396,7 +464,7 @@ export default function SilentMindTreeScreen() {
         </View>
 
         <Text style={styles.startCaption}>Welcome — your starting point</Text>
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
