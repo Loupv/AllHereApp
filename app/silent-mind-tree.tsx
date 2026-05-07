@@ -4,95 +4,119 @@ import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { BackButton } from '../src/components/BackButton';
-import { silentMindVolets, introAudios } from '../src/content/catalog';
-import { useProgress } from '../src/player/progressStore';
+import { silentMindVolets, introAudios, trackDuration, type AudioTrack } from '../src/content/catalog';
+import { useProgress, isTrackUnlocked } from '../src/player/progressStore';
+import { usePlayerStore } from '../src/player/store';
 import { colors, radius, spacing, type as typo } from '../src/theme';
 
 /**
- * Vertical journey tree as a per-stage pager. Each viewport-height page
- * focuses on one zone (Introduction · Earth · Sky · Space) so the user
- * climbs the tree stage by stage. Pages snap; landing scrolls to the
- * Introduction page (the starting point); pagination rail on the right
- * shows position + lock state.
+ * Vertical journey tree as a per-stage pager. Each viewport-height
+ * page focuses on one zone (Introduction · Earth · Sky · Space). Within
+ * a page we show ONE pastille per track — the SM lane on the left, and
+ * if a QM counterpart exists, its pastille opposite on the right. No
+ * intermediate per-part menu: tapping a pastille opens the player on
+ * that track directly.
  */
 
 type StageId = 'intro' | 'part1' | 'part2' | 'part3';
 type Lane = 'sm' | 'qm';
-type BranchState = 'locked' | 'available' | 'done';
+type PastilleState = 'locked' | 'available' | 'done' | 'soon';
 
 type StageDef = {
   id: StageId;
-  zone: string;        // The Earth / Sky / Space / Underground
-  smTitle: string;
-  smCount: number;     // playable SM tracks (excl. comingSoon)
-  qmCount: number;     // playable QM tracks
+  zone: string;        // The Earth / Sky / Space / Introduction
   description?: string;
+  smTracks: AudioTrack[];
+  qmTracks: AudioTrack[];
+  hasQM: boolean;      // any playable (non-comingSoon) QM track
 };
 
-const NODE_W = 150;
-const NODE_H = 92;
-const LANE_GAP = 36;
-const TREE_W = NODE_W * 2 + LANE_GAP;       // 336
-const TREE_CENTER = TREE_W / 2;             // 168
-const SM_X = NODE_W / 2;                    // 75
-const QM_X = TREE_W - NODE_W / 2;           // 261
-const HINT_H = 56;                          // small connector hint at top/bottom of a page
+/**
+ * QM ↔ SM track pairings. The catalog doesn't carry an explicit pair
+ * id (and titles diverge — "QM3 — Breathing Body" vs SM "Breath and
+ * Self-Observation"), so we declare the semantic pair here. Add new
+ * entries when QM rounds are added to a part.
+ */
+const QM_TO_SM_PAIRING: Record<string, string> = {
+  'qm1-2': 'p1-2',
+  'qm1-4': 'p1-3',
+  'qm2-3': 'p2-3',
+};
+
+// Geometry
+const PASTILLE_W = 148;
+const PASTILLE_GAP = 22;
+const TREE_W = PASTILLE_W * 2 + PASTILLE_GAP;       // 318
+const TREE_CENTER = TREE_W / 2;                     // 159
+const SM_X = PASTILLE_W / 2;                        // 74
+const QM_X = TREE_W - PASTILLE_W / 2;               // 244
+const HINT_H = 48;
 
 function buildStages(): StageDef[] {
   const stages: StageDef[] = [
     {
-      id: 'intro', zone: 'Introduction', smTitle: 'Introduction',
-      smCount: introAudios.length, qmCount: 0,
+      id: 'intro',
+      zone: 'Introduction',
       description: 'Three short audios to get oriented before the journey begins.',
+      smTracks: introAudios,
+      qmTracks: [],
+      hasQM: false,
     },
   ];
   for (const v of silentMindVolets) {
     if (v.id === 'intro') continue;
+    const qm = v.qmTracks ?? [];
     stages.push({
       id: v.id as StageId,
       zone: v.tagline ?? v.subtitle ?? v.title,
-      smTitle: v.subtitle ?? v.title,
-      smCount: v.tracks.filter(t => !t.comingSoon).length,
-      qmCount: (v.qmTracks ?? []).filter(t => !t.comingSoon).length,
       description: v.description,
+      smTracks: v.tracks,
+      qmTracks: qm,
+      hasQM: qm.some(t => !t.comingSoon),
     });
   }
   return stages;
 }
 
-function trackIdsFor(stage: StageId, lane: Lane): string[] {
-  if (stage === 'intro') return lane === 'sm' ? introAudios.map(t => t.id) : [];
-  const v = silentMindVolets.find(s => s.id === stage);
-  if (!v) return [];
-  const list = lane === 'sm' ? v.tracks : (v.qmTracks ?? []);
-  return list.filter(t => !t.comingSoon).map(t => t.id);
-}
+type Row = { sm: AudioTrack | null; qm: AudioTrack | null };
 
-function previousStage(stage: StageId): StageId | undefined {
-  if (stage === 'part1') return 'intro';
-  if (stage === 'part2') return 'part1';
-  if (stage === 'part3') return 'part2';
-  return undefined;
-}
-
-function branchState(
-  stage: StageId,
-  lane: Lane,
-  listened: Record<string, true>,
-): BranchState {
-  const ids = trackIdsFor(stage, lane);
-  if (ids.length === 0) return 'locked';
-
-  if (stage === 'intro') {
-    return ids.every(id => listened[id]) ? 'done' : 'available';
+function buildRows(stage: StageDef): Row[] {
+  const used = new Set<string>();
+  const rows: Row[] = [];
+  for (const sm of stage.smTracks) {
+    const pairedQm = stage.qmTracks.find(
+      qm => QM_TO_SM_PAIRING[qm.id] === sm.id,
+    );
+    if (pairedQm) used.add(pairedQm.id);
+    rows.push({ sm, qm: pairedQm ?? null });
   }
+  for (const qm of stage.qmTracks) {
+    if (!used.has(qm.id)) rows.push({ sm: null, qm });
+  }
+  return rows;
+}
 
-  const prev = previousStage(stage)!;
-  const prevSm = trackIdsFor(prev, 'sm');
-  const prevQm = trackIdsFor(prev, 'qm');
-  const anyPrevDone = [...prevSm, ...prevQm].some(id => listened[id]);
-  if (!anyPrevDone) return 'locked';
-  return ids.every(id => listened[id]) ? 'done' : 'available';
+function pastilleState(
+  t: AudioTrack | null,
+  listened: Record<string, true>,
+): PastilleState {
+  if (!t) return 'locked';
+  if (t.comingSoon) return 'soon';
+  if (!isTrackUnlocked(t.id, listened)) return 'locked';
+  if (listened[t.id]) return 'done';
+  return 'available';
+}
+
+function stageReachable(
+  stage: StageDef,
+  listened: Record<string, true>,
+): boolean {
+  // Reachable = at least one pastille is available, done, or soon-but-
+  // technically-unlocked. We use the same rule as the existing isTrackUnlocked
+  // chain: the first SM track of every Part is unlocked from the start once
+  // the prerequisites are met.
+  return stage.smTracks.some(t => !t.comingSoon && isTrackUnlocked(t.id, listened))
+    || stage.qmTracks.some(t => !t.comingSoon && isTrackUnlocked(t.id, listened));
 }
 
 export default function SilentMindTreeScreen() {
@@ -100,23 +124,18 @@ export default function SilentMindTreeScreen() {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
   const listened = useProgress(s => s.listened);
+  const openPlayer = usePlayerStore(s => s.open);
   const scrollRef = useRef<ScrollView>(null);
 
   const stages = useMemo(() => buildStages(), []);
-  // Display order top → bottom of scroll: Space first, Introduction last,
-  // so swiping up the screen reveals the next stage *above* (climbing).
+  // Display order top → bottom of scroll: Space first, Introduction last.
+  // Climbing means swiping the screen up (= scrolling up to earlier index).
   const displayed = useMemo(() => [...stages].reverse(), [stages]);
 
-  // Use a fixed page height that matches the viewport so each stage
-  // takes the screen exactly. We cap below to leave room for safe-area
-  // insets without doing layout-time math per page.
   const pageH = winH;
 
   const [activeIdx, setActiveIdx] = useState(displayed.length - 1); // intro by default
 
-  // Land on Introduction (last page in display order = bottom of scroll)
-  // so the user starts at their actual entry point. iOS Safari needs a
-  // tick after layout before scrollTo lands correctly.
   useEffect(() => {
     const id = setTimeout(() => {
       const introOffset = (displayed.length - 1) * pageH;
@@ -133,10 +152,14 @@ export default function SilentMindTreeScreen() {
     }
   };
 
-  const navigate = (stage: StageId, lane: Lane, state: BranchState) => {
-    if (state === 'locked') return;
-    if (lane === 'sm') router.push(`/silent-mind/${stage}` as never);
-    else router.push(`/qm/${stage}` as never);
+  // Per-lane playlist for `openPlayer` — tapping a SM pastille walks
+  // through the stage's playable SM tracks; same for QM.
+  const playTrack = (stage: StageDef, lane: Lane, t: AudioTrack) => {
+    if (t.comingSoon) return;
+    if (!isTrackUnlocked(t.id, listened)) return;
+    const playlist = (lane === 'sm' ? stage.smTracks : stage.qmTracks)
+      .filter(x => !x.comingSoon);
+    openPlayer(t, playlist, { autoStart: true });
   };
 
   return (
@@ -154,26 +177,23 @@ export default function SilentMindTreeScreen() {
         scrollEventThrottle={16}
       >
         {displayed.map((stage, i) => {
-          const branched = stage.qmCount > 0;
-          const smState = branchState(stage.id, 'sm', listened);
-          const qmState = branched ? branchState(stage.id, 'qm', listened) : 'locked';
           const prev = displayed[i - 1]; // page above (more advanced stage)
           const next = displayed[i + 1]; // page below (earlier stage)
-
-          // Connector hints at top/bottom of the page so the user gets a
-          // visual cue of continuity even though stages are paged.
-          const fromShape: 'single' | 'branched' = branched ? 'branched' : 'single';
+          const fromShape: 'single' | 'branched' = stage.hasQM ? 'branched' : 'single';
           const aboveShape: 'single' | 'branched' | undefined =
-            prev ? (prev.qmCount > 0 ? 'branched' : 'single') : undefined;
+            prev ? (prev.hasQM ? 'branched' : 'single') : undefined;
           const belowShape: 'single' | 'branched' | undefined =
-            next ? (next.qmCount > 0 ? 'branched' : 'single') : undefined;
+            next ? (next.hasQM ? 'branched' : 'single') : undefined;
+          const rows = buildRows(stage);
 
           return (
             <View
               key={stage.id}
-              style={[styles.page, { height: pageH, paddingTop: insets.top + 56, paddingBottom: insets.bottom + 24 }]}
+              style={[
+                styles.page,
+                { height: pageH, paddingTop: insets.top + 56, paddingBottom: insets.bottom + 24 },
+              ]}
             >
-              {/* Top hint — connector entering this stage from the stage above */}
               <View style={styles.hintTop}>
                 {aboveShape ? (
                   <PageConnector edge="top" from={aboveShape} to={fromShape} />
@@ -182,52 +202,62 @@ export default function SilentMindTreeScreen() {
                 )}
               </View>
 
-              {/* Centered stage block — zone label, node(s), description
-                  travel together so the visual centre of mass stays
-                  on the node, not pushed down by flex distribution. */}
               <View style={styles.centerStage}>
                 <Text style={styles.zoneLabel}>{stage.zone}</Text>
-                <View style={styles.lanesRow}>
-                  {branched ? (
-                    <>
-                      <LaneNode
-                        title="Silent Mind"
-                        count={`${stage.smCount} ${stage.smCount === 1 ? 'practice' : 'practices'}`}
-                        accent={colors.accent}
-                        state={smState}
-                        onPress={() => navigate(stage.id, 'sm', smState)}
-                      />
-                      <View style={{ width: LANE_GAP }} />
-                      <LaneNode
-                        title="QM Training"
-                        count={`${stage.qmCount} ${stage.qmCount === 1 ? 'session' : 'sessions'}`}
-                        accent={colors.accentAlt}
-                        state={qmState}
-                        onPress={() => navigate(stage.id, 'qm', qmState)}
-                      />
-                    </>
-                  ) : (
-                    <LaneNode
-                      title={stage.id === 'intro' ? 'Introduction' : 'Silent Mind'}
-                      count={
-                        stage.id === 'intro'
-                          ? `${stage.smCount} ${stage.smCount === 1 ? 'audio' : 'audios'}`
-                          : `${stage.smCount} ${stage.smCount === 1 ? 'practice' : 'practices'}`
-                      }
-                      accent={colors.accent}
-                      state={smState}
-                      onPress={() => navigate(stage.id, 'sm', smState)}
-                    />
-                  )}
+
+                {/* Stages with no QM lane render a single centred
+                    column (Intro, Part 3 today). Stages with QM keep
+                    SM on the left, QM on the right at the same X as
+                    the connector lanes. */}
+                <View style={stage.hasQM ? styles.rowList : styles.rowListSingle}>
+                  {rows.map((row, ri) => (
+                    <View
+                      key={ri}
+                      style={stage.hasQM ? styles.row : styles.rowSingle}
+                    >
+                      {stage.hasQM ? (
+                        <>
+                          <View style={styles.lane}>
+                            {row.sm ? (
+                              <Pastille
+                                track={row.sm}
+                                accent={colors.accent}
+                                state={pastilleState(row.sm, listened)}
+                                onPress={() => playTrack(stage, 'sm', row.sm!)}
+                              />
+                            ) : (
+                              <View style={{ width: PASTILLE_W, height: 1 }} />
+                            )}
+                          </View>
+                          <View style={{ width: PASTILLE_GAP }} />
+                          <View style={styles.lane}>
+                            {row.qm ? (
+                              <Pastille
+                                track={row.qm}
+                                accent={colors.accentAlt}
+                                state={pastilleState(row.qm, listened)}
+                                onPress={() => playTrack(stage, 'qm', row.qm!)}
+                              />
+                            ) : (
+                              <View style={{ width: PASTILLE_W, height: 1 }} />
+                            )}
+                          </View>
+                        </>
+                      ) : (
+                        row.sm ? (
+                          <Pastille
+                            track={row.sm}
+                            accent={colors.accent}
+                            state={pastilleState(row.sm, listened)}
+                            onPress={() => playTrack(stage, 'sm', row.sm!)}
+                          />
+                        ) : null
+                      )}
+                    </View>
+                  ))}
                 </View>
-                {stage.description ? (
-                  <Text style={styles.description} numberOfLines={3}>
-                    {stage.description}
-                  </Text>
-                ) : null}
               </View>
 
-              {/* Bottom hint — connector continuing down to the stage below */}
               <View style={styles.hintBottom}>
                 {belowShape ? (
                   <PageConnector edge="bottom" from={fromShape} to={belowShape} />
@@ -240,17 +270,12 @@ export default function SilentMindTreeScreen() {
         })}
       </ScrollView>
 
-      {/* Right-edge progress rail — one bullet per stage, current
-          highlighted. Tapping a bullet jumps to that page. */}
       <View
         pointerEvents="box-none"
         style={[styles.rail, { top: insets.top + 80, bottom: insets.bottom + 80 }]}
       >
         {displayed.map((s, i) => {
-          const stageBranched = s.qmCount > 0;
-          const reachable =
-            branchState(s.id, 'sm', listened) !== 'locked' ||
-            (stageBranched && branchState(s.id, 'qm', listened) !== 'locked');
+          const reachable = stageReachable(s, listened);
           const active = i === activeIdx;
           return (
             <Pressable
@@ -260,9 +285,6 @@ export default function SilentMindTreeScreen() {
               style={[
                 styles.railDot,
                 !reachable && styles.railDotLocked,
-                // Active wins over locked for the colour so the "you
-                // are here" indicator stays readable even on stages
-                // that are currently out of reach.
                 active && styles.railDotActive,
               ]}
             />
@@ -275,69 +297,82 @@ export default function SilentMindTreeScreen() {
 
 // ---------------------------------------------------------------------------
 
-function LaneNode({
-  title,
-  count,
+function Pastille({
+  track,
   accent,
   state,
   onPress,
 }: {
-  title: string;
-  count: string;
+  track: AudioTrack;
   accent: string;
-  state: BranchState;
+  state: PastilleState;
   onPress: () => void;
 }) {
   const locked = state === 'locked';
   const done = state === 'done';
+  const soon = state === 'soon';
+  const dimmed = locked || soon;
+  const duration = trackDuration(track);
+
   return (
     <Pressable
       onPress={onPress}
-      disabled={locked}
-      hitSlop={6}
+      disabled={dimmed}
+      hitSlop={4}
       style={({ pressed }) => [
-        styles.node,
+        styles.pastille,
         {
-          width: NODE_W,
-          height: NODE_H,
-          borderColor: locked ? 'rgba(255,255,255,0.10)' : accent,
-          backgroundColor: locked
+          width: PASTILLE_W,
+          borderColor: dimmed ? 'rgba(255,255,255,0.10)' : accent,
+          backgroundColor: dimmed
             ? 'rgba(255,255,255,0.025)'
             : done
               ? 'rgba(255,255,255,0.04)'
               : `${accent}1F`,
         },
-        pressed && !locked && { opacity: 0.85 },
+        pressed && !dimmed && { opacity: 0.85 },
       ]}
     >
-      <Text
-        style={[styles.nodeTitle, { color: locked ? colors.textDim : colors.text }]}
-        numberOfLines={1}
-      >
-        {title}
-      </Text>
-      <Text
-        style={[styles.nodeCount, { color: locked ? colors.textDim : colors.textMuted }]}
-        numberOfLines={1}
-      >
-        {count}
-      </Text>
-      {locked ? (
-        <Text style={styles.stateGlyph}>🔒</Text>
-      ) : done ? (
-        <Text style={[styles.stateGlyph, { color: accent }]}>✓</Text>
-      ) : null}
+      <View style={styles.pastilleHead}>
+        <View
+          style={[
+            styles.pastilleBullet,
+            {
+              backgroundColor: dimmed ? 'transparent' : accent,
+              borderColor: dimmed ? 'rgba(255,255,255,0.30)' : accent,
+            },
+          ]}
+        />
+        <Text
+          style={[
+            styles.pastilleTitle,
+            { color: dimmed ? colors.textDim : colors.text },
+          ]}
+          numberOfLines={2}
+        >
+          {track.title}
+        </Text>
+      </View>
+      <View style={styles.pastilleFoot}>
+        <Text
+          style={[
+            styles.pastilleMeta,
+            { color: dimmed ? colors.textDim : colors.textMuted },
+          ]}
+          numberOfLines={1}
+        >
+          {soon ? 'SOON' : locked ? 'LOCKED' : (duration ?? '')}
+        </Text>
+        {done ? (
+          <Text style={[styles.pastilleCheck, { color: accent }]}>✓</Text>
+        ) : null}
+      </View>
     </Pressable>
   );
 }
 
 // ---------------------------------------------------------------------------
 
-/**
- * Connector hint stub at the top / bottom edge of a page. Conveys
- * continuity (something is above / below) without pulling the next
- * stage's nodes onto this page.
- */
 function PageConnector({
   edge,
   from,
@@ -352,15 +387,8 @@ function PageConnector({
   const c = TREE_CENTER;
   const sm = SM_X;
   const qm = QM_X;
-
-  // Top hint: line(s) come into the bottom edge of the hint area (where
-  // the node sits below). Bottom hint: line(s) leave from the top edge
-  // (where the node sat above). We model both as "incoming = the page's
-  // current stage shape" and "outgoing = the neighbour's shape".
-  const incoming = edge === 'top' ? to : from; // shape at the page-side
-  const outgoing = edge === 'top' ? from : to; // shape at the off-page side
-
-  // Positions: yClose = side closer to the page's nodes; yFar = off-page.
+  const incoming = edge === 'top' ? to : from;
+  const outgoing = edge === 'top' ? from : to;
   const yClose = edge === 'top' ? h : 0;
   const yFar = edge === 'top' ? 0 : h;
 
@@ -368,7 +396,6 @@ function PageConnector({
   if (incoming === 'single' && outgoing === 'single') {
     d = `M ${c} ${yFar} L ${c} ${yClose}`;
   } else if (incoming === 'single' && outgoing === 'branched') {
-    // page-side single, off-page branched — diverge toward the edge.
     const yMid = (yFar + yClose) / 2;
     d = `M ${c} ${yClose} L ${c} ${yMid}
          M ${c} ${yMid} C ${c} ${(yMid + yFar) / 2}, ${sm} ${(yMid + yFar) / 2}, ${sm} ${yFar}
@@ -377,7 +404,6 @@ function PageConnector({
     d = `M ${sm} ${yFar} L ${sm} ${yClose}
          M ${qm} ${yFar} L ${qm} ${yClose}`;
   } else {
-    // page-side branched, off-page single — converge toward the edge.
     const yMid = (yFar + yClose) / 2;
     d = `M ${sm} ${yClose} C ${sm} ${(yMid + yClose) / 2}, ${c} ${(yMid + yClose) / 2}, ${c} ${yMid}
          M ${qm} ${yClose} C ${qm} ${(yMid + yClose) / 2}, ${c} ${(yMid + yClose) / 2}, ${c} ${yMid}
@@ -417,7 +443,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     gap: spacing.lg,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.md,
   },
   zoneLabel: {
     ...typo.display,
@@ -426,43 +452,64 @@ const styles = StyleSheet.create({
     letterSpacing: 1.6,
     textAlign: 'center',
   },
-  lanesRow: {
+  rowList: {
+    width: TREE_W,
+    gap: spacing.sm,
+  },
+  rowListSingle: {
+    width: PASTILLE_W,
+    gap: spacing.sm,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  rowSingle: {
+    width: PASTILLE_W,
+  },
+  lane: {
+    width: PASTILLE_W,
+  },
+  pastille: {
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.sm,
+    minHeight: 56,
+    justifyContent: 'space-between',
+  },
+  pastilleHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing.xs,
   },
-  node: {
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth * 2,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
+  pastilleBullet: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1,
   },
-  nodeTitle: {
+  pastilleTitle: {
     ...typo.h3,
-    fontSize: 15,
-    textAlign: 'center',
-  },
-  nodeCount: {
-    ...typo.caption,
-    fontSize: 11,
-    marginTop: 2,
-    textAlign: 'center',
-  },
-  stateGlyph: {
-    position: 'absolute',
-    top: 6,
-    right: 8,
     fontSize: 12,
-    color: colors.textDim,
+    lineHeight: 15,
+    flex: 1,
   },
-  description: {
-    ...typo.body,
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center',
+  pastilleFoot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    paddingLeft: 16, // align with title (bullet + gap)
+  },
+  pastilleMeta: {
+    ...typo.caption,
+    fontSize: 10,
+    letterSpacing: 0.4,
+  },
+  pastilleCheck: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   startHere: {
     alignItems: 'center',
