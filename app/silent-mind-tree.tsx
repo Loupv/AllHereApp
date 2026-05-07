@@ -3,7 +3,6 @@ import { View, Text, Pressable, ScrollView, StyleSheet, useWindowDimensions } fr
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  useAnimatedScrollHandler,
   withRepeat,
   withSequence,
   withTiming,
@@ -261,27 +260,37 @@ export default function SilentMindTreeScreen() {
   // space (P3) crossfades happen across the inter-part dividers, with
   // a fade window centred on each boundary's Y in scroll content.
   const scrollY = useSharedValue(0);
-  const scrollHandler = useAnimatedScrollHandler({
-    onScroll: e => { scrollY.value = e.contentOffset.y; },
-  });
 
-  // Manual snap-on-drag: any drag past a small threshold advances
-  // exactly one page in the drag direction, regardless of velocity or
-  // distance. Below the threshold (= a tap or accidental nudge) we
-  // snap back to the current page. This gives a one-swipe-one-page
-  // feel (like Stories) instead of the default pagingEnabled which
-  // requires dragging past viewport/2.
-  const dragStartY = useRef(0);
-  const onScrollBeginDragCb = (e: any) => {
-    dragStartY.current = e?.nativeEvent?.contentOffset?.y ?? 0;
-  };
-  const onScrollEndDragCb = (e: any) => {
-    const endY = e?.nativeEvent?.contentOffset?.y ?? 0;
-    const delta = endY - dragStartY.current;
-    const startPage = Math.round(dragStartY.current / pageH);
-    const direction = Math.abs(delta) > 6 ? Math.sign(delta) : 0;
-    const targetPage = Math.max(0, Math.min(pageOrder.length - 1, startPage + direction));
-    scrollRef.current?.scrollTo({ y: targetPage * pageH, animated: true });
+  // Hard snap-per-page: ANY scroll movement past a small threshold
+  // from the current page's centre triggers a single-page advance in
+  // that direction, ignoring velocity / distance. After scroll stops
+  // (100 ms idle) we lock onto the chosen page exactly. This gives a
+  // discrete Stories-style pager that works for touch drags AND
+  // mouse-wheel / trackpad gestures (which never fire Begin/EndDrag
+  // events on web).
+  const settledPage = useRef(0);
+  const isSnapping = useRef(false);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onScrollNative = (e: any) => {
+    const y = e?.nativeEvent?.contentOffset?.y ?? 0;
+    scrollY.value = y;
+    if (isSnapping.current) return;
+    if (settleTimer.current) clearTimeout(settleTimer.current);
+    settleTimer.current = setTimeout(() => {
+      const settledY = settledPage.current * pageH;
+      const delta = y - settledY;
+      let targetPage = settledPage.current;
+      if (Math.abs(delta) > 10) {
+        targetPage = Math.max(
+          0,
+          Math.min(pageOrder.length - 1, settledPage.current + Math.sign(delta)),
+        );
+      }
+      isSnapping.current = true;
+      settledPage.current = targetPage;
+      scrollRef.current?.scrollTo({ y: targetPage * pageH, animated: true });
+      setTimeout(() => { isSnapping.current = false; }, 420);
+    }, 100);
   };
 
   // Page boundaries (= page index × pageH) drive the shader crossfade
@@ -328,7 +337,12 @@ export default function SilentMindTreeScreen() {
           if (idx >= 0) pageIdx = idx;
         }
       }
+      // Brief snapping-flag so the initial scroll doesn't get
+      // intercepted by the scroll-driven snap logic.
+      isSnapping.current = true;
+      settledPage.current = pageIdx;
       scrollRef.current?.scrollTo({ y: pageIdx * pageH, animated: false });
+      setTimeout(() => { isSnapping.current = false; }, 200);
     }, 50);
     return () => clearTimeout(id);
   }, [pageH, pageOrder, layers, initialNextId]);
@@ -377,17 +391,9 @@ export default function SilentMindTreeScreen() {
         ref={scrollRef as never}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
-        onScroll={scrollHandler}
+        onScroll={onScrollNative}
         scrollEventThrottle={16}
-        // We handle snap manually in onScrollEndDrag (see above) so any
-        // drag advances exactly one page in its direction. We keep the
-        // snap interval as a safety net in case the manual handler
-        // misses an edge case (e.g. wheel scrolls on web that don't
-        // trigger Begin/EndDrag).
         decelerationRate="fast"
-        snapToInterval={pageH}
-        onScrollBeginDrag={onScrollBeginDragCb}
-        onScrollEndDrag={onScrollEndDragCb}
       >
         <View style={[styles.tree, { width: totalW, height: totalH }]}>
           <Svg
