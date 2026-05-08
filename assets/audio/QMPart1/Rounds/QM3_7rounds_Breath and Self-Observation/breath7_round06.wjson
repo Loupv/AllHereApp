@@ -1,5 +1,5 @@
 {
-  "text": " Back to observing your breathing body. How the body is breathing. Watch your breath. Watch the slow movement of your breathing, of the air, of your breathing, of your breathing. Just wait and witness your breathing or non-breathing. Continue observing your breath. Witness this moment. www.mooji.org",
+  "text": "Back to observing your breathing body. How the body is breathing. Watch your breath. Watch the slow movement of your breathing, of the air, of your breathing, of your breathing. Just wait and witness your breathing or non-breathing. Continue observing your breath. Witness this moment.",
   "segments": [
     {
       "id": 0,
@@ -451,48 +451,6 @@
           "start": 173.4,
           "end": 173.86,
           "probability": 0.9940698146820068
-        }
-      ]
-    },
-    {
-      "id": 7,
-      "seek": 17386,
-      "start": 173.86,
-      "end": 179.96,
-      "text": " www.mooji.org",
-      "tokens": [
-        50364,
-        12520,
-        13,
-        76,
-        1986,
-        4013,
-        13,
-        4646,
-        50496
-      ],
-      "temperature": 1,
-      "avg_logprob": -1.428776168823242,
-      "compression_ratio": 0.6190476190476191,
-      "no_speech_prob": 0.48684585094451904,
-      "words": [
-        {
-          "word": " www",
-          "start": 173.86,
-          "end": 176.08,
-          "probability": 0.0022635546047240496
-        },
-        {
-          "word": ".mooji",
-          "start": 176.08,
-          "end": 179.96,
-          "probability": 0.7022143015637994
-        },
-        {
-          "word": ".org",
-          "start": 179.96,
-          "end": 179.96,
-          "probability": 0.9450815618038177
         }
       ]
     }

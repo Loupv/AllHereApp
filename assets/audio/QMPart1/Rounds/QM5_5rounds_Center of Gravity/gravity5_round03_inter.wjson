@@ -1,48 +1,6 @@
 {
-  "text": " Www.mooji.org Prepare for the next round, and we begin in 3, 2, 1, Thank you very much for watching.",
+  "text": "Prepare for the next round, and we begin in 3, 2, 1,",
   "segments": [
-    {
-      "id": 0,
-      "seek": 0,
-      "start": 3.4600000000000004,
-      "end": 4.86,
-      "text": " Www.mooji.org",
-      "tokens": [
-        50364,
-        12520,
-        13,
-        76,
-        1986,
-        4013,
-        13,
-        4646,
-        50464
-      ],
-      "temperature": 0,
-      "avg_logprob": -0.9670001029968261,
-      "compression_ratio": 0.6190476190476191,
-      "no_speech_prob": 0.2023356407880783,
-      "words": [
-        {
-          "word": " Www",
-          "start": 3.4600000000000004,
-          "end": 4.86,
-          "probability": 0.0006582404021173716
-        },
-        {
-          "word": ".mooji",
-          "start": 4.86,
-          "end": 4.86,
-          "probability": 0.7770099192857742
-        },
-        {
-          "word": ".org",
-          "start": 4.86,
-          "end": 4.86,
-          "probability": 0.951520562171936
-        }
-      ]
-    },
     {
       "id": 1,
       "seek": 3000,
@@ -145,66 +103,6 @@
           "start": 57.66,
           "end": 58.36,
           "probability": 0.9923688769340515
-        }
-      ]
-    },
-    {
-      "id": 2,
-      "seek": 5836,
-      "start": 58.36,
-      "end": 58.5,
-      "text": " Thank you very much for watching.",
-      "tokens": [
-        50364,
-        1044,
-        291,
-        588,
-        709,
-        337,
-        1976,
-        13,
-        50464
-      ],
-      "temperature": 0,
-      "avg_logprob": -0.9412540435791016,
-      "compression_ratio": 0.8048780487804879,
-      "no_speech_prob": 0.5557763576507568,
-      "words": [
-        {
-          "word": " Thank",
-          "start": 58.36,
-          "end": 58.36,
-          "probability": 0.04494066908955574
-        },
-        {
-          "word": " you",
-          "start": 58.36,
-          "end": 58.36,
-          "probability": 0.9341633915901184
-        },
-        {
-          "word": " very",
-          "start": 58.36,
-          "end": 58.44,
-          "probability": 0.12130793184041977
-        },
-        {
-          "word": " much",
-          "start": 58.44,
-          "end": 58.5,
-          "probability": 0.9964168071746826
-        },
-        {
-          "word": " for",
-          "start": 58.5,
-          "end": 58.5,
-          "probability": 0.43151170015335083
-        },
-        {
-          "word": " watching.",
-          "start": 58.5,
-          "end": 58.5,
-          "probability": 0.5824700593948364
         }
       ]
     }

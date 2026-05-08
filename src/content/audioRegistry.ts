@@ -172,15 +172,21 @@ export function getAudioSource(trackId: string, roundIndex?: number): AudioSourc
   };
 
   if (trackId in qmRoundMap && roundIndex !== undefined) {
-    // qm1-2 rounds 1-3 are bundled (same files as home-qm3) — they're
-    // not on WordPress, so we MUST return the bundled require here
-    // instead of trying to resolve a remote URL.
-    if (trackId === 'qm1-2' && roundIndex < 3) {
-      const bundled = [BUNDLED_AUDIO.qm3Br1, BUNDLED_AUDIO.qm3Br2, BUNDLED_AUDIO.qm3Br3][roundIndex];
+    // qm1-2 drops its first round (per the catalog's `max: 6` and the
+    // user's edit) — round 1 in the player corresponds to the source
+    // file's round 02. We shift the index here so every consumer
+    // (Player, prefetch, transcript) sees the same shifted view of
+    // the audio. Other QM tracks aren't shifted.
+    const sourceRoundIndex = trackId === 'qm1-2' ? roundIndex + 1 : roundIndex;
+    // qm1-2 source rounds 02 + 03 are bundled (= original qm3Br2,
+    // qm3Br3 — same files as home-qm3 rounds 2 and 3). Player round
+    // 1 → qm3Br2, player round 2 → qm3Br3. Player round 3+ → remote.
+    if (trackId === 'qm1-2' && sourceRoundIndex >= 1 && sourceRoundIndex <= 2) {
+      const bundled = [BUNDLED_AUDIO.qm3Br2, BUNDLED_AUDIO.qm3Br3][sourceRoundIndex - 1];
       return { bundled };
     }
     const { folder, pattern } = qmRoundMap[trackId];
-    const roundNum = String(roundIndex + 1).padStart(2, '0');
+    const roundNum = String(sourceRoundIndex + 1).padStart(2, '0');
     const fileName = `${pattern}${roundNum}.mp3`;
     const url = REMOTE_PATTERN(`${folder}/${fileName}`);
     return url ? { remote: url } : null;
@@ -203,9 +209,12 @@ export function getTranscriptSource(
   if (roundIndex !== undefined) {
     const roundNum = roundIndex + 1;
     if (trackId === 'qm1-2') {
+      // Same +1 shift as the audio sources — player round N maps to
+      // source round/inter N+1 because the first round was dropped.
+      const sourceNum = roundNum + 1;
       const key = isInter
-        ? `qm3_inter${roundNum}` as keyof typeof BUNDLED_TRANSCRIPTS
-        : `qm3_round${roundNum}` as keyof typeof BUNDLED_TRANSCRIPTS;
+        ? `qm3_inter${sourceNum}` as keyof typeof BUNDLED_TRANSCRIPTS
+        : `qm3_round${sourceNum}` as keyof typeof BUNDLED_TRANSCRIPTS;
       const t = BUNDLED_TRANSCRIPTS[key];
       if (t !== undefined) return { bundled: t };
     }
@@ -288,7 +297,8 @@ export function getInterSource(trackId: string, interIndex: number): AudioSource
     'qm1-2': {
       folder: 'QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation',
       pattern: 'breath7_round',
-      maxInters: 6,
+      // 6 player rounds → 5 inters (between consecutive rounds).
+      maxInters: 5,
     },
     'qm1-4': {
       folder: 'QMPart1/Rounds/QM5_5rounds_Center of Gravity',
@@ -305,12 +315,16 @@ export function getInterSource(trackId: string, interIndex: number): AudioSource
   if (trackId in qmInterMap) {
     const config = qmInterMap[trackId];
     if (interIndex >= config.maxInters) return null;
-    // qm1-2 inters 1-2 are bundled (shared with home-qm3) — not on WP.
-    if (trackId === 'qm1-2' && interIndex < 2) {
-      const bundled = [BUNDLED_AUDIO.qm3Inter1, BUNDLED_AUDIO.qm3Inter2][interIndex];
-      return { bundled };
+    // Same shift as the rounds: qm1-2 player inter N corresponds to
+    // source inter N+1, since we dropped the first round (and with it
+    // the first break).
+    const sourceInterIndex = trackId === 'qm1-2' ? interIndex + 1 : interIndex;
+    // qm1-2 source inter 02 is bundled (= qm3Inter2). Player inter 1
+    // → qm3Inter2; player inter 2+ → remote.
+    if (trackId === 'qm1-2' && sourceInterIndex === 1) {
+      return { bundled: BUNDLED_AUDIO.qm3Inter2 };
     }
-    const interNum = String(interIndex + 1).padStart(2, '0');
+    const interNum = String(sourceInterIndex + 1).padStart(2, '0');
     const fileName = `${config.pattern}${interNum}_inter.mp3`;
     const url = REMOTE_PATTERN(`${config.folder}/${fileName}`);
     return url ? { remote: url } : null;

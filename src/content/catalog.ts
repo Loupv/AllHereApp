@@ -222,8 +222,13 @@ export const silentMindVolets: Volet[] = [
       {
         id: 'qm1-2', title: 'QM3 — Breathing Body',
         description: 'Turn the mind towards the breathing process — notice the body exhaling, inhaling, then resting attention on the natural breath.',
+        // Original recording has 7 rounds + 6 inters; the first round
+        // and the first break were dropped per the user's edit, so the
+        // session now runs 6 rounds. The audioRegistry shifts the
+        // round-index resolution by +1 to keep playing files
+        // breath7_round02..07 + breath7_round02..06_inter.
         rounds: {
-          max: 7, roundLengthMinutes: 3, breakSeconds: 60,
+          max: 6, roundLengthMinutes: 3, breakSeconds: 60,
         },
       },
       {
