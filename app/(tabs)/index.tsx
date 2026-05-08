@@ -171,34 +171,30 @@ export default function StartScreen() {
                 style={styles.header}
                 entering={reveal ? FadeInDown.duration(600) : undefined}
               >
-                {/* Title row: spacer · centred title · account avatar.
-                    The leading spacer matches the avatar's footprint
-                    so the title stays visually centred while the
-                    avatar sits at the right end of the same band —
-                    aligned with the title's eye level. */}
-                <View style={styles.titleRow}>
-                  <View style={styles.avatarSlot} />
-                  <Text
-                    style={[
-                      styles.title,
-                      isTall && styles.titleTall,
-                      isTablet && styles.titleTablet,
-                      { flex: 1 },
-                    ]}
-                    numberOfLines={2}
-                  >
-                    {noOrphan('Your journey to the Silent Mind')}
-                  </Text>
-                  <Pressable
-                    onPress={() => setAccountOpen(true)}
-                    hitSlop={10}
-                    accessibilityRole="button"
-                    accessibilityLabel="Open account menu"
-                    style={({ pressed }) => [styles.avatarBtn, pressed && { opacity: 0.7 }]}
-                  >
-                    <BustIcon size={18} color={colors.text} />
-                  </Pressable>
-                </View>
+                {/* Title fills the header band centred; the avatar
+                    is hoisted to absolute top-right so the title has
+                    full width to breathe at its larger ProgramHeader-
+                    matched font size. Same vertical eye level for both
+                    elements via the header's paddingTop. */}
+                <Text
+                  style={[
+                    styles.title,
+                    isTall && styles.titleTall,
+                    isTablet && styles.titleTablet,
+                  ]}
+                  numberOfLines={2}
+                >
+                  {noOrphan('Your journey to the Silent Mind')}
+                </Text>
+                <Pressable
+                  onPress={() => setAccountOpen(true)}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open account menu"
+                  style={({ pressed }) => [styles.avatarBtnAbs, pressed && { opacity: 0.7 }]}
+                >
+                  <BustIcon size={18} color={colors.text} />
+                </Pressable>
               </Animated.View>
 
               <View style={styles.spacerTop} />
@@ -304,7 +300,10 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingTop: spacing.lg,
+    // paddingTop tuned so the centred title lands at the same Y as
+    // the title block on the SM / QM / About tabs (which use
+    // ProgramHeader: eyebrow at the top, then title ~37 px below).
+    paddingTop: spacing.lg + spacing.xl,
     paddingBottom: spacing.xs,
   },
   // Title row — flex row that pairs a leading spacer (same footprint
@@ -329,13 +328,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Absolute-positioned variant — sits at the top-right of the
+  // <Animated.View style={styles.header}> so the centred title
+  // underneath has full row width.
+  avatarBtnAbs: {
+    position: 'absolute',
+    top: spacing.lg + spacing.xl,
+    right: spacing.lg,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.28)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
 
   title: {
+    // Matches ProgramHeader's title style on the SM / QM / About tabs
+    // (display font, fontSize 22) so the page heading sits at the same
+    // typographic tier across the bottom-tab navigator.
     ...type.display, color: colors.text,
-    fontSize: 15, lineHeight: 20, letterSpacing: 0.8, textAlign: 'center',
+    fontSize: 22, lineHeight: 28, letterSpacing: 1,
+    textAlign: 'center', paddingHorizontal: spacing.sm,
   },
-  titleTall: { fontSize: 17, lineHeight: 22, letterSpacing: 0.9 },
-  titleTablet: { fontSize: 20, lineHeight: 24, letterSpacing: 1 },
+  titleTall: { fontSize: 22, lineHeight: 28, letterSpacing: 1 },
+  titleTablet: { fontSize: 26, lineHeight: 32, letterSpacing: 1.2 },
 
   // Vertical spacers — flex:1 with a tiny floor so on compact phones
   // everything stays packed and on tall viewports the surplus is

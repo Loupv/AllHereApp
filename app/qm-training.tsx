@@ -239,11 +239,11 @@ export default function QMTrainingScreen() {
     setCurrentRound(1);
     setElapsed(0);
     setPaused(false);
-    // Drop straight into round 1 with the bell — the 3-2-1 ticks are
-    // only used to bridge breaks back to the next round, not at the
-    // initial start (the user already tapped play).
-    playBell();
-    setPhase('round');
+    // Lead-in countdown before round 1 — same 3-2-1 ticks as the
+    // inter-break bridge, so the user has a beat to settle before
+    // the round bell. The 'countdown' phase fires the round bell at
+    // its end and transitions to 'round'.
+    setPhase('countdown');
   };
   const skipPhase = () => {
     // Manual "end round / skip break / start now" — does the same
