@@ -363,10 +363,9 @@ export default function QMScreen() {
           <View style={{ flex: TOP_FLEX, alignItems: 'center' }}>
             <ProgramHeader
               eyebrow={qmProgram.eyebrow}
-              title="QM Training"
-              description={mode === 'unguided'
-                ? 'Bell-only timed rounds — pick a preset or set your own format.'
-                : 'Tap a guided session to open the audio. Locked sessions unlock with their Silent Mind counterpart.'}
+              title={qmProgram.title}
+              subtitle={qmProgram.byline}
+              description={qmProgram.intro}
               accent={colors.accentAlt}
             />
             <ModeToggle mode={mode} onChange={setMode} />
