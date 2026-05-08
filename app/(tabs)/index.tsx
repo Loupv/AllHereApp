@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   // its flexSpacer 0.78 + middle flex 1 ratio). spacerTop is
   // weighted heavier than the bottom spacers so the journey
   // block + circle sit visually centred-low like in the Player.
-  spacerTop: { flex: 1.7, minHeight: spacing.sm },
+  spacerTop: { flex: 0.85, minHeight: spacing.sm },
   spacerBottom: { flex: 1, minHeight: spacing.md },
   bottomFloor: { flex: 1, minHeight: spacing.sm },
 

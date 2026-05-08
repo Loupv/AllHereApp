@@ -44,7 +44,7 @@ export function useLayout(): LayoutInfo {
     ? Math.max(180, Math.min(240, Math.round(height / 5.0)))
     : Math.max(120, Math.min(160, Math.round(height / 5.5)));
   const usableH = Math.max(360, height - insets.top - insets.bottom);
-  const playCenterY = insets.top + Math.round(usableH * 0.52);
+  const playCenterY = insets.top + Math.round(usableH * 0.45);
   return {
     width,
     height,

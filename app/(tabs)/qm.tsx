@@ -244,6 +244,16 @@ export default function QMScreen() {
     const playlist = guidedItems.map(g => g.track).filter(t => isTrackUnlocked(t.id, listened));
     openPlayer(it.track, playlist, { autoStart: true });
   };
+  // Play action for the big circle button in guided mode — picks the
+  // next-up unlocked QM (first not-yet-listened, falling back to the
+  // first unlocked one) and opens the Player.
+  const playFirstGuided = () => {
+    const unlocked = guidedItems.filter(it => isTrackUnlocked(it.track.id, listened));
+    if (unlocked.length === 0) return;
+    const target = unlocked.find(it => !listened[it.track.id]) ?? unlocked[0];
+    const playlist = unlocked.map(it => it.track);
+    openPlayer(target.track, playlist, { autoStart: true });
+  };
 
   // ---- render ---------------------------------------------------------
 
@@ -368,18 +378,21 @@ export default function QMScreen() {
               description={qmProgram.intro}
               accent={colors.accentAlt}
             />
-            <ModeToggle mode={mode} onChange={setMode} />
-            <View style={{ flex: 1 }} />
-            {mode === 'unguided' ? (
-              <Text style={styles.totalLine}>
-                {roundsCount} × {roundLengthMin} min · break {breakSeconds < 60 ? `${breakSeconds}s` : `${Math.round(breakSeconds / 60)} min`}
-              </Text>
-            ) : null}
           </View>
 
           <View style={{ height: playSize }} />
 
           <View style={{ flex: 1, alignItems: 'center', width: '100%' }}>
+            {/* Toggle sits directly below the play circle — the user
+                picks "what does the play button do" right under the
+                button itself. Total-line (current preset) sits between
+                the toggle and the preset grid in unguided mode. */}
+            <ModeToggle mode={mode} onChange={setMode} />
+            {mode === 'unguided' ? (
+              <Text style={styles.totalLine}>
+                {roundsCount} × {roundLengthMin} min · break {breakSeconds < 60 ? `${breakSeconds}s` : `${Math.round(breakSeconds / 60)} min`}
+              </Text>
+            ) : null}
             <View style={{ flex: 1 }} />
             {mode === 'unguided' ? (
               <View style={styles.presetBlock}>
@@ -437,22 +450,21 @@ export default function QMScreen() {
         </View>
       </View>
 
-      {/* Pre-play CircleButton — only meaningful in unguided mode (it
-          starts the timer). Hidden in guided mode since each list row
-          carries its own play affordance. */}
-      {mode === 'unguided' ? (
-        <View
-          pointerEvents="box-none"
-          style={{ position: 'absolute', left: 0, right: 0, top: playCenterY - playSize / 2, alignItems: 'center' }}
-        >
-          <CircleButton
-            mode="pre"
-            size={playSize}
-            accent={colors.accentAlt}
-            onPress={startSession}
-          />
-        </View>
-      ) : null}
+      {/* Pre-play CircleButton — visible in both modes. Unguided fires
+          the bell-only timer; guided opens the Player on the first
+          available QM track (next-up unlistened, falling back to the
+          first unlocked). */}
+      <View
+        pointerEvents="box-none"
+        style={{ position: 'absolute', left: 0, right: 0, top: playCenterY - playSize / 2, alignItems: 'center' }}
+      >
+        <CircleButton
+          mode="pre"
+          size={playSize}
+          accent={colors.accentAlt}
+          onPress={mode === 'unguided' ? startSession : playFirstGuided}
+        />
+      </View>
 
       <Modal visible={customOpen} transparent animationType="slide" onRequestClose={() => setCustomOpen(false)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setCustomOpen(false)}>
