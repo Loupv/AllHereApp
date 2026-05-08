@@ -27,7 +27,6 @@ type Props = {
  * dismissing returns the user exactly where they were on Start.
  */
 export function AccountSheet({ visible, onClose }: Props) {
-  const user = useAuth(s => s.user);
   const logout = useAuth(s => s.logout);
   const resetProgress = useProgress(s => s.resetProgress);
   const insets = useSafeAreaInsets();
@@ -86,14 +85,10 @@ export function AccountSheet({ visible, onClose }: Props) {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.greeting}>
-              {user?.name ? `Hello, ${user.name}` : 'Account'}
-            </Text>
-            {user?.email ? (
-              <Text style={styles.email} numberOfLines={1}>{user.email}</Text>
-            ) : null}
-
-            <View style={styles.divider} />
+            {/* No login flow yet — progress is local-only — so we
+                drop the "Hello, …" banner that had no value when no
+                real account is attached. The sheet opens straight
+                into actions; no header line. */}
 
             {/* Reset progress — two-tap confirm. First tap reveals the
                 warning copy in red; second tap commits. Auto-resets if

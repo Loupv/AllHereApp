@@ -158,6 +158,21 @@ export default function StartScreen() {
 
   return (
     <View style={styles.root}>
+      {/* Account button — pinned to the *screen* top-right corner
+          (not the content column). Sits at the root so it ignores the
+          ScrollView's content padding and the column's max-width
+          inset; this keeps it tucked into the actual corner instead
+          of floating mid-band. The (tabs) layout already consumes
+          insets.top, so `top: 4` reads as just below the status bar. */}
+      <Pressable
+        onPress={() => setAccountOpen(true)}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Open account menu"
+        style={({ pressed }) => [styles.avatarBtnCorner, pressed && { opacity: 0.7 }]}
+      >
+        <BustIcon size={18} color={colors.text} />
+      </Pressable>
       <SwipeTabs current="index">
         <View style={{ flex: 1 }}>
           <ScrollView
@@ -171,11 +186,6 @@ export default function StartScreen() {
                 style={styles.header}
                 entering={reveal ? FadeInDown.duration(600) : undefined}
               >
-                {/* Title fills the header band centred; the avatar
-                    is hoisted to absolute top-right so the title has
-                    full width to breathe at its larger ProgramHeader-
-                    matched font size. Same vertical eye level for both
-                    elements via the header's paddingTop. */}
                 <Text
                   style={[
                     styles.title,
@@ -186,15 +196,6 @@ export default function StartScreen() {
                 >
                   {noOrphan('Your journey to the Silent Mind')}
                 </Text>
-                <Pressable
-                  onPress={() => setAccountOpen(true)}
-                  hitSlop={10}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open account menu"
-                  style={({ pressed }) => [styles.avatarBtnAbs, pressed && { opacity: 0.7 }]}
-                >
-                  <BustIcon size={18} color={colors.text} />
-                </Pressable>
               </Animated.View>
 
               <View style={styles.spacerTop} />
@@ -328,13 +329,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Absolute-positioned variant — sits at the top-right of the
-  // <Animated.View style={styles.header}> so the centred title
-  // underneath has full row width.
-  avatarBtnAbs: {
+  // Pinned to the actual screen corner — sits at the root of the
+  // Start tree, so the ScrollView's content padding and the centred
+  // column's max-width don't push it inward. The (tabs) layout
+  // consumes insets.top, so `top: 4` reads as just below the status
+  // bar; `right: 8` tucks the icon into the top-right corner without
+  // touching the screen edge.
+  avatarBtnCorner: {
     position: 'absolute',
-    top: spacing.lg + spacing.xl,
-    right: spacing.lg,
+    top: spacing.xs,
+    right: spacing.sm,
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -343,7 +347,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 10,
+    zIndex: 100,
   },
 
   title: {

@@ -134,9 +134,28 @@ export default function QMScreen() {
     if (!bellSource) return;
     try { bellPlayer.seekTo(0); bellPlayer.play(); } catch {}
   };
+  // Cuts any in-flight bell decay — used by Exit Training and the
+  // mode→guided guard below so a bell triggered in unguided doesn't
+  // bleed into the guided audio (which has its own opening bell baked
+  // into the mp3).
+  const stopBell = () => {
+    try { bellPlayer.pause(); } catch {}
+    try { bellPlayer.seekTo(0); } catch {}
+  };
   const playTick = () => {
     try { tickPlayer.seekTo(0); tickPlayer.play(); } catch {}
   };
+
+  // Defensive: if the user toggles to guided while a phase-transition
+  // bell is still decaying, mute it. The guided mp3 has its own bell
+  // baked in; we don't want the unguided one bleeding on top.
+  useEffect(() => {
+    if (mode === 'guided') {
+      try { bellPlayer.pause(); } catch {}
+    }
+  // bellPlayer ref is stable from useAudioPlayer; we only react to mode.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   // ---- timer config (presets / custom) ----
   const [roundsCount, setRoundsCount] = useState<number>(5);
@@ -146,8 +165,6 @@ export default function QMScreen() {
   const [draftRounds, setDraftRounds] = useState<number>(roundsCount);
   const [draftLength, setDraftLength] = useState<number>(roundLengthMin);
   const [draftBreak, setDraftBreak] = useState<number>(breakSeconds);
-  const matchedPresetId =
-    PRESETS.find(p => p.rounds === roundsCount && p.lengthMin === roundLengthMin && p.breakSec === breakSeconds)?.id ?? null;
 
   // ---- timer session state ----
   const [phase, setPhase] = useState<Phase>('config');
@@ -224,6 +241,11 @@ export default function QMScreen() {
     }
   };
   const closeSession = () => {
+    // Cut the bell decay first — if Exit Training is tapped right
+    // after a phase-transition bell rang, we don't want it ringing
+    // out into a silent screen (or worse, into a guided audio the
+    // user opens immediately after).
+    stopBell();
     setPhase('config'); setElapsed(0); setCurrentRound(1);
   };
 
@@ -244,17 +266,6 @@ export default function QMScreen() {
     const playlist = guidedItems.map(g => g.track).filter(t => isTrackUnlocked(t.id, listened));
     openPlayer(it.track, playlist, { autoStart: true });
   };
-  // Play action for the big circle button in guided mode — picks the
-  // next-up unlocked QM (first not-yet-listened, falling back to the
-  // first unlocked one) and opens the Player.
-  const playFirstGuided = () => {
-    const unlocked = guidedItems.filter(it => isTrackUnlocked(it.track.id, listened));
-    if (unlocked.length === 0) return;
-    const target = unlocked.find(it => !listened[it.track.id]) ?? unlocked[0];
-    const playlist = unlocked.map(it => it.track);
-    openPlayer(target.track, playlist, { autoStart: true });
-  };
-
   // ---- render ---------------------------------------------------------
 
   // Session in progress: render the timer-active screen (round / break / done)
@@ -321,15 +332,19 @@ export default function QMScreen() {
             <View style={{ flex: 1, alignItems: 'center', width: '100%' }}>
               {phase !== 'done' ? (
                 <View style={styles.controlsStack}>
-                  <Pressable onPress={skipPhase} hitSlop={10} style={styles.skipBtn}>
-                    <Text style={[styles.skipBtnText, { color: colors.accentAlt }]}>
-                      {phase === 'break'
-                        ? 'Skip break →'
-                        : phase === 'countdown'
-                          ? 'Start now →'
-                          : 'End round →'}
-                    </Text>
-                  </Pressable>
+                  {/* Skip is only useful during the break — we hide it
+                      during countdown ('Start now') and round ('End
+                      round') because it collides visually with the big
+                      play / pause CircleButton sitting at the same
+                      vertical position. The bell + duration drive
+                      those phases on their own. */}
+                  {phase === 'break' ? (
+                    <Pressable onPress={skipPhase} hitSlop={10} style={styles.skipBtn}>
+                      <Text style={[styles.skipBtnText, { color: colors.accentAlt }]}>
+                        Skip break →
+                      </Text>
+                    </Pressable>
+                  ) : null}
                   <Pressable onPress={closeSession} hitSlop={10} style={styles.exitLink}>
                     <Text style={styles.exitLinkText}>Exit training</Text>
                   </Pressable>
@@ -362,44 +377,33 @@ export default function QMScreen() {
     );
   }
 
-  // Config phase — header + Guided/Unguided toggle + play circle +
-  // (presets | guided list) below the circle.
+  // Config phase — header + Guided/Unguided toggle + (presets | guided
+  // list). No big play button here: tapping a preset starts the timer
+  // directly; tapping a guided row opens the Player.
   return (
     <Background color={colors.bgTabAlt}>
       <Stack.Screen options={{ title: '' }} />
       <SwipeTabs current="qm">
       <View style={[styles.content, { alignItems: 'center', paddingTop: insets.top, flex: 1 }]}>
         <View style={[styles.column, { maxWidth: columnMax, flex: 1 }]}>
-          <View style={{ flex: TOP_FLEX, alignItems: 'center' }}>
-            <ProgramHeader
-              eyebrow={qmProgram.eyebrow}
-              title={qmProgram.title}
-              subtitle={qmProgram.byline}
-              description={qmProgram.intro}
-              accent={colors.accentAlt}
-            />
+          <ProgramHeader
+            eyebrow={qmProgram.eyebrow}
+            title={qmProgram.title}
+            subtitle={qmProgram.byline}
+            description={qmProgram.intro}
+            accent={colors.accentAlt}
+          />
+
+          <View style={{ alignItems: 'center', width: '100%', marginTop: spacing.md }}>
+            <ModeToggle mode={mode} onChange={setMode} />
           </View>
 
-          <View style={{ height: playSize }} />
-
-          <View style={{ flex: 1, alignItems: 'center', width: '100%' }}>
-            {/* Toggle sits directly below the play circle — the user
-                picks "what does the play button do" right under the
-                button itself. Total-line (current preset) sits between
-                the toggle and the preset grid in unguided mode. */}
-            <ModeToggle mode={mode} onChange={setMode} />
-            {mode === 'unguided' ? (
-              <Text style={styles.totalLine}>
-                {roundsCount} × {roundLengthMin} min · break {breakSeconds < 60 ? `${breakSeconds}s` : `${Math.round(breakSeconds / 60)} min`}
-              </Text>
-            ) : null}
-            <View style={{ flex: 1 }} />
+          <View style={{ flex: 1, alignItems: 'center', width: '100%', marginTop: spacing.xl }}>
             {mode === 'unguided' ? (
               <View style={styles.presetBlock}>
                 <Text style={styles.pickerLabel}>Choose a format</Text>
                 <View style={styles.presetGrid}>
                   {PRESETS.map(p => {
-                    const selected = matchedPresetId === p.id;
                     return (
                       <Pressable
                         key={p.id}
@@ -407,14 +411,18 @@ export default function QMScreen() {
                           setRoundsCount(p.rounds);
                           setRoundLengthMin(p.lengthMin);
                           setBreakSeconds(p.breakSec);
+                          // Start session immediately — the preset cell
+                          // is the entry point now (no separate play
+                          // button). Use setTimeout(0) so the state
+                          // updates flush before the phase change.
+                          setTimeout(() => startSession(), 0);
                         }}
                         style={({ pressed }) => [
                           styles.presetCell,
-                          selected && styles.presetCellSelected,
                           pressed && { opacity: 0.85 },
                         ]}
                       >
-                        <Text style={[styles.presetCellLabel, selected && styles.presetCellLabelSelected]}>
+                        <Text style={styles.presetCellLabel}>
                           {p.label}
                         </Text>
                       </Pressable>
@@ -430,14 +438,10 @@ export default function QMScreen() {
                     style={({ pressed }) => [
                       styles.presetCell,
                       styles.customCell,
-                      matchedPresetId === null && styles.presetCellSelected,
                       pressed && { opacity: 0.85 },
                     ]}
                   >
-                    <Text style={[
-                      styles.presetCellLabel,
-                      matchedPresetId === null && styles.presetCellLabelSelected,
-                    ]}>
+                    <Text style={styles.presetCellLabel}>
                       Custom…
                     </Text>
                   </Pressable>
@@ -448,22 +452,6 @@ export default function QMScreen() {
             )}
           </View>
         </View>
-      </View>
-
-      {/* Pre-play CircleButton — visible in both modes. Unguided fires
-          the bell-only timer; guided opens the Player on the first
-          available QM track (next-up unlistened, falling back to the
-          first unlocked). */}
-      <View
-        pointerEvents="box-none"
-        style={{ position: 'absolute', left: 0, right: 0, top: playCenterY - playSize / 2, alignItems: 'center' }}
-      >
-        <CircleButton
-          mode="pre"
-          size={playSize}
-          accent={colors.accentAlt}
-          onPress={mode === 'unguided' ? startSession : playFirstGuided}
-        />
       </View>
 
       <Modal visible={customOpen} transparent animationType="slide" onRequestClose={() => setCustomOpen(false)}>
@@ -645,11 +633,13 @@ function GuidedList({
                     {row.track.title}
                   </Text>
                   <Text style={styles.guidedRowMeta} numberOfLines={1}>
-                    {!unlocked && row.smGate
-                      ? `Listen to ‘${row.smGate.title}’ first`
-                      : done
-                        ? `${dur ?? ''} · listened`
-                        : (dur ?? '')}
+                    {!unlocked
+                      ? 'Listen to the longer version first'
+                      : row.track.rounds
+                        ? `${row.track.rounds.max} rounds${done ? ' · listened' : ''}`
+                        : done
+                          ? `${dur ?? ''} · listened`
+                          : (dur ?? '')}
                   </Text>
                 </View>
               </Pressable>
@@ -708,25 +698,39 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.xs,
   },
+  // Preset cells are the entry points (no play button — tapping a cell
+  // starts the timer). Compact 2-col grid so the 5 presets + Custom
+  // fit comfortably on a phone screen without scrolling. Teal identity
+  // (border + fill) matches the ProgramHeader pill and the guided rows
+  // below, so the unguided / guided modes feel like siblings.
   presetCell: {
     flexBasis: '48%',
     flexGrow: 1,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.18)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: colors.accentAltSoft,
+    backgroundColor: 'rgba(54,160,158,0.10)',
     alignItems: 'center',
-    gap: 2,
+    justifyContent: 'center',
+    minHeight: 48,
+    overflow: 'hidden',
   },
-  presetCellSelected: {
-    borderColor: colors.accentAlt,
-    backgroundColor: 'rgba(54,160,158,0.18)',
+  presetCellLabel: {
+    ...type.h3,
+    color: colors.text,
+    fontSize: 14,
+    letterSpacing: 0.4,
   },
-  presetCellLabel: { ...type.h3, color: colors.text, fontSize: 15 },
-  presetCellLabelSelected: { color: colors.accentAlt },
-  customCell: { borderStyle: 'dashed' },
+  // The Custom cell stays visually distinct — dashed border + neutral
+  // fill — so the eye reads it as "configure" rather than "another
+  // preset". Same dimensions / radius for grid harmony.
+  customCell: {
+    borderStyle: 'dashed',
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.025)',
+  },
 
   guidedList: {
     width: '100%',
