@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -333,6 +333,39 @@ export default function SilentMindTreeScreen() {
     const t = Math.max(0, Math.min(1, (yP2P3 + FADE_PX - y) / (2 * FADE_PX)));
     return { opacity: t };
   });
+
+  // Web only: intercept wheel/trackpad events directly so we can
+  // call preventDefault() and stop the browser's native scroll-with-
+  // momentum from running multiple pages of distance during one
+  // gesture. The earlier onScroll-based lock couldn't keep up with
+  // Chrome's scroll inertia (events kept arriving for 400–600 ms after
+  // a single trackpad swipe and slipped past our 480 ms lock).
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    let cooldownUntil = 0;
+    const handleWheel = (e: WheelEvent) => {
+      // The listener is mounted only while this screen is in the tree
+      // — useEffect cleanup tears it down on navigation away — so we
+      // can react to all wheel events here without filtering targets.
+      e.preventDefault();
+      const now = Date.now();
+      if (now < cooldownUntil) return;
+      if (Math.abs(e.deltaY) < 4) return;
+      const direction = Math.sign(e.deltaY);
+      const targetPage = Math.max(
+        0,
+        Math.min(pageOrder.length - 1, settledPage.current + direction),
+      );
+      if (targetPage === settledPage.current) return;
+      cooldownUntil = now + 700;
+      isSnapping.current = true;
+      settledPage.current = targetPage;
+      scrollRef.current?.scrollTo({ y: targetPage * pageH, animated: true });
+      setTimeout(() => { isSnapping.current = false; }, 700);
+    };
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, [pageH, pageOrder.length]);
 
   // Land the user on the page that contains the next track they have
   // to listen to — bottom (Welcome's page) for a first connection,
