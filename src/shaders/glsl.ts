@@ -421,11 +421,12 @@ void main() {
   vec2 driftMid   = vec2(uTime * 0.012, 0.0);
   vec2 driftFront = vec2(uTime * 0.024, 0.0);
 
-  // Day / night cycle over 60 s. 0 = deep night, max ≈ 0.60 =
-  // overcast / soft day (we never push to "full daylight" — the
-  // page stays contemplative even at peak brightness).
+  // Day / night cycle over 60 s. 0 = deep night, max ≈ 0.40 =
+  // pre-dawn / late-evening (we cap well below "full daylight" so
+  // foreground text — circle labels, descriptions, dots — stays
+  // legible against the brightest frame of the loop).
   float rawPhase = 0.5 + 0.5 * sin(uTime * 6.28318 / 60.0);
-  float dayPhase = smoothstep(0.05, 0.95, rawPhase) * 0.60;
+  float dayPhase = smoothstep(0.05, 0.95, rawPhase) * 0.40;
   // Twilight peaks at the rising / falling middle of the cycle.
   // Used below to drive the warm rim — sun rakes the edges of
   // cumulus most strongly at dawn / dusk, fades at full day and
