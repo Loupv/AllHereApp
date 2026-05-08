@@ -13,6 +13,8 @@ import { useProgress } from '../player/progressStore';
 import { loadTranscript } from '../content/loadTranscript';
 import { findCueIndex, TranscriptCue } from '../content/transcript';
 import { trackProgram, trackLocation } from '../content/catalog';
+import { AtmosphereBackground } from './AtmosphereBackground';
+import { VideoBackground } from './VideoBackground';
 import { resolveAudioSource, prefetchAudio } from '../content/audioResolver';
 import { getAudioSource, getInterSource, getTranscriptSource, getInterTranscriptSource } from '../content/audioRegistry';
 import { WAVEFORMS } from '../content/waveforms.generated';
@@ -656,7 +658,18 @@ function PlayerInner() {
   };
 
   const endBreak = () => {
-    pauseHard();
+    // Single sync pause — NOT pauseHard. The user-initiated "Skip to
+    // round N+1" is fundamentally different from a natural round-end
+    // transition: we're interrupting the inter (mostly silence with
+    // a bell) on PURPOSE, then immediately playing the next round.
+    // pauseHard schedules a 60 ms-late pause to suppress the closing
+    // bell of round-end audio; that late pause was firing AFTER the
+    // resolve effect had already kicked off play() on the new round
+    // (which lands in ~5 ms for bundled audio), re-pausing the next
+    // round and leaving the user staring at a stuck player. A single
+    // sync pause is enough — useAudioPlayer's source change finishes
+    // the cleanup naturally.
+    try { player.pause(); } catch {}
     setInBreak(false);
     setCurrentRound(r => r + 1);
     endedHandled.current = false;
@@ -677,26 +690,31 @@ function PlayerInner() {
     if (!resolvedUri || !hasStarted || finished) return;
     roundChangedAt.current = Date.now();
     endedHandled.current = false;
-    const kick = () => {
-      try {
-        player.seekTo(0);
-        // expo-audio types play() as void, but on web it actually
-        // returns a Promise that can reject (autoplay policy / format
-        // errors). Cast through unknown so TS doesn't fight the
-        // truthiness check.
-        const p = player.play() as unknown as Promise<void> | undefined;
-        if (p && typeof p.then === 'function') {
-          p.catch((err) =>
-            console.warn('[Player] play() rejected:', err),
-          );
-        }
-      } catch (err) {
-        console.warn('[Player] play() threw:', err);
+    try {
+      player.seekTo(0);
+      // expo-audio types play() as void, but on web it actually
+      // returns a Promise that can reject (autoplay policy / format
+      // errors). Cast through unknown so TS doesn't fight the
+      // truthiness check.
+      const p = player.play() as unknown as Promise<void> | undefined;
+      if (p && typeof p.then === 'function') {
+        p.catch((err) =>
+          console.warn('[Player] play() rejected:', err),
+        );
       }
-    };
-    kick();
-    const t1 = setTimeout(kick, 400);
-    return () => clearTimeout(t1);
+    } catch (err) {
+      console.warn('[Player] play() threw:', err);
+    }
+    // Historically a 400 ms re-kick was queued here to cover a race
+    // where the first call fired before the source was loadable
+    // (qm1-4 canary). With the effect now keyed on `resolvedUri`
+    // rather than `player`, the kick only runs once the URI is
+    // present — the race is gone, and the re-kick was double-ringing
+    // the audio's opening bell on tracks that begin with one (qm1-2
+    // / breath7_round01 was the visible canary). If the original
+    // race resurfaces, prefer guarding the re-kick on
+    // `!status.playing` so the seekTo(0) doesn't rewind a
+    // successfully-started track.
   }, [resolvedUri, hasStarted, finished, player]);
 
   useEffect(() => {
@@ -1006,13 +1024,31 @@ function PlayerInner() {
     return n > 0 ? sum / n : 0;
   }, [peaks, t, duration, playing, canSeek]);
 
+  // Player background follows the journey-tree's part palette: lake
+  // for intro, earth (= shadow-wall video) for Part 1, sky for Part 2,
+  // space for Part 3. Same mapping as the silent-mind tree, so the
+  // backdrop you see when a track plays matches the section it lives
+  // in. Falls through to lake for any unrecognised id (defensive).
+  const partTheme: 'lake' | 'earth' | 'sky' | 'space' = (() => {
+    const id = track?.id ?? '';
+    if (id.startsWith('intro-')) return 'lake';
+    if (id.startsWith('p2-') || id.startsWith('qm2-')) return 'sky';
+    if (id.startsWith('p3-') || id.startsWith('qm3-')) return 'space';
+    if (id.startsWith('p1-') || id.startsWith('qm1-') || id.startsWith('home-')) return 'earth';
+    return 'lake';
+  })();
+
   return (
     <View style={styles.root}>
-      {/* No internal gradient — the root layout already paints the
-          shared atmospheric gradient + EnergyColumn behind everything,
-          so the Player UI fades in OVER the same backdrop the Start
-          screen had. Reads as the same screen morphing rather than a
-          modal on top. */}
+      {/* Per-part backdrop — lake / earth-video / sky / space, picked
+          from the playing track's id. Sits BEHIND the Player UI, so
+          the user sees the matching atmosphere even if the screen
+          underneath the Player overlay is on a different one. */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        {partTheme === 'earth'
+          ? <VideoBackground />
+          : <AtmosphereBackground theme={partTheme} />}
+      </View>
       <View style={styles.header}>
         {!finished ? (
           <Pressable
