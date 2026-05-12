@@ -36,7 +36,8 @@ export const SHADER_FOR_THEME: Record<ShaderTheme, string> = {
  */
 export function themeForNextTrack(trackId: string | undefined): ShaderTheme {
   if (!trackId) return 'space'; // user has finished — reward with the cosmos
+  if (trackId.startsWith('intro-')) return 'lake'; // first connection
   if (trackId.startsWith('p2-') || trackId.startsWith('qm2-')) return 'sky';
   if (trackId.startsWith('p3-') || trackId.startsWith('qm3-')) return 'space';
-  return 'earth';
+  return 'earth'; // p1 / qm1 / home
 }

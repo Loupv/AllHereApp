@@ -37,6 +37,8 @@ import { EnergyColumn } from '../src/components/EnergyColumn';
 import { AtmosphereBackground as ShaderBackground } from '../src/components/AtmosphereBackground';
 import { VideoBackground } from '../src/components/VideoBackground';
 import { useShaderThemeStore } from '../src/shaders/themeStore';
+import { themeForNextTrack } from '../src/shaders';
+import { useProgress } from '../src/player/progressStore';
 import { WebSwipeBack } from '../src/components/WebSwipeBack';
 import { usePlayerStore } from '../src/player/store';
 import { AppState } from 'react-native';
@@ -53,25 +55,23 @@ const TransparentNavTheme = {
   colors: { ...DarkTheme.colors, background: 'transparent' },
 };
 
-// Pick one of the three headline shaders at module load — that's
-// once per app process, so it survives navigation and only changes
-// when the app is fully relaunched.
-const LAUNCH_POOL: ('lake' | 'sky' | 'space')[] = ['lake', 'sky', 'space'];
-const LAUNCH_THEME = LAUNCH_POOL[Math.floor(Math.random() * LAUNCH_POOL.length)];
-
 export default function RootLayout() {
   const [introDone, setIntroDone] = useState(false);
-  // Shader theme: auto-derived from progress, optionally overridden
-  // by the dev pill on the home tab (via the shared store), and
-  // forced to the slow-lake variant on Media + About where the
-  // calmer water motion is a quieter companion to dense text.
+  // Shader theme — tied to the user's progression through the
+  // Silent Mind journey, mirroring the silent-mind-tree's per-part
+  // palette:
+  //   • next track is intro-* → lake (every tab stays calm during
+  //     the first connection)
+  //   • next track is p1-* / qm1-* → earth (video atmosphere)
+  //   • next track is p2-* / qm2-* → sky
+  //   • next track is p3-* / qm3-* → space
+  //   • journey complete → space
+  // The dev pill override on the home tab still wins (manual cycle
+  // through themes for design work).
   const shaderOverride = useShaderThemeStore(s => s.override);
-  // Random launch theme — picked once per app process from the three
-  // headline shaders (lake, sky, space). Module-level constant means
-  // every screen sees the same backdrop until the next launch, while
-  // re-opening the app gives the user a different atmosphere. Any
-  // dev pill override still wins.
-  const shaderTheme = shaderOverride ?? LAUNCH_THEME;
+  const nextTrackIdFn = useProgress(s => s.nextTrackId);
+  const nextId = nextTrackIdFn();
+  const shaderTheme = shaderOverride ?? themeForNextTrack(nextId);
   // Pause only when the app is backgrounded. The shader keeps
   // running on every screen now (lake on Media/About, the
   // progress-based theme everywhere else).
