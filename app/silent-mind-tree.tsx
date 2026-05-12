@@ -23,9 +23,11 @@ import { BackButton } from '../src/components/BackButton';
 import { AtmosphereBackground } from '../src/components/AtmosphereBackground';
 import { VideoBackground } from '../src/components/VideoBackground';
 import { silentMindVolets, introAudios, trackDuration, QM_TO_SM_PAIRING, type AudioTrack } from '../src/content/catalog';
+import { TrackInfoSheet } from '../src/components/TrackInfoSheet';
 import { useProgress, isTrackUnlocked } from '../src/player/progressStore';
 import { usePlayerStore } from '../src/player/store';
 import { colors, spacing, type as typo } from '../src/theme';
+import { noOrphan } from '../src/utils/noOrphan';
 
 /**
  * Continuous-tree visualisation of the Silent Mind program. Each track
@@ -112,6 +114,11 @@ function buildLayers(): Layer[] {
   return layers;
 }
 
+function partDescription(partId: StageId): string | undefined {
+  const v = silentMindVolets.find(x => x.id === partId);
+  return v?.description;
+}
+
 function partLabel(partId: StageId): string {
   switch (partId) {
     case 'intro': return 'Introduction';
@@ -168,15 +175,19 @@ export default function SilentMindTreeScreen() {
     );
   }, [flowTime]);
 
-  // Responsive layout sizing. We clamp the total to the viewport, then
-  // scale the tree column down (within bounds) so the labels keep at
-  // least some breathing room on narrow phones.
+  // Responsive layout sizing.
   const totalW = Math.min(MAX_TOTAL_W, Math.max(220, winW - 16));
-  const treeW = Math.max(MIN_TREE_W, Math.min(TARGET_TREE_W, totalW * 0.45));
-  const sideW = (totalW - treeW) / 2;
-  const SM_X = sideW + treeW * 0.3;
-  const QM_X = sideW + treeW * 0.7;
-  const CENTER_X = sideW + treeW / 2;
+  // Tree recentred — SM trunk sits a bit left of the column centre so
+  // the QM side branch has room to extend to the right. Labels live
+  // on the wider side per track type: SM titles (the long ones) go on
+  // the LEFT of the trunk (~155 px), QM titles on the RIGHT of their
+  // branch dot (~135 px with the shorter branch arm below). Full
+  // description opens in a bottom sheet on tap (see TrackInfoSheet).
+  const CENTER_X = Math.round(totalW * 0.50);
+  const SM_X = CENTER_X; // kept for buildPathSegments compatibility
+  // Slightly shorter branch arm to give the QM label a bit more
+  // right-side room without losing the visual side-branch read.
+  const QM_X = CENTER_X + 48;
   // Node radius — gently scales up on wider viewports so the dots don't
   // read as a faint ring on big phones / desktop preview.
   const NODE_R = Math.min(30, Math.max(BASE_NODE_R, BASE_NODE_R + (winW - 360) * 0.03));
@@ -187,7 +198,13 @@ export default function SilentMindTreeScreen() {
   // floating BackButton, and the dashed section header at the bottom.
   const pageH = winH;
   const TOP_PAD = Math.max(60, insets.top + 28);
-  const BOTTOM_PAD = Math.max(56, insets.bottom + 32);
+  // Bottom pad has to clear the fixed footer (≈ 100 px tag area +
+  // dashed line + paddingBottom of insets.bottom + 12) AND leave
+  // breathing room above it so the last track's label (which extends
+  // ~45 px below the dot's centre Y) doesn't graze the dashed line.
+  // Same `BOTTOM_PAD` is used for every part page (intro / earth /
+  // sky / space) so they all get the same lift.
+  const BOTTOM_PAD = Math.max(180, insets.bottom + 160);
   const DIVIDER_OFFSET = 28; // distance from page bottom to the dashed line
 
   // Order in which parts appear top-down in display (one page each).
@@ -280,7 +297,7 @@ export default function SilentMindTreeScreen() {
   // glow halo on the trunk segments belonging to that part.
   const partColor = (partId: StageId): string => {
     switch (partId) {
-      case 'intro': return '#B83B3B'; // deep red — first connection
+      case 'intro': return '#C9A66B'; // warm dawn gold — first connection
       case 'part1': return '#2E6B47'; // deeper green — Earth
       case 'part2': return '#3D6BBA'; // dark blue — Sky
       case 'part3': return '#9B6FDD'; // purple — Space
@@ -335,6 +352,11 @@ export default function SilentMindTreeScreen() {
   // the snap handlers below; initial value matches `initialPageIdx`
   // so the right backdrop is the only one running on first frame.
   const [currentPageIdx, setCurrentPageIdx] = useState<number>(initialPageIdx);
+
+  // Track currently shown in the bottom-sheet details panel. Tapping
+  // a title opens the sheet on that track; the dot itself still
+  // launches the Player directly (two distinct affordances).
+  const [sheetTrack, setSheetTrack] = useState<AudioTrack | null>(null);
 
   // Hard snap-per-page: as soon as the scroll position drifts more
   // than a few px from the current settled page, we IMMEDIATELY commit
@@ -434,27 +456,35 @@ export default function SilentMindTreeScreen() {
   // Web only: intercept wheel/trackpad events directly so we can
   // call preventDefault() and stop the browser's native scroll-with-
   // momentum from running multiple pages of distance during one
-  // gesture. The earlier onScroll-based lock couldn't keep up with
-  // Chrome's scroll inertia (events kept arriving for 400–600 ms after
-  // a single trackpad swipe and slipped past our 480 ms lock).
+  // gesture. A fixed cooldown (700 ms) wasn't enough — macOS
+  // trackpad sends inertia wheel events for 1–2 s after a flick,
+  // and any event landing after the cooldown expired would trigger
+  // another snap → one gesture = 2-3 page jumps. Instead we use a
+  // "quiet-time" lock: each wheel event extends a 150 ms idle
+  // timer; the lock only releases once the user has stopped
+  // generating wheel events for that long. One gesture = one snap.
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    let cooldownUntil = 0;
+    let locked = false;
+    let momentumTimer: ReturnType<typeof setTimeout> | null = null;
     const handleWheel = (e: WheelEvent) => {
-      // The listener is mounted only while this screen is in the tree
-      // — useEffect cleanup tears it down on navigation away — so we
-      // can react to all wheel events here without filtering targets.
       e.preventDefault();
-      const now = Date.now();
-      if (now < cooldownUntil) return;
       if (Math.abs(e.deltaY) < 4) return;
+      // Reset the idle timer on every wheel event — the lock stays
+      // engaged as long as events keep arriving.
+      if (momentumTimer) clearTimeout(momentumTimer);
+      momentumTimer = setTimeout(() => {
+        locked = false;
+        momentumTimer = null;
+      }, 150);
+      if (locked) return;
       const direction = Math.sign(e.deltaY);
       const targetPage = Math.max(
         0,
         Math.min(pageOrder.length - 1, settledPage.current + direction),
       );
       if (targetPage === settledPage.current) return;
-      cooldownUntil = now + 700;
+      locked = true;
       isSnapping.current = true;
       settledPage.current = targetPage;
       setCurrentPageIdx(targetPage);
@@ -462,7 +492,10 @@ export default function SilentMindTreeScreen() {
       setTimeout(() => { isSnapping.current = false; }, 700);
     };
     window.addEventListener('wheel', handleWheel, { passive: false });
-    return () => window.removeEventListener('wheel', handleWheel);
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      if (momentumTimer) clearTimeout(momentumTimer);
+    };
   }, [pageH, pageOrder.length]);
 
   // Land the user on the page that contains the next track they have
@@ -532,8 +565,6 @@ export default function SilentMindTreeScreen() {
         </Animated.View>
       </View>
 
-      <BackButton />
-
       <Animated.ScrollView
         ref={scrollRef as never}
         contentContainerStyle={styles.scroll}
@@ -572,17 +603,21 @@ export default function SilentMindTreeScreen() {
             const y = rowYs[i];
             const state = nodeState(l.track, listened);
             const isSm = l.kind === 'sm-row';
-            // SM dots sit on the central trunk; QM dots float to the
-            // RIGHT of the trunk on a short side branch (the connector
-            // path itself is drawn in `buildPathSegments`).
             const cx = isSm ? CENTER_X : QM_X;
-            // SM label sits to the LEFT of the trunk dot (so the trunk
-            // line is visually clear on the right). QM label sits to
-            // the RIGHT of its branch dot (away from the trunk).
-            const labelLeft = isSm ? 0 : cx + NODE_R + LABEL_PAD;
-            const labelWidth = isSm
-              ? cx - NODE_R - LABEL_PAD
-              : totalW - (cx + NODE_R + LABEL_PAD) - LABEL_PAD;
+            // SM titles (the longer ones in the catalog) sit on the
+            // LEFT of the trunk dot — wider left gutter on a centred
+            // tree, so 36-char titles like "Self-Observation and
+            // Breath Following" wrap to 2 lines without truncation.
+            // QM titles (shorter — "QM3 — Breathing Body") sit on
+            // the RIGHT of their branch dot.
+            const labelOnLeft = isSm;
+            const labelLeft = labelOnLeft
+              ? LABEL_PAD
+              : cx + NODE_R + LABEL_PAD;
+            const labelWidth = labelOnLeft
+              ? cx - NODE_R - LABEL_PAD - LABEL_PAD
+              : totalW - labelLeft - LABEL_PAD;
+            const duration = trackDuration(l.track) ?? undefined;
             return (
               <View key={`row-${i}`} pointerEvents="box-none">
                 <CircleNode
@@ -598,10 +633,10 @@ export default function SilentMindTreeScreen() {
                 <Label
                   key={`label-${i}`}
                   text={l.track.title}
-                  meta={trackDuration(l.track)}
+                  duration={duration}
                   state={state}
-                  accent={trackColor(l.track.id)}
-                  align={isSm ? 'right' : 'left'}
+                  align={labelOnLeft ? 'right' : 'left'}
+                  onPress={() => setSheetTrack(l.track)}
                   cy={y}
                   left={labelLeft}
                   width={labelWidth}
@@ -633,6 +668,40 @@ export default function SilentMindTreeScreen() {
           ))}
         </View>
       </View>
+
+      {/* Back button rendered LAST so it sits on top of everything
+          (ScrollView, footer, bg layers). Previously placed before
+          the ScrollView, which on react-native-web paints over an
+          absolute-positioned sibling even with a zIndex — moving it
+          to the end fixes the unreachable tap target. */}
+      <BackButton />
+
+      {/* Track-detail bottom sheet — opened by tapping a label.
+          Tapping the dot still launches the Player directly; the
+          sheet has its own Play CTA for the in-sheet flow. */}
+      <TrackInfoSheet
+        visible={sheetTrack !== null}
+        track={sheetTrack}
+        accent={sheetTrack ? trackColor(sheetTrack.id) : colors.accent}
+        locked={sheetTrack ? !isTrackUnlocked(sheetTrack.id, listened) : false}
+        description={
+          sheetTrack
+            ? typeof sheetTrack.description === 'string'
+              ? sheetTrack.description
+              : Array.isArray(sheetTrack.description)
+                ? sheetTrack.description.map(d => d.text).join(' ')
+                : undefined
+            : undefined
+        }
+        onClose={() => setSheetTrack(null)}
+        onPlay={() => {
+          if (!sheetTrack) return;
+          const partId = trackPartIndex[sheetTrack.id];
+          const isQm = sheetTrack.id.startsWith('qm');
+          if (partId) playTrack(isQm ? 'qm' : 'sm', partId, sheetTrack);
+          setSheetTrack(null);
+        }}
+      />
     </View>
   );
 }
@@ -654,12 +723,18 @@ function FooterPartLabel({
     // when an adjacent page is centred, smooth in between.
     return { opacity: Math.max(0, 1 - Math.abs(t - pageIdx)) };
   });
+  const description = partDescription(partId);
   return (
     <Animated.View style={[styles.footerLabelLayer, animStyle]}>
       <View style={styles.partTag}>
         <Text style={styles.partName} numberOfLines={1}>
           {partLabel(partId)}
         </Text>
+        {description ? (
+          <Text style={styles.partDescription} numberOfLines={3}>
+            {noOrphan(description)}
+          </Text>
+        ) : null}
       </View>
     </Animated.View>
   );
@@ -880,74 +955,97 @@ function CircleNode({
 
 function Label({
   text,
-  meta,
+  duration,
   state,
-  accent,
   align,
+  onPress,
   cy,
   left,
   width,
 }: {
   text: string;
-  meta?: string;
+  duration?: string;
   state: NodeState;
-  accent: string;
+  /** Text alignment within the label box. SM rows use 'left' (label
+   *  to the right of the dot, reading rightward); QM rows use
+   *  'right' (label to the left of the dot, reading toward the
+   *  dot). Picks whichever side has more horizontal room. */
   align: 'left' | 'right';
+  /** Tap handler — opens the bottom sheet for this track. */
+  onPress: () => void;
   cy: number;
   left: number;
   width: number;
 }) {
   const locked = state === 'locked';
   const soon = state === 'soon';
-  const done = state === 'done';
   const dimmed = locked || soon;
-  // Estimated label vertical footprint — used to centre vertically on
-  // the node without measuring at runtime. Up to 2 lines title + meta.
-  const ESTIMATED_H = 60;
+  // Worst-case label height: title fontSize 16 × lineHeight 20 × 3
+  // lines = 60 + 2 marginTop + duration ~17 + small slack ≈ 85.
+  // overflow:'visible' as well, because react-native-web sets
+  // overflow:'hidden' on View by default, which was clipping the
+  // duration line on long-titled QM tracks (= the "temps coupé" the
+  // user reported).
+  const ESTIMATED_H = 90;
   return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: 'absolute',
-        left,
-        top: cy - ESTIMATED_H / 2,
-        width,
-        height: ESTIMATED_H,
-        justifyContent: 'center',
-        alignItems: align === 'right' ? 'flex-end' : 'flex-start',
-      }}
+    <Pressable
+      onPress={onPress}
+      hitSlop={6}
+      style={({ pressed }) => [
+        {
+          position: 'absolute',
+          left,
+          top: cy - ESTIMATED_H / 2,
+          width,
+          height: ESTIMATED_H,
+          justifyContent: 'center',
+          overflow: 'visible',
+        },
+        pressed && { opacity: 0.75 },
+      ]}
     >
       <Text
-        numberOfLines={2}
+        numberOfLines={3}
         style={{
           ...typo.h3,
-          fontSize: 13,
-          lineHeight: 17,
-          // Title always white when reachable. The earlier "done →
-          // tint with accent" scheme has been dropped — labels stay
-          // in one neutral colour so the eye reads the dot's accent
-          // (now pale blue) as the only colour layer in the tree.
+          fontSize: 16,
+          lineHeight: 20,
           color: dimmed ? colors.textDim : colors.text,
           textAlign: align,
         }}
       >
         {text}
       </Text>
-      {meta || soon || locked ? (
+      {duration ? (
+        <Text
+          numberOfLines={1}
+          style={{
+            ...typo.caption,
+            fontSize: 13,
+            color: dimmed ? colors.textDim : colors.textMuted,
+            fontVariant: ['tabular-nums'],
+            marginTop: 2,
+            textAlign: align,
+          }}
+        >
+          {duration}
+        </Text>
+      ) : null}
+      {soon || locked ? (
         <Text
           numberOfLines={1}
           style={{
             ...typo.caption,
             fontSize: 10,
-            color: dimmed ? colors.textDim : colors.textMuted,
-            marginTop: 2,
+            color: colors.textDim,
+            marginTop: 4,
             textAlign: align,
           }}
         >
-          {soon ? 'SOON' : locked ? 'LOCKED' : meta}
+          {soon ? 'SOON' : 'LOCKED'}
         </Text>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 
@@ -1128,7 +1226,7 @@ function buildPathSegments(
     const cornerX = QM_X;
     const cornerY = smY;
     // M start → L (cornerX - cornerR, smY) → Q cornerX smY, cornerX (smY - cornerR) → L (cornerX, yQmEdge)
-    const cornerR = 10; // radius of the rounded turn
+    const cornerR = 22; // radius of the rounded turn — bigger = softer bend
     // Going UP if qmY < smY (typical, since QM sits ABOVE its paired SM
     // in display because we placed QM right after SM in journey order;
     // display is reversed → QM is above-in-display = smaller Y).
@@ -1198,12 +1296,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 2.8,
   },
-  // Full-width banner running edge-to-edge across the screen. No
-  // border / no radius — reads as a "section divider" that frames the
-  // current part's name rather than a floating chip.
+  // Short blurb from the catalog (volet.description) shown under the
+  // part name so the user gets the part's intent at a glance without
+  // having to open a track. Sentence-case to contrast with the all-
+  // caps title above it.
+  partDescription: {
+    ...typo.caption,
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
+    marginTop: 6,
+    paddingHorizontal: spacing.sm,
+  },
+  // Full-width banner running edge-to-edge across the screen. We
+  // dropped the solid bgTab fill so the per-part background (esp.
+  // the Earth video) can reach all the way to the bottom of the
+  // viewport without an opaque strip covering the last 40 px. A
+  // very-soft dark overlay (rgba 0,0,0,0.30) keeps the part name
+  // readable against bright frames of the video. The textShadow on
+  // typo.overline does the rest of the lifting.
   partTag: {
     width: '100%',
-    backgroundColor: colors.bgTab,
+    backgroundColor: 'rgba(0,0,0,0.30)',
     paddingHorizontal: spacing.lg,
     paddingVertical: 10,
     alignItems: 'center',
@@ -1225,16 +1340,15 @@ const styles = StyleSheet.create({
   fixedFooterLabelArea: {
     // Full-width so the absolutely-positioned crossfade layers inside
     // (left:0 / right:0) actually have a non-zero width to stretch
-    // into. Without this the area collapsed (its only children are
-    // absolute, which don't contribute to auto-sizing) and the
-    // banner rendered at width 0.
+    // into.
     width: '100%',
-    // Sized to hold the bumped-up partTag (text 14 + paddingY 10 ~37 px).
-    // Half-overlap onto the dashed line so the tag's background cuts
-    // it cleanly.
-    height: 38,
+    // Bumped to hold the title (37 px) + the description block
+    // (up to 3 lines × 16 lineHeight + 6 marginTop ≈ 54 px) + a
+    // bit of vertical padding. Half-overlap onto the dashed line
+    // so the tag's background cuts it cleanly.
+    height: 100,
     marginTop: -19,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   footerLabelLayer: {
     // Full-width so the inner partTag banner stretches edge-to-edge
