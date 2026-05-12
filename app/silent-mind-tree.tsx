@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -7,17 +7,20 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
+  withDelay,
   Easing,
   type SharedValue,
 } from 'react-native-reanimated';
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Ellipse } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Animated wrapper around react-native-svg's <Path> so we can drive
 // stroke opacity / width from a Reanimated shared value (the tree's
 // energy pulse — see SilentMindTreeScreen).
 const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
 
 import { BackButton } from '../src/components/BackButton';
 import { AtmosphereBackground } from '../src/components/AtmosphereBackground';
@@ -61,6 +64,10 @@ const MAX_TOTAL_W = 420;
 const TARGET_TREE_W = 180;
 const MIN_TREE_W = 110;     // never shrink the tree below this — circles need room
 const LABEL_PAD = 8;        // gap between circle edge and label
+// Radius of the rounded corner on QM branch paths. MUST match the
+// value used inside buildPathSegments — particles travel along the
+// same arc so they need the same geometry.
+const BRANCH_CORNER_R = 22;
 
 // Layer types — each "row" carries exactly ONE track now (instead of
 // the previous SM+QM-paired row). QM tracks are rendered as side
@@ -120,11 +127,32 @@ function partDescription(partId: StageId): string | undefined {
 }
 
 function partLabel(partId: StageId): string {
+  // Legacy single-string label, kept for callers that don't need the
+  // split rendering. The footer's <FooterPartLabel> uses
+  // partLabelParts() below for the stacked "Mind-Body / *The Earth*"
+  // layout.
   switch (partId) {
     case 'intro': return 'Introduction';
-    case 'part1': return 'The Earth';
-    case 'part2': return 'The Sky';
-    case 'part3': return 'The Space';
+    case 'part1': return 'Mind-Body';
+    case 'part2': return 'Stability & Equanimity';
+    case 'part3': return 'Towards Silence';
+  }
+}
+
+// Footer label split into "title" + optional "tagline", so the
+// tagline can render in italic next to a regular-styled title:
+//   PART 1 — *The Earth*
+// Intro has no tagline (its name is just "Introduction").
+function partLabelParts(partId: StageId): { title: string; tagline?: string } {
+  // Titles match the catalog's official `subtitle` for each volet:
+  // "Part 1 — Mind-Body" on the SM index, etc. The italic tagline
+  // (The Earth / Sky / Space) keeps the poetic frame next to the
+  // academic name.
+  switch (partId) {
+    case 'intro': return { title: 'Introduction' };
+    case 'part1': return { title: 'Mind-Body', tagline: 'The Earth' };
+    case 'part2': return { title: 'Stability & Equanimity', tagline: 'The Sky' };
+    case 'part3': return { title: 'Towards Silence', tagline: 'The Space' };
   }
 }
 
@@ -145,9 +173,12 @@ export default function SilentMindTreeScreen() {
 
   const layers = useMemo(() => buildLayers(), []);
 
-  // Tree-wide energy pulse — a slow sin breath that drives the soft
-  // glow on completed nodes. ~5 s cycle is slower than the next-up
-  // node's pulse (2.0 s) so the two layers don't compete for the eye.
+  // Tree-wide energy pulse — slow sin breath that drives the halo
+  // opacity on every lit node (up-next + done + playable). ~5 s
+  // full cycle (2.5 s up + 2.5 s down). withSequence with two
+  // withTimings — Easing.inOut(Easing.sin) on both legs makes the
+  // crest and trough match velocity (= 0), so the sequence
+  // boundary is smooth.
   const energyPulse = useSharedValue(0);
   useEffect(() => {
     energyPulse.value = withRepeat(
@@ -168,12 +199,45 @@ export default function SilentMindTreeScreen() {
   // speed; sin shaping happens per-segment from the phase offset.
   const flowTime = useSharedValue(0);
   useEffect(() => {
-    flowTime.value = withRepeat(
-      withTiming(1, { duration: 4000, easing: Easing.linear }),
-      -1,
-      false,
-    );
+    // Same monotonic-clock pattern as the particle clocks: avoid the
+    // withRepeat boundary that snapped the value 1 → 0 and produced
+    // a visible jump in the trunk's brightness wave. EnergyPath uses
+    // `% 1` to wrap.
+    const CYCLES_AHEAD = 10000;
+    flowTime.value = withTiming(CYCLES_AHEAD, {
+      duration: 4000 * CYCLES_AHEAD,
+      easing: Easing.linear,
+    });
   }, [flowTime]);
+
+  // Shared clocks for the rising particle field — one clock per kind
+  // (trunk = long slow drift, branch = shorter cycle on the QM
+  // side-branches). Each particle reads `(clock + phase) % 1`, so
+  // distributing distinct phase offsets across the particles instantly
+  // populates the trunk on first frame (= prewarm — no fill-up delay
+  // when the user lands on the screen).
+  const trunkClock = useSharedValue(0);
+  const branchClock = useSharedValue(0);
+  useEffect(() => {
+    // One MONOTONIC withTiming instead of withRepeat — the latter
+    // resets the value to 0 at each iteration boundary, which made
+    // particles whose phase ≈ 0 "teleport" visibly (alpha was
+    // technically 0 at the wrap moment but Reanimated's
+    // interpolation could still emit a perceptible flicker).
+    // Animating to a big target over a proportionally long
+    // duration keeps the clock smoothly increasing forever; the
+    // `% 1` inside each particle's worklet handles the wrap with
+    // no discontinuity.
+    const CYCLES_AHEAD = 10000;
+    trunkClock.value = withTiming(CYCLES_AHEAD, {
+      duration: 200000 * CYCLES_AHEAD,
+      easing: Easing.linear,
+    });
+    branchClock.value = withTiming(CYCLES_AHEAD, {
+      duration: 50000 * CYCLES_AHEAD,
+      easing: Easing.linear,
+    });
+  }, [trunkClock, branchClock]);
 
   // Responsive layout sizing.
   const totalW = Math.min(MAX_TOTAL_W, Math.max(220, winW - 16));
@@ -197,7 +261,10 @@ export default function SilentMindTreeScreen() {
   // Padding inside each page leaves room for the safe-area top, the
   // floating BackButton, and the dashed section header at the bottom.
   const pageH = winH;
-  const TOP_PAD = Math.max(60, insets.top + 28);
+  // Extra breathing room at the top of each page so the topmost row
+  // doesn't sit right against the tagline / scroll hint. Same value
+  // applied to every part page so the vertical rhythm stays even.
+  const TOP_PAD = Math.max(120, insets.top + 96);
   // Bottom pad has to clear the fixed footer (≈ 100 px tag area +
   // dashed line + paddingBottom of insets.bottom + 12) AND leave
   // breathing room above it so the last track's label (which extends
@@ -290,6 +357,77 @@ export default function SilentMindTreeScreen() {
   const nextTrackIdFn = useProgress(s => s.nextTrackId);
   const nextId = nextTrackIdFn();
 
+  // Journey-position bounds derived from progress:
+  //   • lastListenedY    = Y of the deepest-in-journey track that's
+  //     been listened (= smallest Y across all listened layers).
+  //     Drives the trunk's "lit/dim" boundary.
+  //   • nextUpY / nextUpSmId = the SM immediately AFTER the last-
+  //     listened SM in catalog journey order. Drives the trunk
+  //     particle flow's top end. We compute this LOCALLY rather than
+  //     reading useProgress().nextTrackId() because that store-level
+  //     "next" is "first unlistened in the whole list" — a user who
+  //     skipped intros and went straight to p1-1/p1-2 would have
+  //     `nextId = intro-1`, which would point the particles back
+  //     toward the bottom of the tree instead of toward the genuine
+  //     next journey step (= Center of Gravity). The tree's mental
+  //     model is "what's the next SM after the one I just finished?"
+  //   • lastListenedSmId = id of the deepest-in-journey SM that's
+  //     been listened. Branch particles run on its paired QM (the
+  //     "you've just unlocked this" cue) until that QM is also done.
+  const journeyBounds = useMemo(() => {
+    // Walk the SM tracks in catalog journey order across all volets
+    // (intro → part1 → part2 → part3, SM-only — QM tracks pair with
+    // SM via QM_TO_SM_PAIRING and aren't part of the trunk).
+    const smJourney: { id: string; layerIdx: number }[] = [];
+    for (const v of silentMindVolets) {
+      for (const t of v.tracks) {
+        if (t.comingSoon) continue;
+        const layerIdx = layers.findIndex(
+          l => l.kind === 'sm-row' && l.track.id === t.id,
+        );
+        if (layerIdx >= 0) smJourney.push({ id: t.id, layerIdx });
+      }
+    }
+    // Find the last-listened SM in journey order.
+    let lastListenedSmJourneyIdx = -1;
+    for (let i = 0; i < smJourney.length; i++) {
+      if (listened[smJourney[i].id]) lastListenedSmJourneyIdx = i;
+    }
+    const lastListenedSmEntry =
+      lastListenedSmJourneyIdx >= 0 ? smJourney[lastListenedSmJourneyIdx] : null;
+    const nextSmEntry =
+      lastListenedSmJourneyIdx + 1 < smJourney.length
+        ? smJourney[lastListenedSmJourneyIdx + 1]
+        : null;
+    const lastListenedSmId = lastListenedSmEntry?.id ?? null;
+    const lastListenedSmY =
+      lastListenedSmEntry !== null ? rowYs[lastListenedSmEntry.layerIdx] : null;
+    const nextUpSmId = nextSmEntry?.id ?? null;
+    const nextUpY = nextSmEntry !== null ? rowYs[nextSmEntry.layerIdx] : null;
+    // lastListenedY: smallest Y among ALL listened layers (SM + QM).
+    // Kept around because the segment-lighting logic in
+    // buildPathSegments treats QM-listened state as not contributing
+    // to trunk lighting (QMs sit on side branches) — but the field
+    // is still useful elsewhere.
+    let lastListenedY: number | null = null;
+    for (let i = 0; i < layers.length; i++) {
+      const l = layers[i];
+      if (l.kind !== 'sm-row' && l.kind !== 'qm-branch') continue;
+      if (listened[l.track.id]) {
+        if (lastListenedY === null || rowYs[i] < lastListenedY) {
+          lastListenedY = rowYs[i];
+        }
+      }
+    }
+    return {
+      lastListenedY,
+      lastListenedSmY,
+      lastListenedSmId,
+      nextUpY,
+      nextUpSmId,
+    };
+  }, [layers, rowYs, listened]);
+
   // Per-part accent colours — replaces the previous "single pale-blue
   // for everything" scheme (too cold) and the rainbow gradient before
   // that. Each part now has its own warm-balanced hue that carries
@@ -298,7 +436,7 @@ export default function SilentMindTreeScreen() {
   const partColor = (partId: StageId): string => {
     switch (partId) {
       case 'intro': return '#C9A66B'; // warm dawn gold — first connection
-      case 'part1': return '#2E6B47'; // deeper green — Earth
+      case 'part1': return '#3D8E5E'; // vivid forest green — Earth
       case 'part2': return '#3D6BBA'; // dark blue — Sky
       case 'part3': return '#9B6FDD'; // purple — Space
     }
@@ -320,25 +458,40 @@ export default function SilentMindTreeScreen() {
     return partId ? partColor(partId) : '#E55050';
   };
 
-  // Initial page = whichever part contains the user's next-up track,
-  // falling back to the bottommost page (intro). Computed ONCE at
-  // mount via useState lazy init — the value seeds the scrollY shared
-  // value and the ScrollView's contentOffset, so the very first frame
-  // already shows the correct atmosphere (no "ghost frame" of the
-  // top-of-content shader before the post-mount scrollTo lands).
-  const initialNextId = useRef(nextId).current;
+  // Initial page = the HIGHEST-in-display part that has at least one
+  // unlocked track (= the most advanced part the user can currently
+  // reach). For a fresh user that's intro (only Welcome unlocked);
+  // after Welcome → intro-2/4 → p1-1 unlocks → opens at part1; and
+  // so on. Lands the user on "next step in the journey" rather than
+  // always at the journey's start.
+  //
+  // Computed ONCE at mount via useState lazy init — the value seeds
+  // the scrollY shared value and the ScrollView's contentOffset, so
+  // the very first frame already shows the correct atmosphere.
   const [initialPageIdx] = useState<number>(() => {
-    if (initialNextId) {
-      const layer = layers.find(
-        l =>
-          (l.kind === 'sm-row' || l.kind === 'qm-branch') &&
-          l.track.id === initialNextId,
-      );
-      if (layer && (layer.kind === 'sm-row' || layer.kind === 'qm-branch')) {
-        const idx = pageOrder.indexOf(layer.partId);
-        if (idx >= 0) return idx;
+    // Walk every PLAYABLE SM/QM layer and find the unlocked one with
+    // the SMALLEST Y (= topmost on screen = most advanced in journey).
+    // Coming-soon rows fall through isTrackUnlocked's "unknown id →
+    // permissive" branch and would otherwise pull the initial page
+    // up to part3 (where most coming-soon tracks live).
+    let topMostUnlockedY: number | null = null;
+    let topMostUnlockedPartId: StageId | null = null;
+    for (let i = 0; i < layers.length; i++) {
+      const l = layers[i];
+      if (l.kind !== 'sm-row' && l.kind !== 'qm-branch') continue;
+      if (l.track.comingSoon) continue;
+      if (!isTrackUnlocked(l.track.id, listened)) continue;
+      if (topMostUnlockedY === null || rowYs[i] < topMostUnlockedY) {
+        topMostUnlockedY = rowYs[i];
+        topMostUnlockedPartId = l.partId;
       }
     }
+    if (topMostUnlockedPartId !== null) {
+      const idx = pageOrder.indexOf(topMostUnlockedPartId);
+      if (idx >= 0) return idx;
+    }
+    // Fallback (no unlocked layers — shouldn't happen since Welcome
+    // is always unlocked) → land on the bottommost page (intro).
     return Math.max(0, pageOrder.length - 1);
   });
 
@@ -376,6 +529,26 @@ export default function SilentMindTreeScreen() {
       /* native may not expose the prop — animation still runs */
     }
   };
+  // Programmatic page jump — used by the scroll-hint chevrons when
+  // they're tapped as buttons. Reuses the same snap-then-clamp dance
+  // as the scroll-driven path so chevron taps and gestures land in
+  // the same end state (one stable target Y, no double-advance).
+  const goToPage = (targetPage: number) => {
+    if (targetPage < 0 || targetPage >= pageOrder.length) return;
+    if (targetPage === settledPage.current) return;
+    isSnapping.current = true;
+    settledPage.current = targetPage;
+    setCurrentPageIdx(targetPage);
+    setScrollLocked(true);
+    const targetY = targetPage * pageH;
+    scrollRef.current?.scrollTo({ y: targetY, animated: true });
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: targetY, animated: false });
+      isSnapping.current = false;
+      setScrollLocked(false);
+    }, 480);
+  };
+
   const onScrollNative = (e: any) => {
     const y = e?.nativeEvent?.contentOffset?.y ?? 0;
     scrollY.value = y;
@@ -589,7 +762,152 @@ export default function SilentMindTreeScreen() {
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           >
-            {buildPathSegments(layers, rowYs, SM_X, QM_X, CENTER_X, NODE_R, listened, flowTime, totalH, partColor)}
+            {buildPathSegments(layers, rowYs, SM_X, QM_X, CENTER_X, NODE_R, listened, flowTime, totalH, partColor, journeyBounds.lastListenedSmY, pageOrder, pageH)}
+            {(() => {
+              // Trunk + branch particle field. Always renders as long
+              // as there's a next-up to flow toward; when the user has
+              // no progress, yBottom falls back to the Welcome row
+              // (bottommost layer) and the flow heads to the topmost
+              // unlocked SM (intro destinations are unlocked from the
+              // first launch, so something is always reachable).
+              const nextUpY = journeyBounds.nextUpY;
+              if (nextUpY === null) return null;
+              // Bottom anchor = Welcome (bottom-most accessible row).
+              // Particles ascend through the entire accessible journey
+              // — the lit section AND the unlit "next up" gap —
+              // instead of starting at lastListenedY. Keeps the tree
+              // feeling alive everywhere, not just in the small band
+              // between the most recent track and the up-next one.
+              let yBottom: number | null = null;
+              for (let i = layers.length - 1; i >= 0; i--) {
+                const l = layers[i];
+                if (l.kind === 'sm-row' || l.kind === 'qm-branch') {
+                  yBottom = rowYs[i];
+                  break;
+                }
+              }
+              if (yBottom === null) return null;
+              // When the fallback collapses (yBottom === nextUpY, which
+              // happens on a fresh user since nextId IS Welcome), aim
+              // the flow at the topmost unlocked layer so there's
+              // always a visible ascending stream from day 1.
+              let topY = nextUpY;
+              if (topY >= yBottom) {
+                // Fresh-user case: nextUp IS Welcome (the bottom-most
+                // layer), so the range collapses. Aim instead at the
+                // layer with the LARGEST Y strictly above Welcome —
+                // gives particles somewhere to flow from day 1, and
+                // matches "next SM in journey after Welcome" for the
+                // standard catalog (= intro-2).
+                let nearest: number | null = null;
+                for (let i = 0; i < layers.length; i++) {
+                  const l = layers[i];
+                  if (l.kind !== 'sm-row' && l.kind !== 'qm-branch') continue;
+                  if (rowYs[i] >= yBottom) continue; // skip Welcome itself
+                  if (nearest === null || rowYs[i] > nearest) nearest = rowYs[i];
+                }
+                if (nearest === null) return null;
+                topY = nearest;
+              }
+              // Pull the upper end DOWN so the particle's full ellipse
+              // stays below the next-up node — without this, the
+              // streak's top edge (cy − ry ≈ cy − 11 px) punches
+              // through the node when cy reaches nextUpY. NODE_R + a
+              // small buffer is enough to keep the visual contained.
+              const PARTICLE_TOP_PAD = NODE_R + 6;
+              const topYClamped = Math.min(topY + PARTICLE_TOP_PAD, yBottom - 8);
+              const yRange = yBottom - topYClamped;
+              if (yRange <= 0) return null;
+              // 1 particle / 4 px — each particle is now rendered as
+              // core + halo (2 ellipses), so we cap a bit lower than
+              // the pre-halo version to keep the SVG tree manageable
+              // on long ranges. The halos overlap freely, so visual
+              // density actually goes UP despite the slightly lower
+              // count.
+              const PARTICLE_COUNT = Math.max(28, Math.min(240, Math.round(yRange / 4)));
+              const trunkParticles = Array.from({ length: PARTICLE_COUNT }, (_, k) => {
+                const phase = k / PARTICLE_COUNT;
+                // Three independent deterministic seeds — opacity/size,
+                // speed, and an INDEPENDENT vertical-stretch ratio so
+                // some particles read as short dots and others as
+                // elongated streaks (no shared aspect ratio across the
+                // field).
+                const sScale = ((k * 1664525 + 1013904223) % 233280) / 233280;
+                const sSpeed = ((k * 2654435761 + 374761393) % 233280) / 233280;
+                const sLength = ((k * 1103515245 + 12345) % 233280) / 233280;
+                const opacityScale = 0.6 + sScale * 0.4;
+                const sizeScale = 0.7 + sScale * 0.3;
+                // 0.5..1.9 → 3.8× spread in vertical length. Short
+                // particles stay near a dot shape, long ones look like
+                // brief comet trails.
+                const lengthScale = 0.5 + sLength * 1.4;
+                const speedMul = 0.55 + sSpeed * 0.9;
+                return (
+                  <TrunkParticle
+                    key={`particle-${k}`}
+                    cx={CENTER_X}
+                    yTop={topYClamped}
+                    yBottom={yBottom!}
+                    clock={trunkClock}
+                    phase={phase}
+                    speedMul={speedMul}
+                    color="rgba(255, 255, 255, 1)"
+                    opacityScale={opacityScale}
+                    sizeScale={sizeScale}
+                    lengthScale={lengthScale}
+                  />
+                );
+              });
+              // QM branch particles — on each QM whose paired SM is
+              // EITHER the last-listened SM (just-unlocked alternative)
+              // OR the next-up SM (upcoming preview).
+              const smYById = new Map<string, number>();
+              for (let i = 0; i < layers.length; i++) {
+                const l = layers[i];
+                if (l.kind === 'sm-row') smYById.set(l.track.id, rowYs[i]);
+              }
+              const branchParticles: React.ReactNode[] = [];
+              const BRANCH_PER_BRANCH = 10;
+              layers.forEach((l, i) => {
+                if (l.kind !== 'qm-branch') return;
+                // Branch particles render only on QMs the user has
+                // ACTUALLY UNLOCKED — paired SM must be listened
+                // AND the QM itself not done yet. Anything farther
+                // ahead in the journey (paired SM still locked) stays
+                // particle-free; without this gate, every QM branch
+                // would glow from day 1 even when the user is several
+                // SMs away from being able to play them.
+                if (!listened[l.pairedSmId]) return;
+                if (listened[l.track.id]) return;
+                const smY = smYById.get(l.pairedSmId);
+                if (smY === undefined) return;
+                const qmY = rowYs[i];
+                for (let k = 0; k < BRANCH_PER_BRANCH; k++) {
+                  const phase = k / BRANCH_PER_BRANCH;
+                  const sScale = ((k * 1664525 + i * 1013904223) % 233280) / 233280;
+                  const sSpeed = ((k * 2654435761 + i * 374761393) % 233280) / 233280;
+                  const sLength = ((k * 1103515245 + i * 12345 + 7) % 233280) / 233280;
+                  branchParticles.push(
+                    <BranchParticle
+                      key={`branch-${i}-${k}`}
+                      trunkX={CENTER_X}
+                      cornerX={QM_X}
+                      smY={smY}
+                      qmY={qmY}
+                      nodeR={NODE_R}
+                      clock={branchClock}
+                      phase={phase}
+                      speedMul={0.55 + sSpeed * 0.9}
+                      color="rgba(255, 255, 255, 1)"
+                      opacityScale={0.6 + sScale * 0.4}
+                      sizeScale={0.7 + sScale * 0.3}
+                      lengthScale={0.5 + sLength * 1.4}
+                    />,
+                  );
+                }
+              });
+              return [...trunkParticles, ...branchParticles];
+            })()}
           </Svg>
 
           {/* Section headers used to live inside the scroll content;
@@ -646,6 +964,94 @@ export default function SilentMindTreeScreen() {
           })}
         </View>
       </Animated.ScrollView>
+
+      {/* Tree edge fades — semi-opaque navy → transparent gradients
+          covering the top + bottom of the scroll content so the tree
+          doesn't overlap the part tagline (top) or the part-name
+          banner (bottom). Also gives the scroll-hint chevrons a clean
+          dim band to render against. Drawn AFTER the ScrollView so
+          they sit on top, but BEFORE the chevrons + tagline + footer
+          so those still render above the fade. */}
+      <View
+        pointerEvents="none"
+        style={[styles.treeEdgeTop, { top: 0, height: insets.top + 150 }]}
+      >
+        <LinearGradient
+          colors={['rgba(0,16,46,0.92)', 'rgba(0,16,46,0)']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+      <View
+        pointerEvents="none"
+        style={[styles.treeEdgeBottom, { bottom: 0, height: insets.bottom + 210 }]}
+      >
+        <LinearGradient
+          colors={['rgba(0,16,46,0)', 'rgba(0,16,46,0.92)']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+
+      {/* Top header — the italic tagline ("The Earth" / "The Sky" /
+          "The Space") for the currently-visible part. Sits just below
+          the safe-area inset, crossfades between pages on the same
+          scroll-Y mapping the footer uses. The Introduction page has
+          no tagline, so the layer is empty there (label component
+          returns null). */}
+      <View
+        pointerEvents="none"
+        style={[styles.fixedHeader, { paddingTop: insets.top + 48 }]}
+      >
+        {pageOrder.map((partId, idx) => (
+          <HeaderPartLabel
+            key={`hdr-${partId}`}
+            partId={partId}
+            pageIdx={idx}
+            scrollY={scrollY}
+            pageH={pageH}
+          />
+        ))}
+      </View>
+
+      {/* Scroll affordances — small pulsing chevrons hinting at the
+          adjacent pages. The up chevron vanishes when the user is on
+          page 0; the down chevron vanishes on the last page. Sits
+          inside the safe area below the header and above the footer
+          banner so it never overlaps the dashed line. */}
+      {/* Up chevron — mounts only when there's a page above the
+          current one. `box-none` on the wrap so taps anywhere in the
+          banded area pass through except on the Pressable itself. */}
+      {currentPageIdx > 0 ? (
+        <View
+          pointerEvents="box-none"
+          style={[styles.scrollHintTopWrap, { top: insets.top + 14 }]}
+        >
+          <ScrollHint
+            direction="up"
+            onPress={() => goToPage(currentPageIdx - 1)}
+          />
+        </View>
+      ) : null}
+      {/* Down chevron — mounts only when there's a page below. Intro
+          is the journey's first step (bottom of scroll), so we also
+          explicitly suppress the chevron there even if the index
+          math would have allowed it (defensive — the previous
+          opacity-fade approach left ghost taps visible on intro). */}
+      {currentPageIdx < pageOrder.length - 1 &&
+      pageOrder[currentPageIdx] !== 'intro' ? (
+        <View
+          pointerEvents="box-none"
+          style={[styles.scrollHintBottomWrap, { bottom: insets.bottom + 132 }]}
+        >
+          <ScrollHint
+            direction="down"
+            onPress={() => goToPage(currentPageIdx + 1)}
+          />
+        </View>
+      ) : null}
 
       {/* Fixed footer — section header for the part the user is
           currently looking at. Crossfades smoothly between part names
@@ -724,12 +1130,20 @@ function FooterPartLabel({
     return { opacity: Math.max(0, 1 - Math.abs(t - pageIdx)) };
   });
   const description = partDescription(partId);
+  const labelParts = partLabelParts(partId);
+  // Intro page: "Introduction" already appears at the TOP (via
+  // HeaderPartLabel), so suppress the title here to avoid duplication.
+  // The description still shows so the user gets the prologue blurb
+  // in the same footer band as the other parts.
+  const showTitle = partId !== 'intro';
   return (
     <Animated.View style={[styles.footerLabelLayer, animStyle]}>
       <View style={styles.partTag}>
-        <Text style={styles.partName} numberOfLines={1}>
-          {partLabel(partId)}
-        </Text>
+        {showTitle ? (
+          <Text style={styles.partName} numberOfLines={1}>
+            {labelParts.title}
+          </Text>
+        ) : null}
         {description ? (
           <Text style={styles.partDescription} numberOfLines={3}>
             {noOrphan(description)}
@@ -737,6 +1151,94 @@ function FooterPartLabel({
         ) : null}
       </View>
     </Animated.View>
+  );
+}
+
+// Top-of-screen tagline — "The Earth" / "The Sky" / "The Space" in
+// italic, sitting just below the safe-area inset. Crossfades between
+// part pages the same way FooterPartLabel does. Intro page has no
+// tagline (no header label rendered).
+function HeaderPartLabel({
+  partId,
+  pageIdx,
+  scrollY,
+  pageH,
+}: {
+  partId: StageId;
+  pageIdx: number;
+  scrollY: { value: number };
+  pageH: number;
+}) {
+  const animStyle = useAnimatedStyle(() => {
+    const t = scrollY.value / pageH;
+    return { opacity: Math.max(0, 1 - Math.abs(t - pageIdx)) };
+  });
+  const labelParts = partLabelParts(partId);
+  // Parts 1/2/3 use the italic tagline (The Earth / Sky / Space);
+  // the intro page has no tagline, so we surface its `title`
+  // ("Introduction") in the same slot with the same style — gives
+  // every page a top heading at the same vertical anchor.
+  const headerText = labelParts.tagline ?? labelParts.title;
+  if (!headerText) return null;
+  return (
+    <Animated.View style={[styles.headerLabelLayer, animStyle]} pointerEvents="none">
+      <Text style={styles.headerTagline} numberOfLines={1}>
+        {headerText}
+      </Text>
+    </Animated.View>
+  );
+}
+
+// Scroll affordance + button — a small chevron that bobs gently in
+// the hint direction AND triggers a page jump on tap. Caller is
+// responsible for only mounting it when there's somewhere to go
+// (we no longer fade-out via a `visible` prop; conditional render
+// means the chevron isn't present at all on the first / last page).
+function ScrollHint({
+  direction,
+  onPress,
+}: {
+  direction: 'up' | 'down';
+  onPress: () => void;
+}) {
+  const bob = useSharedValue(0);
+  useEffect(() => {
+    bob.value = withRepeat(
+      withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
+      -1, true,
+    );
+  }, []);
+  // Bob is computed in the CHILD's frame (always negative translateY),
+  // and the wrapper applies a static 180° rotation for the down
+  // chevron. This separation matters:
+  //   • mixing { translateY } and { rotate } in a single animated
+  //     transform array seems to break the bob on react-native-web
+  //     (the up chevron sat still, only the down one moved)
+  //   • the parent's static rotation also flips the bob direction
+  //     for free — child bobs "up" → screen-down for the rotated
+  //     down chevron, screen-up for the up chevron, both correct.
+  const animStyle = useAnimatedStyle(() => {
+    return { transform: [{ translateY: -bob.value * 5 }] };
+  });
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={16}
+      style={({ pressed }) => [
+        direction === 'up' ? styles.scrollHintUp : styles.scrollHintDown,
+        { opacity: pressed ? 0.95 : 0.65 },
+      ]}
+    >
+      <View
+        style={
+          direction === 'down' ? styles.scrollHintRotate : undefined
+        }
+      >
+        <Animated.View style={animStyle}>
+          <Text style={styles.scrollHintGlyph}>⌃</Text>
+        </Animated.View>
+      </View>
+    </Pressable>
   );
 }
 
@@ -775,35 +1277,31 @@ function CircleNode({
   // up-next glow stays in phase with the done-node glow (the user
   // pinned this — having every glow on a different period read as
   // visual chaos, not "alive").
-  const breath = useSharedValue(0); // 0..1 sin, 2.0 s — scale
-  const sway   = useSharedValue(0); // -1..+1 sin, 7 s — slow Y drift
-  const ripple = useSharedValue(0); // 0..1 ramp,  1.6 s — expanding ring
+  const ripple = useSharedValue(0); // 0..1 ramp, 1.6 s — expanding ring
+  // Ripple runs on every tappable-and-unlistened node — the "this
+  // is available, tap me" cue the user asked for systematically.
+  // No scale breath on the dot itself anymore: the dot stays
+  // perfectly still, only the halo and ripple do the animating.
+  const wantsRipple = isNext || playable;
   useEffect(() => {
-    if (isNext) {
-      breath.value = withRepeat(
-        withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
-        -1, true,
-      );
-      // Sway starts at -1 so the bounce stays symmetric (otherwise the
-      // first cycle's range was 0 → +1 → -1 → +1 — visibly faster than
-      // later cycles). Same fix as CircleButton.tsx.
-      sway.value = -1;
-      sway.value = withRepeat(
-        withTiming(1, { duration: 7000, easing: Easing.inOut(Easing.sin) }),
-        -1, true,
-      );
-      // Ripple is a one-way 0→1 ramp on each cycle — the outer ring
-      // expands and fades, then snaps back to 0 to start over.
+    if (wantsRipple) {
+      // Sequence: snap-to-0 (1 ms, invisible reset) → expand 0→1
+      // over 2800 ms (the ring grows + fades) → hold at 1 (=
+      // ring invisible since opacity = 0) for 2000 ms before the
+      // next ring starts. Gives a clear gap between successive
+      // emanations instead of a continuous chain.
       ripple.value = withRepeat(
-        withTiming(1, { duration: 1600, easing: Easing.out(Easing.quad) }),
+        withSequence(
+          withTiming(0, { duration: 1 }),
+          withTiming(1, { duration: 2800, easing: Easing.out(Easing.quad) }),
+          withDelay(2000, withTiming(1, { duration: 1 })),
+        ),
         -1, false,
       );
     } else {
-      breath.value = withTiming(0, { duration: 240 });
-      sway.value = withTiming(0, { duration: 240 });
       ripple.value = withTiming(0, { duration: 240 });
     }
-  }, [isNext]);
+  }, [wantsRipple]);
   // Composite animation:
   //   • Up-next node: scale breath + slow Y sway + ripple ring +
   //     halo opacity that follows the tree-wide `energyPulse` (so the
@@ -811,40 +1309,35 @@ function CircleNode({
   //   • Done node: subtle scale (1 → 1.03) + halo opacity, both keyed
   //     off the same `energyPulse` — every lit dot breathes together.
   //   • Other states: static, no glow.
-  const animStyle = useAnimatedStyle(() => {
-    if (isNext) {
-      return {
-        transform: [
-          { translateY: sway.value * 1.5 },
-          // Boosted from 1.06 → 1.10 so the up-next dot visibly
-          // breathes — the previous range was easy to miss against
-          // the surrounding still dots.
-          { scale: 1 + 0.10 * breath.value },
-        ],
-        // Halo on up-next is wider (shadowRadius 22 in the View
-        // style) AND brighter (0.55..1.0 vs 0.25..0.80 on done) so
-        // the active CTA still stands out from the ambient glow.
-        shadowOpacity: 0.55 + 0.45 * energyPulse.value,
-      };
-    }
-    if (done) {
-      return {
-        transform: [
-          { translateY: 0 },
-          { scale: 1 + 0.03 * energyPulse.value },
-        ],
-        shadowOpacity: 0.25 + 0.55 * energyPulse.value,
-      };
-    }
-    return { transform: [{ translateY: 0 }, { scale: 1 }], shadowOpacity: 0 };
+  // No animation on the main dot itself — it stays still. All
+  // motion happens in the halo (opacity pulse) and ripple ring
+  // (expand & fade) layers behind it.
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: 1 }] }));
+  // Outer ripple ring — renders on every tappable + unlistened node.
+  // Slightly dialed back: smaller max scale (1 → 1.7 vs 1 → 2.0) and
+  // gentler baseline opacity, so the rings read as a quiet pulse
+  // rather than dominating the screen.
+  const rippleStyle = useAnimatedStyle(() => {
+    if (!wantsRipple) return { transform: [{ scale: 1 }], opacity: 0 };
+    const baseOpacity = isNext ? 0.85 : 0.70;
+    return {
+      transform: [{ scale: 1 + 0.7 * ripple.value }],
+      opacity: Math.max(0, baseOpacity * (1 - ripple.value)),
+    };
   });
-  // Outer ripple ring — bigger (scale 1 → 2.0) and brighter (0.75 →
-  // 0) than the previous version so the up-next dot reads as actively
-  // emitting energy. Only renders while isNext (gated below).
-  const rippleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + 1.0 * ripple.value }],
-    opacity: isNext ? Math.max(0, 0.75 * (1 - ripple.value)) : 0,
-  }));
+  // Standalone halo layer — separate Animated.View positioned BEHIND
+  // the main dot, with a static box-shadow and an animated `opacity`.
+  // Reanimated reliably animates `opacity` on web (vs `shadowOpacity`
+  // which doesn't propagate to react-native-web's box-shadow CSS
+  // unless the layer is also re-composited by another animation —
+  // why isNext's halo was the only visible one). Driving the WHOLE
+  // View's opacity means the shadow it casts fades with it.
+  const haloStyle = useAnimatedStyle(() => {
+    if (isNext) return { opacity: 0.55 + 0.45 * energyPulse.value };
+    if (done) return { opacity: 0.25 + 0.55 * energyPulse.value };
+    if (playable) return { opacity: 0.55 + 0.40 * energyPulse.value };
+    return { opacity: 0 };
+  });
 
   return (
     <Pressable
@@ -864,12 +1357,13 @@ function CircleNode({
         pressed && !dimmed && { opacity: 0.7 },
       ]}
     >
-      {/* Ripple ring — only really visible on the up-next node (the
-          rippleStyle pins opacity to 0 elsewhere). Sits BEHIND the
-          main dot, expanding outward each cycle so the dot looks like
-          it's emitting energy rings. Border-only, no fill, so the
-          connector path passing through the centre stays visible. */}
-      {isNext ? (
+      {/* Halo layer — static box-shadow on a transparent circle View
+          whose OPACITY is animated. Rendered BEHIND the main dot and
+          the ripple. Reanimated drives opacity reliably on every
+          platform (including web's react-native-web, where box-shadow
+          CSS doesn't react to animated shadowOpacity unless the layer
+          is re-composited elsewhere). */}
+      {(isNext || done || playable) ? (
         <Animated.View
           pointerEvents="none"
           style={[
@@ -878,7 +1372,33 @@ function CircleNode({
               width: D,
               height: D,
               borderRadius: radius,
-              borderWidth: 2.5,
+              shadowColor: accent,
+              shadowRadius: isNext ? 22 : done ? 10 : 18,
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 1, // static; haloStyle.opacity drives visibility
+              elevation: isNext ? 14 : 6,
+            },
+            haloStyle,
+          ]}
+        />
+      ) : null}
+      {/* Ripple ring — every tappable+unlistened node emits one.
+          Sits BEHIND the main dot, expanding outward each cycle so
+          each available dot looks like it's emitting energy rings.
+          Border-only, no fill, so the connector path passing
+          through the centre stays visible. */}
+      {wantsRipple ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            {
+              position: 'absolute',
+              width: D,
+              height: D,
+              borderRadius: radius,
+              // Thicker outline (3 vs 2.5) so the ring stays crisp
+              // as it expands past the halo's soft bloom.
+              borderWidth: 3,
               borderColor: accent,
             },
             rippleStyle,
@@ -907,24 +1427,10 @@ function CircleNode({
             opacity: dimmed ? 0.45 : 1,
             alignItems: 'center',
             justifyContent: 'center',
-            // Soft accent halo on lit nodes (up-next + already-done).
-            // Its opacity is animated by `animStyle` above; this just
-            // declares the shadow colour / radius. Untraversed (locked
-            // / soon / available-but-not-next) nodes keep
-            // shadowOpacity 0 so the rest of the chain stays clean.
-            ...(isNext || done
-              ? {
-                  shadowColor: accent,
-                  // Up-next halo is much wider (22 vs 10) so the
-                  // active CTA reads above the ambient done-node
-                  // glow — both pulse IN PHASE via energyPulse, but
-                  // amplitude is what separates "next" from
-                  // "already-walked".
-                  shadowRadius: isNext ? 22 : 10,
-                  shadowOffset: { width: 0, height: 0 },
-                  elevation: isNext ? 14 : 6,
-                }
-              : null),
+            // Halo / glow handled by a separate Animated.View
+            // rendered behind this dot (see haloStyle above) — the
+            // main dot itself stays unshadowed so the layer doesn't
+            // need to re-composite for shadow updates.
           },
           animStyle,
         ]}
@@ -1058,6 +1564,241 @@ function Label({
 // travels UP the trunk on a 4 s loop. The eye reads "energy ascending
 // along the white axis".
 //
+// ---------------------------------------------------------------------------
+
+// A single dot drifting UPWARD along the trunk, from Welcome (the
+// bottommost track) to the top of the tree, looping forever. Several
+// stacked instances with staggered delays give the trunk a continuous
+// "ascending current". Two visual states:
+//   • inactive (no track listened anywhere) — small, dim — a subtle
+//     hint that the journey moves upward
+//   • active (≥ 1 track listened) — bigger, brighter — the tree reads
+//     as live / energized
+function TrunkParticle({
+  cx,
+  yTop,
+  yBottom,
+  clock,
+  phase,
+  speedMul,
+  color,
+  opacityScale,
+  /** General size multiplier (~0.7..1.0). Applied to both axes —
+   *  introduces gentle uniform variation. */
+  sizeScale,
+  /** Vertical-only stretch (~0.5..1.8). Independent from sizeScale
+   *  so the field has mixed long/short streaks instead of every
+   *  particle reading at the same aspect ratio. */
+  lengthScale,
+}: {
+  cx: number;
+  yTop: number;
+  yBottom: number;
+  /** Shared 0..1 clock driving every trunk particle. Each particle
+   *  reads `(clock * speedMul + phase) % 1` so individual particles
+   *  travel at slightly different rates — without this, the field
+   *  looks like a single train of evenly-spaced dots. */
+  clock: SharedValue<number>;
+  phase: number;
+  /** Per-particle speed multiplier (~0.55..1.45). Caller seeds it
+   *  deterministically so the variation is stable across re-renders. */
+  speedMul: number;
+  color: string;
+  opacityScale: number;
+  sizeScale: number;
+  lengthScale: number;
+}) {
+  // Single ambient sizing for every state — the user prefers the
+  // small "tree empty" look kept everywhere, instead of bumping size
+  // / brightness once the user starts listening. Subtle, always.
+  const baseR = 2.4;
+  // Animated props for the two stacked ellipses. The halo ellipse
+  // reads the same cy + alpha curve as the core, so they move
+  // together; only the rx/ry and an opacity multiplier differ. Using
+  // two ellipses to fake a Gaussian blur — react-native-svg's filter
+  // primitives are inconsistent across platforms, and stacking is
+  // cheap.
+  const animatedCoreProps = useAnimatedProps(() => {
+    const t = (clock.value * speedMul + phase) % 1;
+    const cy = yBottom - (yBottom - yTop) * t;
+    let alpha = 1;
+    if (t < 0.18) alpha = t / 0.18;
+    else if (t > 0.82) alpha = (1 - t) / 0.18;
+    // Constant low opacity — no "ramp up when listening starts"
+    // behaviour. The field reads as ambient, not as a progress
+    // indicator.
+    const baseOpacity = 0.22;
+    return { cy, opacity: baseOpacity * alpha * opacityScale };
+  });
+  const animatedHaloProps = useAnimatedProps(() => {
+    const t = (clock.value * speedMul + phase) % 1;
+    const cy = yBottom - (yBottom - yTop) * t;
+    let alpha = 1;
+    if (t < 0.18) alpha = t / 0.18;
+    else if (t > 0.82) alpha = (1 - t) / 0.18;
+    // Halo is dimmer + much wider → soft cloud surrounding the core.
+    const baseOpacity = 0.10;
+    return { cy, opacity: baseOpacity * alpha * opacityScale };
+  });
+  // Thinner streaks (0.6 → 0.32 rx multiplier) so particles read as
+  // strands of mist rather than pellets. Vertical size driven by an
+  // independent lengthScale → some are short, some are elongated.
+  const coreRx = baseR * sizeScale * 0.32;
+  const coreRy = baseR * sizeScale * lengthScale * 1.4;
+  const haloRx = coreRx * 3.2;   // wider halo for a softer cloud
+  const haloRy = coreRy * 1.7;
+  return (
+    <>
+      <AnimatedEllipse
+        cx={cx}
+        rx={haloRx}
+        ry={haloRy}
+        fill={color}
+        animatedProps={animatedHaloProps}
+      />
+      <AnimatedEllipse
+        cx={cx}
+        rx={coreRx}
+        ry={coreRy}
+        fill={color}
+        animatedProps={animatedCoreProps}
+      />
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+// A particle that traces a QM branch path — from the paired SM dot's
+// right edge → horizontal along smY → quarter-arc corner → vertical
+// up to the QM dot's bottom edge. Same path geometry as the segment
+// drawn in buildPathSegments. Renders only for unlocked QM branches
+// so we don't animate flow into locked sections.
+function BranchParticle({
+  trunkX,
+  cornerX,
+  smY,
+  qmY,
+  nodeR,
+  clock,
+  phase,
+  speedMul,
+  color,
+  opacityScale,
+  sizeScale,
+  lengthScale,
+}: {
+  trunkX: number;
+  cornerX: number;
+  smY: number;
+  qmY: number;
+  nodeR: number;
+  clock: SharedValue<number>;
+  phase: number;
+  speedMul: number;
+  color: string;
+  opacityScale: number;
+  sizeScale: number;
+  lengthScale: number;
+}) {
+  const x1 = trunkX + nodeR;
+  const x2 = cornerX - BRANCH_CORNER_R;
+  const yArcEnd = smY - BRANCH_CORNER_R;
+  const yEnd = qmY + nodeR;
+  const hLen = Math.max(0, x2 - x1);
+  const cLen = (Math.PI * BRANCH_CORNER_R) / 2;
+  const vLen = Math.max(0, yArcEnd - yEnd);
+  const total = Math.max(1, hLen + cLen + vLen);
+
+  // Animate cx / cy directly (number props) instead of a transform
+  // string. The previous transform="translate(x,y) rotate(angle)"
+  // route via useAnimatedProps was NOT reliably wiring through
+  // react-native-svg — the trunk particles, which animate cy as a
+  // plain number prop, render fine; the branch particles using a
+  // string transform stayed invisible. Drop the rotation (was
+  // aligning the ellipse with motion direction along the path) and
+  // use slightly rounder ellipses so orientation doesn't matter
+  // visually — the particles read as soft dots flowing along the
+  // branch.
+  const animatedCoreProps = useAnimatedProps(() => {
+    const t = (clock.value * speedMul + phase) % 1;
+    const dist = t * total;
+    let cx: number, cy: number;
+    if (dist <= hLen) {
+      cx = x1 + dist;
+      cy = smY;
+    } else if (dist <= hLen + cLen) {
+      const arcProgress = (dist - hLen) / cLen;
+      const a = arcProgress * (Math.PI / 2);
+      cx = x2 + BRANCH_CORNER_R * Math.sin(a);
+      cy = smY - BRANCH_CORNER_R * (1 - Math.cos(a));
+    } else {
+      cx = cornerX;
+      cy = yArcEnd - (dist - hLen - cLen);
+    }
+    let alpha = 1;
+    if (t < 0.18) alpha = t / 0.18;
+    else if (t > 0.82) alpha = (1 - t) / 0.18;
+    // Constant ambient opacity — matches the trunk's idle level so
+    // the field reads as one continuous mist field across trunk and
+    // branches.
+    const baseOpacity = 0.22;
+    return { cx, cy, opacity: baseOpacity * alpha * opacityScale };
+  });
+  const animatedHaloProps = useAnimatedProps(() => {
+    const t = (clock.value * speedMul + phase) % 1;
+    const dist = t * total;
+    let cx: number, cy: number;
+    if (dist <= hLen) {
+      cx = x1 + dist;
+      cy = smY;
+    } else if (dist <= hLen + cLen) {
+      const arcProgress = (dist - hLen) / cLen;
+      const a = arcProgress * (Math.PI / 2);
+      cx = x2 + BRANCH_CORNER_R * Math.sin(a);
+      cy = smY - BRANCH_CORNER_R * (1 - Math.cos(a));
+    } else {
+      cx = cornerX;
+      cy = yArcEnd - (dist - hLen - cLen);
+    }
+    let alpha = 1;
+    if (t < 0.18) alpha = t / 0.18;
+    else if (t > 0.82) alpha = (1 - t) / 0.18;
+    const baseOpacity = 0.10;
+    return { cx, cy, opacity: baseOpacity * alpha * opacityScale };
+  });
+  // Single ambient sizing for every state — the user prefers the
+  // small "tree empty" look kept everywhere, instead of bumping size
+  // / brightness once the user starts listening. Subtle, always.
+  const baseR = 2.4;
+  // Rounder geometry than the trunk streaks — without the rotation
+  // alignment, vertical streaks would read "sideways" on the
+  // horizontal leg of the branch. Keep rx and ry close so the
+  // particle looks the same regardless of direction.
+  const coreRx = baseR * sizeScale * 0.75;
+  const coreRy = baseR * sizeScale * lengthScale * 0.95;
+  const haloRx = coreRx * 2.6;
+  const haloRy = coreRy * 2.6;
+  return (
+    <>
+      <AnimatedEllipse
+        rx={haloRx}
+        ry={haloRy}
+        fill={color}
+        animatedProps={animatedHaloProps}
+      />
+      <AnimatedEllipse
+        rx={coreRx}
+        ry={coreRy}
+        fill={color}
+        animatedProps={animatedCoreProps}
+      />
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
 // Untraversed edges render as a flat dim Path — we don't pay the
 // double-AnimatedPath cost on connectors that aren't lit yet.
 function EnergyPath({
@@ -1151,6 +1892,13 @@ function buildPathSegments(
   flowTime: SharedValue<number>,
   totalH: number,
   partColor: (p: StageId) => string,
+  /** Y of the deepest-in-journey listened track. Segments whose
+   *  UPPER endpoint Y >= this value are "below the last listened"
+   *  and read as the completed journey portion (= lit). null when
+   *  nothing's listened yet. */
+  lastListenedY: number | null,
+  pageOrder: StageId[],
+  pageH: number,
 ) {
   const elements: React.ReactNode[] = [];
   const dimStroke = 'rgba(255,255,255,0.18)';
@@ -1165,33 +1913,75 @@ function buildPathSegments(
   for (let k = 1; k < smIndices.length; k++) {
     const upperIdx = smIndices[k - 1]; // higher in display = later in journey
     const lowerIdx = smIndices[k];     // lower in display = earlier in journey
+    const upperLayer = layers[upperIdx];
     const lowerLayer = layers[lowerIdx];
     if (lowerLayer.kind !== 'sm-row') continue;
+    if (upperLayer.kind !== 'sm-row') continue;
     const yUpper = rowYs[upperIdx];
     const yLower = rowYs[lowerIdx];
-    // Segment lights up as soon as the LOWER endpoint (= the SM you
-    // just finished going up) is listened.
-    const traversed = !!listened[lowerLayer.track.id];
+    const traversed = lastListenedY !== null && yUpper >= lastListenedY;
     const stroke = traversed ? litStroke : dimStroke;
     const strokeWidth = traversed ? 2.5 : 2;
-    const accent = partColor(lowerLayer.partId);
     const ty1 = yUpper + nodeR;
     const ty2 = yLower - nodeR;
-    const d = `M ${CENTER_X} ${ty1} L ${CENTER_X} ${ty2}`;
-    const yMid = (ty1 + ty2) / 2;
-    const yPhase = totalH > 0 ? 1 - yMid / totalH : 0;
-    elements.push(
-      <EnergyPath
-        key={`trunk-${upperIdx}-${lowerIdx}`}
-        d={d}
-        stroke={stroke}
-        strokeWidth={strokeWidth}
-        traversed={traversed}
-        accent={accent}
-        yPhase={yPhase}
-        flowTime={flowTime}
-      />,
-    );
+    // Cross-part trunk segments are SPLIT at the PAGE BOUNDARY
+    // between the two parts (= the snap line between two pages),
+    // not at the dashed divider — the divider sits a few px above
+    // the page bottom but the user-visible "screen change" line is
+    // the page boundary itself. Lower half keeps the lower part's
+    // colour, upper half takes the upper part's colour.
+    const crossesParts = upperLayer.partId !== lowerLayer.partId;
+    let splitY: number | null = null;
+    if (crossesParts) {
+      // The lower part's page top = upper part's page bottom = the
+      // snap line. pageOrder is display top-down, so the page top
+      // of the lower part is at idx*pageH.
+      const lowerIdx2 = pageOrder.indexOf(lowerLayer.partId);
+      if (lowerIdx2 >= 0) splitY = lowerIdx2 * pageH;
+    }
+    if (crossesParts && splitY !== null && splitY > ty1 && splitY < ty2) {
+      // Two paths: ty1 → splitY (upper part colour), splitY → ty2
+      // (lower part colour).
+      const segs: { dStr: string; accent: string; tag: string }[] = [
+        { dStr: `M ${CENTER_X} ${ty1} L ${CENTER_X} ${splitY}`, accent: partColor(upperLayer.partId), tag: 'top' },
+        { dStr: `M ${CENTER_X} ${splitY} L ${CENTER_X} ${ty2}`, accent: partColor(lowerLayer.partId), tag: 'bot' },
+      ];
+      for (const s of segs) {
+        const dStart = s.tag === 'top' ? ty1 : splitY;
+        const dEnd = s.tag === 'top' ? splitY : ty2;
+        const yMidSeg = (dStart + dEnd) / 2;
+        const yPhaseSeg = totalH > 0 ? 1 - yMidSeg / totalH : 0;
+        elements.push(
+          <EnergyPath
+            key={`trunk-${upperIdx}-${lowerIdx}-${s.tag}`}
+            d={s.dStr}
+            stroke={stroke}
+            strokeWidth={strokeWidth}
+            traversed={traversed}
+            accent={s.accent}
+            yPhase={yPhaseSeg}
+            flowTime={flowTime}
+          />,
+        );
+      }
+    } else {
+      const accent = partColor(lowerLayer.partId);
+      const d = `M ${CENTER_X} ${ty1} L ${CENTER_X} ${ty2}`;
+      const yMid = (ty1 + ty2) / 2;
+      const yPhase = totalH > 0 ? 1 - yMid / totalH : 0;
+      elements.push(
+        <EnergyPath
+          key={`trunk-${upperIdx}-${lowerIdx}`}
+          d={d}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+          traversed={traversed}
+          accent={accent}
+          yPhase={yPhase}
+          flowTime={flowTime}
+        />,
+      );
+    }
   }
 
   // ---- QM side branches: emerge from the PAIRED SM dot on the trunk
@@ -1212,6 +2002,12 @@ function buildPathSegments(
     const qmY = rowYs[i];
     const smY = smYByTrackId.get(layer.pairedSmId);
     if (smY === undefined) return; // paired SM not in tree (shouldn't happen)
+    // QM branch is lit only once the QM TRACK ITSELF has been
+    // listened — having the paired SM listened (which unlocks the
+    // branch) is not enough. Without this rule the trunk would read
+    // as "extending into" an unfinished QM the moment you completed
+    // its SM anchor, which is misleading: from the user's POV the
+    // QM is "ticked" (done) only when its own dot is filled.
     const traversed = !!listened[layer.track.id];
     const stroke = traversed ? litStroke : dimStroke;
     const strokeWidth = traversed ? 2.5 : 2;
@@ -1226,7 +2022,7 @@ function buildPathSegments(
     const cornerX = QM_X;
     const cornerY = smY;
     // M start → L (cornerX - cornerR, smY) → Q cornerX smY, cornerX (smY - cornerR) → L (cornerX, yQmEdge)
-    const cornerR = 22; // radius of the rounded turn — bigger = softer bend
+    const cornerR = BRANCH_CORNER_R; // shared with BranchParticle
     // Going UP if qmY < smY (typical, since QM sits ABOVE its paired SM
     // in display because we placed QM right after SM in journey order;
     // display is reversed → QM is above-in-display = smaller Y).
@@ -1294,7 +2090,20 @@ const styles = StyleSheet.create({
     ...typo.overline,
     color: colors.text,
     fontSize: 14,
-    letterSpacing: 2.8,
+    letterSpacing: 2.4,
+    textAlign: 'center',
+  },
+  // The "The Earth" / "The Sky" / "The Space" tagline sits on its own
+  // line below the part's official name (Mind-Body, etc.). Italic +
+  // mixed case (catalog-defined) makes it read as poetic complement
+  // rather than another section title.
+  partTagline: {
+    color: colors.textMuted,
+    fontSize: 13,
+    letterSpacing: 1.2,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 2,
   },
   // Short blurb from the catalog (volet.description) shown under the
   // part name so the user gets the part's intent at a glance without
@@ -1309,16 +2118,14 @@ const styles = StyleSheet.create({
     marginTop: 6,
     paddingHorizontal: spacing.sm,
   },
-  // Full-width banner running edge-to-edge across the screen. We
-  // dropped the solid bgTab fill so the per-part background (esp.
-  // the Earth video) can reach all the way to the bottom of the
-  // viewport without an opaque strip covering the last 40 px. A
-  // very-soft dark overlay (rgba 0,0,0,0.30) keeps the part name
-  // readable against bright frames of the video. The textShadow on
-  // typo.overline does the rest of the lifting.
+  // Full-width banner. Dark overlay bumped to rgba(0,0,0,0.65) so
+  // the lit trunk + particles don't show through behind the part
+  // name. expo-blur would be cleaner (real backdrop blur) but isn't
+  // installed; a dense semi-opaque fill achieves the same "isolated
+  // info strip" feel.
   partTag: {
     width: '100%',
-    backgroundColor: 'rgba(0,0,0,0.30)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     paddingHorizontal: spacing.lg,
     paddingVertical: 10,
     alignItems: 'center',
@@ -1359,5 +2166,86 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'stretch',
     justifyContent: 'center',
+  },
+  // Top-of-screen tagline header. Mirrors `fixedFooter` (absolute,
+  // full-width, pointer-events:none) but anchored to the top edge.
+  // Each HeaderPartLabel inside is an absolutely-positioned layer
+  // crossfading with its siblings on scroll.
+  fixedHeader: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    alignItems: 'center',
+  },
+  headerLabelLayer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  // Top-screen tagline — promoted to a hero-sized italic so it reads
+  // as the section's poetic name on first glance. Lighter colour than
+  // colors.text so it still sits "above" the tree without competing
+  // with the labels.
+  headerTagline: {
+    color: colors.text,
+    fontSize: 22,
+    lineHeight: 28,
+    letterSpacing: 1.6,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    opacity: 0.85,
+  },
+  // Scroll-hint chevrons — small text glyphs centred horizontally,
+  // wrapped in an absolutely-positioned band so they don't catch
+  // taps and don't reflow the layout when they appear / disappear.
+  scrollHintTopWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  scrollHintBottomWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  // Edge fades — absolutely positioned bands at the top and bottom
+  // of the screen, hosting a LinearGradient that obscures the tree's
+  // top / bottom rows so they don't collide with the part tagline
+  // (top) or the part-name banner (bottom).
+  treeEdgeTop: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+  },
+  treeEdgeBottom: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+  },
+  scrollHintUp: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollHintDown: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollHintGlyph: {
+    color: colors.text,
+    fontSize: 16,
+    lineHeight: 16,
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  // Static 180° rotation for the down chevron — applied on a plain
+  // View wrapper so it doesn't conflict with the inner Animated.View's
+  // translateY bob.
+  scrollHintRotate: {
+    transform: [{ rotate: '180deg' }],
   },
 });

@@ -14,6 +14,7 @@ const BG_FX_ENABLED = true;
 const BG_STATIC_MODE = Platform.OS !== 'web';
 import Animated, {
   useAnimatedStyle, useSharedValue, withTiming, Easing,
+  FadeIn, FadeOut,
 } from 'react-native-reanimated';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -181,11 +182,23 @@ export default function RootLayout() {
       ) : null}
       {/* Atmospheric shader behind everything — rendered at root
           level so it stays visible behind the audio Player overlay
-          (which fades the navigator below). Paused when off-home
-          or app-backgrounded for battery. */}
-      {shaderTheme === 'earth'
-        ? <VideoBackground paused={shaderPaused} />
-        : <ShaderBackground theme={shaderTheme} paused={shaderPaused} />}
+          (which fades the navigator below). Each option is keyed +
+          wrapped in an Animated.View with FadeIn / FadeOut so
+          switching between video and shader (or between shader
+          themes) crossfades instead of hard-swapping. The hard swap
+          used to expose a single frame of root-View bg before the
+          new layer painted, which read as a brief flash. */}
+      <Animated.View
+        key={shaderTheme}
+        style={StyleSheet.absoluteFill}
+        entering={FadeIn.duration(360)}
+        exiting={FadeOut.duration(360)}
+        pointerEvents="none"
+      >
+        {shaderTheme === 'earth'
+          ? <VideoBackground paused={shaderPaused} />
+          : <ShaderBackground theme={shaderTheme} paused={shaderPaused} />}
+      </Animated.View>
       <Animated.View style={[{ flex: 1 }, stackFadeStyle]} pointerEvents={playerOpen ? 'none' : 'auto'}>
       <ThemeProvider value={TransparentNavTheme}>
       <Stack
@@ -236,7 +249,22 @@ export default function RootLayout() {
         <Stack.Screen name="silent-mind/[id]" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
         <Stack.Screen name="qm/[id]" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
         <Stack.Screen name="qm-training" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
-        <Stack.Screen name="silent-mind-tree" options={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }} />
+        {/* Tree screen entry — overrides the global slide_from_right
+            with a fade. The SM tab's diagram + Enter button reads as
+            a "preview" of the tree, so a slide-in felt like jumping
+            sideways into a new context. A fade lets the diagram
+            visually dissolve into the live tree at the same spot.
+            Same `slide_from_right` on the way back (default), which
+            preserves the swipe-right back gesture. */}
+        <Stack.Screen
+          name="silent-mind-tree"
+          options={{
+            headerShown: false,
+            contentStyle: { backgroundColor: 'transparent' },
+            animation: 'fade',
+            animationDuration: 320,
+          }}
+        />
         <Stack.Screen name="news/[id]" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
         <Stack.Screen name="video/[id]" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
       </Stack>

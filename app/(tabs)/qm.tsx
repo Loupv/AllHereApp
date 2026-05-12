@@ -55,7 +55,11 @@ const BREAK_OPTIONS: { seconds: number; label: string }[] = [
   { seconds: 60, label: '1 min' },
 ];
 
-const PRE_ROUND_SECONDS = 3;
+// 5 s pre-round countdown gives users a longer settle-in moment before
+// the first bell — the previous 3 s felt rushed once we added the
+// pre-bell breathing intent. Adjust here only; the rest of the QM
+// timer chain reads from this constant.
+const PRE_ROUND_SECONDS = 5;
 const TICK_SOURCE = require('../../assets/audio/tick.mp3');
 
 const fmtMMSS = (totalSeconds: number) => {
@@ -323,7 +327,7 @@ export default function QMScreen() {
                       : inBreakCountdown
                         ? 'next round in…'
                         : phase === 'break'
-                          ? 'breathing break'
+                          ? ''
                           : `${roundLengthMin} min round`}
                 </Text>
               </View>
@@ -339,7 +343,11 @@ export default function QMScreen() {
                       vertical position. The bell + duration drive
                       those phases on their own. */}
                   {phase === 'break' ? (
-                    <Pressable onPress={skipPhase} hitSlop={10} style={styles.skipBtn}>
+                    <Pressable
+                      onPress={skipPhase}
+                      hitSlop={10}
+                      style={[styles.skipBtn, styles.skipBtnBreakOffset]}
+                    >
                       <Text style={[styles.skipBtnText, { color: colors.accentAlt }]}>
                         Skip break →
                       </Text>
@@ -864,6 +872,10 @@ const styles = StyleSheet.create({
 
   controlsStack: { alignItems: 'center', marginTop: spacing.lg, gap: spacing.md },
   skipBtn: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  // Extra top breathing room when the Skip-break button sits just
+  // below the play CircleButton during a break — without it the
+  // overline text sat flush against the ring and read as one block.
+  skipBtnBreakOffset: { marginTop: spacing.xl },
   skipBtnText: { ...type.overline, fontSize: 11, letterSpacing: 1.4 },
 
   donePill: {

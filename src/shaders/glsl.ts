@@ -126,13 +126,20 @@ void main() {
   float b2 = mod(uTime + 6.3,  416.0);
   vec2 m1 = centre + vec2(cos(uTime * 0.0050 + 3.2),  sin(uTime * 0.0060 + 0.9))  * 0.28;
   vec2 m2 = centre + vec2(cos(uTime * 0.0040 + 4.8),  sin(uTime * 0.0048 + 2.4))  * 0.20;
-  float microRipples = ripple(p, m1, b1, 312.0, 0.165, 0.0033, 65.0)
-                     + ripple(p, m2, b2, 416.0, 0.125, 0.0020, 80.0);
+  // High-k wave numbers softened (65/80 → 38/48) so the micro-ripples
+  // read as gentle wavelets instead of a busy crackle on the surface.
+  float microRipples = ripple(p, m1, b1, 312.0, 0.165, 0.0033, 38.0)
+                     + ripple(p, m2, b2, 416.0, 0.125, 0.0020, 48.0);
 
-  float ripples = macroRipples * (1.0 + microRipples * 0.7) + microRipples * 0.35;
+  // Reduce the micro contribution into the macro carrier so the
+  // overall ripple field has less HF energy.
+  float ripples = macroRipples * (1.0 + microRipples * 0.4) + microRipples * 0.18;
 
-  float shimmer = fbm(p * 14.0 + ripples * 0.6 + uTime * 0.0025);
-  shimmer = smoothstep(0.45, 0.80, shimmer);
+  // Coarser shimmer (14 → 7) — same energy, lower spatial frequency,
+  // less "noisy" surface. Threshold tightened so only the clearest
+  // peaks register, leaving the rest of the surface smoother.
+  float shimmer = fbm(p * 7.0 + ripples * 0.6 + uTime * 0.0025);
+  shimmer = smoothstep(0.55, 0.85, shimmer);
 
   float caustics = fbm(p * 2.6 + uTime * 0.00075);
 
@@ -155,9 +162,10 @@ void main() {
   // Ripple body — crests lift more in blue than green/red so the
   // wave tops glow with a watery sheen.
   col += vec3(0.05, 0.10, 0.18) * ripples;
-  // Specular peaks where shimmer + ripple crests align. Boosted
-  // factor so highlights register against the mid blue.
-  col = mix(col, light, shimmer * smoothstep(0.05, 0.20, ripples) * 1.0);
+  // Specular peaks where shimmer + ripple crests align. Factor
+  // dialled back (1.0 → 0.55) so the sparkle reads as occasional
+  // glints rather than a high-frequency haze across the whole pond.
+  col = mix(col, light, shimmer * smoothstep(0.05, 0.20, ripples) * 0.55);
 
   // Outer vignette to anchor the page edges back to navy.
   float vig = 1.0 - smoothstep(0.55, 1.20, fromCentre * 1.6);

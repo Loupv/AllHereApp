@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Pressable, Text, View, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle,
-  withRepeat, withTiming, Easing,
+  withRepeat, withTiming, withSequence, withDelay, Easing,
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { colors, type } from '../theme';
@@ -56,6 +56,9 @@ export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, siz
   const breath = useSharedValue(0);
   const glowPulse = useSharedValue(0);
   const sway = useSharedValue(0);
+  // Expanding ripple ring (0..1 ramp). Same shape as SM tree
+  // CircleNode.ripple so the rhythm matches across the app.
+  const ripple = useSharedValue(0);
 
   // Mode masks — fade animations in/out smoothly when the mode changes
   // rather than snapping. `pre` runs full intensity, `playing` runs
@@ -63,6 +66,9 @@ export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, siz
   const breathActive = useSharedValue(0);
   const glowActive   = useSharedValue(0);
   const swayActive   = useSharedValue(0);
+  // Ripple visibility — runs only in `pre` (waiting-for-tap) mode.
+  // Other modes fade it out smoothly via the rippleActive mask.
+  const rippleActive = useSharedValue(0);
 
   // Voice envelope — caller passes a raw peak (0..1), we damp toward it
   // here so the button doesn't twitch on every status tick. Only applies
@@ -97,6 +103,20 @@ export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, siz
       withTiming(1, { duration: 9000, easing: Easing.inOut(Easing.sin) }),
       -1, true,
     );
+    // Expanding ripple ring — same rhythm as the SM tree CircleNode's
+    // ripple so the Start play button reads as part of the same
+    // family of "available, tap me" cues. Cycle: invisible reset (1 ms)
+    // → expand 0→1 over 2800 ms (ring grows + fades) → 2 s hold so
+    // emanations feel like deliberate exhales rather than a continuous
+    // chain.
+    ripple.value = withRepeat(
+      withSequence(
+        withTiming(0, { duration: 1 }),
+        withTiming(1, { duration: 2800, easing: Easing.out(Easing.quad) }),
+        withDelay(2000, withTiming(1, { duration: 1 })),
+      ),
+      -1, false,
+    );
   }, []);
 
   useEffect(() => {
@@ -109,6 +129,7 @@ export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, siz
     glowActive.value   = withTiming(mode === 'break' ? 0 : intensity > 0 ? 1 : 0.6, { duration: 500 });
     swayActive.value   = withTiming(mode === 'pre' ? 1 : 0, { duration: 500 });
     voiceActive.value  = withTiming(mode === 'playing' ? 1 : 0, { duration: 500 });
+    rippleActive.value = withTiming(mode === 'pre' ? 1 : 0, { duration: 500 });
   }, [mode]);
 
   // Damp incoming voice samples — peaks are ~50 ms-resolved (see
@@ -164,6 +185,19 @@ export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, siz
       }],
     };
   });
+  // Expanding ripple ring style — scale 1 → 1.4, opacity 0.40 → 0,
+  // following the `ripple` 0..1 ramp. Dialled back from the SM tree's
+  // intensity because the Start ring is much larger (a strong ripple
+  // on a 100+ px circle dominates the screen). Gated by `rippleActive`
+  // so it only shows in `pre` mode.
+  const rippleStyle = useAnimatedStyle(() => {
+    const r = ripple.value;
+    return {
+      opacity: Math.max(0, 0.40 * (1 - r)) * rippleActive.value,
+      transform: [{ scale: 1 + 0.4 * r }],
+    };
+  });
+
   const glyphStyle = useAnimatedStyle(() => ({
     transform: [
       {
@@ -207,6 +241,23 @@ export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, siz
             cy={size / 2}
             r={innerR - stroke * 0.75}
             fill={`url(#${gradId})`}
+          />
+        </Svg>
+      </Animated.View>
+
+      {/* Expanding ripple ring — same emanation rhythm as the SM
+          tree's CircleNode. Sits BEHIND the inner ring so the
+          ring crisply outlines the button while a ghost copy of
+          itself drifts outward and fades. */}
+      <Animated.View style={[StyleSheet.absoluteFill, styles.center, rippleStyle]} pointerEvents="none">
+        <Svg width={size} height={size}>
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={innerR}
+            stroke={accent}
+            strokeWidth={stroke * 1.2}
+            fill="transparent"
           />
         </Svg>
       </Animated.View>

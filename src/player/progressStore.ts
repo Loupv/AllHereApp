@@ -57,44 +57,47 @@ export function isTrackUnlocked(
   trackId: string,
   listened: Record<string, true>,
 ): boolean {
-  // Introduction tracks: always unlocked, no internal gate.
-  if (introAudios.some(t => t.id === trackId)) return true;
+  // Strict-sequential SM journey: only Welcome (intro-1) is unlocked
+  // by default; every other SM unlocks once the PREVIOUS SM in
+  // catalog journey order has been listened. QMs unlock once their
+  // paired SM has been listened (catalog QM_TO_SM_PAIRING table).
+  // Quick-meditation pills on the Start screen (home-1min, etc.)
+  // are not in the journey at all and stay permissive — caller
+  // shouldn't be asking us about them, but if they do we return
+  // true rather than blocking access.
+  //
+  // The previous logic had per-part cross-gates and "intros are
+  // always free" — the user simplified to a single sequential rule
+  // so first-launch reads as one clear next step (= Welcome) instead
+  // of the whole intro + p1-1 cluster offered at once.
 
-  // Look the track up in any SM volet — first as a SM track in
-  // `tracks`, then as a QM track in `qmTracks` (which is what the
-  // QM volets mirror). The volet that owns the track defines its
-  // unlock chain.
+  // Build the SM journey order: catalog order across every volet,
+  // skipping coming-soon. intro-1 lives at index 0.
+  const smJourney: string[] = [];
   for (const v of silentMindVolets) {
-    if (v.id === 'intro') continue;
-    const smList = v.tracks.filter(t => !t.comingSoon);
-    const smIdx = smList.findIndex(t => t.id === trackId);
-    if (smIdx >= 0) {
-      // Unlocked iff every previous SM track in this Part is listened.
-      // First SM track of a Part has nothing before it → always unlocked.
-      for (let i = 0; i < smIdx; i++) {
-        if (!listened[smList[i].id]) return false;
-      }
-      return true;
-    }
-    const qmList = (v.qmTracks ?? []).filter(t => !t.comingSoon);
-    const qmTrack = qmList.find(t => t.id === trackId);
-    if (qmTrack) {
-      const pairedSmId = QM_TO_SM_PAIRING[qmTrack.id];
-      // No paired SM declared → orphan QM, treat as unlocked.
-      if (!pairedSmId) return true;
-      return isTrackUnlocked(pairedSmId, listened);
+    for (const t of v.tracks) {
+      if (t.comingSoon) continue;
+      smJourney.push(t.id);
     }
   }
+  const smIdx = smJourney.indexOf(trackId);
+  if (smIdx >= 0) {
+    if (smIdx === 0) return true; // Welcome — always unlocked
+    return !!listened[smJourney[smIdx - 1]];
+  }
 
-  // Some QM volets aren't perfectly mirrored from SM (Part 3 is locked
-  // with its own coming-soon list). Resolve those via the qmVolets
-  // table directly — using the same explicit pairing.
+  // QM tracks — both the SM-mirrored qmTracks and the standalone
+  // qmVolets resolve via QM_TO_SM_PAIRING. The QM is unlocked once
+  // its paired SM has been listened.
+  const pairedSmId = QM_TO_SM_PAIRING[trackId];
+  if (pairedSmId !== undefined) {
+    return !!listened[pairedSmId];
+  }
+
+  // Track exists in qmVolets but has no pairing declared → orphan,
+  // treat as unlocked.
   for (const v of qmVolets) {
-    const qmTrack = v.tracks.find(t => t.id === trackId);
-    if (!qmTrack) continue;
-    const pairedSmId = QM_TO_SM_PAIRING[qmTrack.id];
-    if (!pairedSmId) return true;
-    return isTrackUnlocked(pairedSmId, listened);
+    if (v.tracks.some(t => t.id === trackId)) return true;
   }
 
   // Unknown id (Start screen quick-meditation pills, etc.) — be

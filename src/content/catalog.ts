@@ -95,17 +95,20 @@ export function trackLocation(
 
 /**
  * Display duration for a track:
- * - explicit durationHint wins (e.g. "20:54" or "11 min")
- * - otherwise derive from a QM rounds config: rounds × round length + breaks
+ * - QM rounds config wins for rounds-based tracks: shown as
+ *   "N × M min" (rounds × per-round length). The total-with-breaks
+ *   number was less informative than the format itself — users
+ *   plan by "I have 18 minutes" rather than "I want a 12-min run
+ *   of 3-min rounds".
+ * - explicit durationHint otherwise (e.g. "20:54" or "11 min")
  * - else undefined (no pill shown)
  */
 export function trackDuration(t: AudioTrack): string | undefined {
-  if (t.durationHint) return t.durationHint;
   const r = t.rounds;
   if (r) {
-    const totalMin = r.max * r.roundLengthMinutes + (r.max - 1);
-    return `${totalMin} min`;
+    return `${r.max} × ${r.roundLengthMinutes} min`;
   }
+  if (t.durationHint) return t.durationHint;
   return undefined;
 }
 
@@ -245,7 +248,7 @@ export const silentMindVolets: Volet[] = [
     title: 'Part 2',
     subtitle: 'Stability & Equanimity',
     tagline: 'The Sky',
-    description: 'Transition beyond breath',
+    description: 'Beyond the Body and Breath',
     image: require('../../assets/images/hero/sky.jpg'),
     tracks: [
       {
@@ -284,7 +287,7 @@ export const silentMindVolets: Volet[] = [
     title: 'Part 3',
     subtitle: 'Towards Silence',
     tagline: 'The Space',
-    description: 'Transition from air to emptiness.',
+    description: 'In the momentum of Emptiness',
     image: require('../../assets/images/hero/space.jpg'),
     tracks: [
       {
@@ -292,10 +295,22 @@ export const silentMindVolets: Volet[] = [
         durationHint: '20:58',
         description: 'Training the mind on the presence of emptiness, within and without.',
       },
-      { id: 'p3-2', title: 'The Dark Practice & Vertical Axis', comingSoon: true },
-      { id: 'p3-3', title: 'The Light Practice', comingSoon: true },
-      { id: 'p3-4', title: 'The Light & Dark Practice', comingSoon: true },
-      { id: 'p3-5', title: 'In the Black Hall', comingSoon: true },
+      {
+        id: 'p3-2', title: 'The Dark Practice & Vertical Axis', comingSoon: true,
+        description: 'Dark signifies the depth of emptiness, where even light does not exist. Vertical axis trains embodiment.',
+      },
+      {
+        id: 'p3-3', title: 'The Light Practice', comingSoon: true,
+        description: 'Space objects — the Sun, the Moon and the Pole star — are essential objects in meditation traditions which train absorption and alertness of consciousness, while preventing drowsiness.',
+      },
+      {
+        id: 'p3-4', title: 'The Light & Dark Practice', comingSoon: true,
+        description: 'Wakeful alertness, in the depth of emptiness.',
+      },
+      {
+        id: 'p3-5', title: 'In the Black Hall', comingSoon: true,
+        description: 'In the dissolution of boundary between inner and outer. Beyond object, within and without.',
+      },
     ],
   },
 ];

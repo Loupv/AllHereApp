@@ -107,7 +107,12 @@ export function Player() {
   return (
     <Animated.View
       entering={FadeIn.duration(320)}
-      exiting={FadeOut.duration(260)}
+      // Slower exit (260 → 420 ms) so the Player keeps painting the
+      // screen until the navigator behind has had time to re-paint.
+      // Without this, end-of-audio transitions briefly revealed a
+      // light frame between the Player UI fading and the underlying
+      // screen catching up.
+      exiting={FadeOut.duration(420)}
       style={styles.overlay}
     >
       <PlayerInner />
@@ -1501,7 +1506,17 @@ const styles = StyleSheet.create({
   // Overlay is fully transparent — the seamless transition relies on
   // the root layout's gradient + EnergyColumn showing through. The
   // Player only paints its own UI on top of that shared backdrop.
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'transparent', zIndex: 80 },
+  // Slight navy tint on the overlay backdrop — when the Player
+  // fades out at the end of an audio, this ensures the see-through
+  // gap during the cross-fade reads as DARK NAVY (matches the app
+  // bg), never as a transient near-white frame that the underlying
+  // screen / shader transition can briefly expose. Low alpha so it
+  // doesn't visibly dim the Player UI during normal playback.
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,16,46,0.35)',
+    zIndex: 80,
+  },
   // Transparent so the absolutely-positioned AnimatedGradient (first
   // child) is visible. The outer `overlay` still carries `colors.bg` as
   // a fallback solid, and the gradient's own edge stops fade to near-
