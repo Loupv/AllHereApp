@@ -818,13 +818,13 @@ export default function SilentMindTreeScreen() {
               const topYClamped = Math.min(topY + PARTICLE_TOP_PAD, yBottom - 8);
               const yRange = yBottom - topYClamped;
               if (yRange <= 0) return null;
-              // 1 particle / 4 px — each particle is now rendered as
-              // core + halo (2 ellipses), so we cap a bit lower than
-              // the pre-halo version to keep the SVG tree manageable
-              // on long ranges. The halos overlap freely, so visual
-              // density actually goes UP despite the slightly lower
-              // count.
-              const PARTICLE_COUNT = Math.max(28, Math.min(240, Math.round(yRange / 4)));
+              // 1 particle / 6 px — each particle renders as core
+              // + halo (2 ellipses), so we cap conservatively at 120
+              // to keep the per-frame SVG cost low on long ranges.
+              // The phone was warming up running 480 animated SVG
+              // ellipses; halving the field is invisible visually but
+              // visible on the battery meter.
+              const PARTICLE_COUNT = Math.max(20, Math.min(120, Math.round(yRange / 6)));
               const trunkParticles = Array.from({ length: PARTICLE_COUNT }, (_, k) => {
                 const phase = k / PARTICLE_COUNT;
                 // Three independent deterministic seeds — opacity/size,
@@ -867,7 +867,7 @@ export default function SilentMindTreeScreen() {
                 if (l.kind === 'sm-row') smYById.set(l.track.id, rowYs[i]);
               }
               const branchParticles: React.ReactNode[] = [];
-              const BRANCH_PER_BRANCH = 10;
+              const BRANCH_PER_BRANCH = 6;
               layers.forEach((l, i) => {
                 if (l.kind !== 'qm-branch') return;
                 // Branch particles render only on QMs the user has

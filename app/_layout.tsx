@@ -81,7 +81,16 @@ export default function RootLayout() {
     const sub = AppState.addEventListener('change', s => setAppActive(s === 'active'));
     return () => sub.remove();
   }, []);
-  const shaderPaused = !appActive;
+  // `playerOpen` is also used below to fade the navigator tree —
+  // hoisting the read here so we can pass it into `shaderPaused`.
+  const playerOpen = usePlayerStore(s => s.isOpen);
+  // Pause the root shader when:
+  //  - app is backgrounded (battery)
+  //  - the Player overlay is open (it has its OWN backdrop, so the
+  //    root shader runs invisible behind it for nothing)
+  // The Player open case is the big saver — a 20-min meditation
+  // session is 20 min of free GPU cycles otherwise.
+  const shaderPaused = !appActive || playerOpen;
 
   // Configure expo-audio's session once at startup so the Player keeps
   // playing when the user locks the screen, and the session takes a
@@ -107,7 +116,7 @@ export default function RootLayout() {
   // dissolves together when the audio Player overlay opens, no
   // matter where the user tapped Play. Keeps the morph illusion
   // consistent across entry points.
-  const playerOpen = usePlayerStore(s => s.isOpen);
+  // `playerOpen` already read above (hoisted for shaderPaused).
   const stackOpacity = useSharedValue(playerOpen ? 0 : 1);
   useEffect(() => {
     stackOpacity.value = withTiming(playerOpen ? 0 : 1, {
