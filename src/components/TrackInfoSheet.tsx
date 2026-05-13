@@ -50,14 +50,19 @@ export function TrackInfoSheet({
   // (locked tracks can't be played, no point caching the audio yet).
   const download = useTrackDownload(track ?? undefined);
   const showDownload = !!track && !locked;
+  // Plain ASCII labels — the earlier ⬇ / ✓ glyphs were rendering as
+  // a "barred play" symbol in some font fallback paths on iOS, and
+  // the long "Downloading… NN%" string stretched the pill noticeably
+  // wider than the Play CTA above it. Short, neutral labels keep the
+  // pill consistent across states.
   const downloadLabel =
     download.state === 'cached'
-      ? '✓ Saved offline'
+      ? 'Saved offline'
       : download.state === 'downloading'
-        ? `Downloading… ${Math.round(download.progress)}%`
+        ? `${Math.round(download.progress)}%`
         : download.state === 'error'
-          ? 'Retry download'
-          : '⬇ Save offline';
+          ? 'Retry'
+          : 'Save offline';
 
   // Vertical-swipe-down dismiss — same UX as AccountSheet. Activates
   // only on a clearly downward drag so the inner ScrollView can scroll
@@ -125,11 +130,15 @@ export function TrackInfoSheet({
                       {showDownload ? (
                         <Pressable
                           onPress={
-                            download.state === 'downloading'
+                            download.state === 'downloading' ||
+                            download.state === 'cached'
                               ? undefined
                               : () => { download.download(); }
                           }
-                          disabled={download.state === 'downloading'}
+                          disabled={
+                            download.state === 'downloading' ||
+                            download.state === 'cached'
+                          }
                           style={({ pressed }) => [
                             styles.downloadBtn,
                             pressed && { opacity: 0.7 },
