@@ -46,3 +46,7 @@
 - [ ] Persist user preferences (rounds default, break seconds) per track.
 - [ ] Settings screen (theme, notifications, language).
 - [ ] Offline caching of audio files.
+
+## Audit
+- [ ] Verify every Player entry point has a working Close affordance (Start big play, SM tree dot, SM tree bottom-sheet Play, QM Guided list, QM Unguided preset, etc.). The Close X in the top corner should be reachable from every state the player can land in — including 'break', 'error', 'ended'.
+- [ ] Add a pre-roll countdown (3 s) to the Start screen's 1 min / 3 min / 3 × 3 min quick meditations, mirroring the `PRE_ROUND_SECONDS = 5` countdown used at the start of every QM session. Today they jump straight into audio, which feels jarring versus the QM flow.
