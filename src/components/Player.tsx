@@ -9,7 +9,7 @@ import { Asset } from 'expo-asset';
 import { useRouter } from 'expo-router';
 import { useLayout, CONTENT_MAX_WIDTH as PLAYER_CONTENT_MAX_WIDTH } from '../hooks/useLayout';
 import { usePlayerStore } from '../player/store';
-import { useProgress } from '../player/progressStore';
+import { useProgress, isTrackUnlocked } from '../player/progressStore';
 import { loadTranscript } from '../content/loadTranscript';
 import { findCueIndex, TranscriptCue } from '../content/transcript';
 import { trackProgram, trackLocation } from '../content/catalog';
@@ -212,15 +212,21 @@ function PlayerInner() {
   const { height: winH } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { track, close, playlist, index, playNext, playPrev } = usePlayerStore();
-  const hasNext = index >= 0 && index < playlist.length - 1;
-  const hasPrev = index > 0;
   const markListened = useProgress(s => s.markListened);
-  // Subscribe to the listened map directly (not the `isListened` getter
-  // — Zustand re-runs selectors on every store change, but a function
-  // reference doesn't trigger React re-renders) so the "Already
-  // listened" pill flips off the moment a fresh track is opened and
-  // back on once the current track crosses the 80 % mark.
   const listened = useProgress(s => s.listened);
+  // hasNext also requires the next track to be UNLOCKED — without
+  // this, the › button on a SM-tree-launched session would happily
+  // jump into a track the user hasn't earned access to yet, bypassing
+  // the journey gate that the rest of the UI enforces.
+  const hasNext =
+    index >= 0 &&
+    index < playlist.length - 1 &&
+    isTrackUnlocked(playlist[index + 1].id, listened);
+  const hasPrev = index > 0;
+  // `listened` subscribed earlier (above) — it does double duty: gates
+  // hasNext, and drives the "Already listened" pill that flips off the
+  // moment a fresh track is opened and back on once the current track
+  // crosses the 80 % mark.
 
   const [selectedRounds, setSelectedRounds] = useState(track?.rounds?.max ?? 1);
   const [includeIntro, setIncludeIntro] = useState(!!track?.rounds?.introSource);

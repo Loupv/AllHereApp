@@ -5,6 +5,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import type { AudioTrack } from '../content/catalog';
 import { trackDuration } from '../content/catalog';
+import { useTrackDownload } from '../hooks/useTrackDownload';
 import { colors, radius, spacing, type as typo } from '../theme';
 
 /**
@@ -43,6 +44,20 @@ export function TrackInfoSheet({
 }: Props) {
   const insets = useSafeAreaInsets();
   const duration = track ? trackDuration(track) : null;
+  // Offline-download chip — same hook the ContentCard rows used to
+  // wire. Hidden when there's nothing remote to download (e.g. tracks
+  // bundled directly into the app) and when the track is locked
+  // (locked tracks can't be played, no point caching the audio yet).
+  const download = useTrackDownload(track ?? undefined);
+  const showDownload = !!track && !locked;
+  const downloadLabel =
+    download.state === 'cached'
+      ? '✓ Saved offline'
+      : download.state === 'downloading'
+        ? `Downloading… ${Math.round(download.progress)}%`
+        : download.state === 'error'
+          ? 'Retry download'
+          : '⬇ Save offline';
 
   // Vertical-swipe-down dismiss — same UX as AccountSheet. Activates
   // only on a clearly downward drag so the inner ScrollView can scroll
@@ -95,17 +110,38 @@ export function TrackInfoSheet({
                       LOCKED — finish the previous track to unlock
                     </Text>
                   ) : (
-                    <Pressable
-                      onPress={onPlay}
-                      style={({ pressed }) => [
-                        styles.playBtn,
-                        { borderColor: accent, backgroundColor: pressed ? `${accent}25` : `${accent}15` },
-                      ]}
-                    >
-                      <Text style={[styles.playBtnText, { color: accent }]}>
-                        ▶  Play
-                      </Text>
-                    </Pressable>
+                    <>
+                      <Pressable
+                        onPress={onPlay}
+                        style={({ pressed }) => [
+                          styles.playBtn,
+                          { borderColor: accent, backgroundColor: pressed ? `${accent}25` : `${accent}15` },
+                        ]}
+                      >
+                        <Text style={[styles.playBtnText, { color: accent }]}>
+                          ▶  Play
+                        </Text>
+                      </Pressable>
+                      {showDownload ? (
+                        <Pressable
+                          onPress={
+                            download.state === 'downloading'
+                              ? undefined
+                              : () => { download.download(); }
+                          }
+                          disabled={download.state === 'downloading'}
+                          style={({ pressed }) => [
+                            styles.downloadBtn,
+                            pressed && { opacity: 0.7 },
+                            download.state === 'cached' && styles.downloadBtnCached,
+                          ]}
+                        >
+                          <Text style={styles.downloadBtnText}>
+                            {downloadLabel}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </>
                   )}
                 </>
               ) : null}
@@ -186,5 +222,27 @@ const styles = StyleSheet.create({
     ...typo.overline,
     fontSize: 13,
     letterSpacing: 1.8,
+  },
+  // Secondary CTA below the Play pill — keeps the offline-download
+  // affordance one level down visually so Play stays primary. Cached
+  // state gets a softer, "already done" treatment.
+  downloadBtn: {
+    alignSelf: 'center',
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  downloadBtnCached: {
+    borderColor: 'rgba(255,255,255,0.10)',
+    opacity: 0.7,
+  },
+  downloadBtnText: {
+    ...typo.overline,
+    color: colors.textMuted,
+    fontSize: 11,
+    letterSpacing: 1.4,
   },
 });

@@ -995,26 +995,10 @@ export default function SilentMindTreeScreen() {
         />
       </View>
 
-      {/* Top header — the italic tagline ("The Earth" / "The Sky" /
-          "The Space") for the currently-visible part. Sits just below
-          the safe-area inset, crossfades between pages on the same
-          scroll-Y mapping the footer uses. The Introduction page has
-          no tagline, so the layer is empty there (label component
-          returns null). */}
-      <View
-        pointerEvents="none"
-        style={[styles.fixedHeader, { paddingTop: insets.top + 48 }]}
-      >
-        {pageOrder.map((partId, idx) => (
-          <HeaderPartLabel
-            key={`hdr-${partId}`}
-            partId={partId}
-            pageIdx={idx}
-            scrollY={scrollY}
-            pageH={pageH}
-          />
-        ))}
-      </View>
+      {/* The italic tagline "The Earth / Sky / Space" used to live up
+          here, but on iPhones with a notch it landed right over the
+          speaker/Dynamic Island. Moved back into the footer banner,
+          between the part title and description. */}
 
       {/* Scroll affordances — small pulsing chevrons hinting at the
           adjacent pages. The up chevron vanishes when the user is on
@@ -1027,7 +1011,7 @@ export default function SilentMindTreeScreen() {
       {currentPageIdx > 0 ? (
         <View
           pointerEvents="box-none"
-          style={[styles.scrollHintTopWrap, { top: insets.top + 14 }]}
+          style={[styles.scrollHintTopWrap, { top: insets.top + 24 }]}
         >
           <ScrollHint
             direction="up"
@@ -1044,7 +1028,7 @@ export default function SilentMindTreeScreen() {
       pageOrder[currentPageIdx] !== 'intro' ? (
         <View
           pointerEvents="box-none"
-          style={[styles.scrollHintBottomWrap, { bottom: insets.bottom + 132 }]}
+          style={[styles.scrollHintBottomWrap, { bottom: insets.bottom + 168 }]}
         >
           <ScrollHint
             direction="down"
@@ -1131,17 +1115,15 @@ function FooterPartLabel({
   });
   const description = partDescription(partId);
   const labelParts = partLabelParts(partId);
-  // Intro page: "Introduction" already appears at the TOP (via
-  // HeaderPartLabel), so suppress the title here to avoid duplication.
-  // The description still shows so the user gets the prologue blurb
-  // in the same footer band as the other parts.
-  const showTitle = partId !== 'intro';
   return (
     <Animated.View style={[styles.footerLabelLayer, animStyle]}>
       <View style={styles.partTag}>
-        {showTitle ? (
-          <Text style={styles.partName} numberOfLines={1}>
-            {labelParts.title}
+        <Text style={styles.partName} numberOfLines={1}>
+          {labelParts.title}
+        </Text>
+        {labelParts.tagline ? (
+          <Text style={styles.partTagline} numberOfLines={1}>
+            {labelParts.tagline}
           </Text>
         ) : null}
         {description ? (
@@ -2145,15 +2127,12 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   fixedFooterLabelArea: {
-    // Full-width so the absolutely-positioned crossfade layers inside
-    // (left:0 / right:0) actually have a non-zero width to stretch
-    // into.
     width: '100%',
-    // Bumped to hold the title (37 px) + the description block
-    // (up to 3 lines × 16 lineHeight + 6 marginTop ≈ 54 px) + a
-    // bit of vertical padding. Half-overlap onto the dashed line
-    // so the tag's background cuts it cleanly.
-    height: 100,
+    // Holds title (≈17 px line) + italic tagline (≈16 px line) +
+    // description block (3 lines × 16 lineHeight + 6 marginTop ≈ 54 px)
+    // + paddingVertical inside `.partTag` (10 × 2). Half-overlap onto
+    // the dashed line so the tag's background cuts it cleanly.
+    height: 128,
     marginTop: -19,
     justifyContent: 'flex-start',
   },
