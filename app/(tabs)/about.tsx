@@ -65,8 +65,11 @@ export default function AboutTabScreen() {
   // frame height tracks the width so the image shows in full with
   // no cropping.
   const heroW = Math.min(screenW, columnMax);
-  const heroSrcAspect = 1070 / 1080; // ≈ 0.99 (aboutbanner.png) — square
-  const heroFrameH = heroW;
+  // aboutbanner.png is 1070×1080 (≈ square). Render at full column
+  // width and let the image's natural square-ish ratio drive the
+  // height — no fancy wrapper math, no absoluteFill quirks.
+  const heroSrcAspect = 1080 / 1070;
+  const heroFrameH = Math.round(heroW * heroSrcAspect);
   return (
     <Background color={colors.bgTab}>
       <SwipeTabs current="about">
@@ -81,30 +84,33 @@ export default function AboutTabScreen() {
               <Image> and use the bottom-anchor trick: full width,
               source aspect ratio, absolute bottom: 0 inside an
               overflow:hidden wrapper. */}
-          <View
-            style={[
-              styles.heroWrap,
-              { width: heroW, height: heroFrameH },
-              Platform.OS === 'web' && {
-                // @ts-expect-error — web-only CSS props.
-                backgroundImage: `url(${HERO_URI})`,
-                backgroundSize: 'contain',
-                backgroundPosition: '50% 50%',
-                backgroundRepeat: 'no-repeat',
-              },
-            ]}
-          >
-            {Platform.OS !== 'web' ? (
-              // Native: full-frame Image with `contain` so the whole
-              // banner is visible (no crop). Wrapper is square so the
-              // banner sits centred in its own band.
-              <Image
-                source={HERO_SOURCE}
-                style={StyleSheet.absoluteFillObject}
-                resizeMode="contain"
-              />
-            ) : null}
-          </View>
+          {Platform.OS !== 'web' ? (
+            // Native: Image rendered with EXPLICIT pixel dimensions —
+            // absoluteFillObject inside a wrapper was leaving iOS RN's
+            // <Image> at its natural source size (1070 px) clipped to
+            // the top-left of the smaller wrapper, which is what we
+            // were seeing on device. Concrete width/height + contain
+            // is unambiguous to Yoga and bypasses the bug.
+            <Image
+              source={HERO_SOURCE}
+              style={{ width: heroW, height: heroFrameH, alignSelf: 'center' }}
+              resizeMode="contain"
+            />
+          ) : (
+            <View
+              style={[
+                styles.heroWrap,
+                { width: heroW, height: heroFrameH },
+                {
+                  // @ts-expect-error — web-only CSS props.
+                  backgroundImage: `url(${HERO_URI})`,
+                  backgroundSize: 'contain',
+                  backgroundPosition: '50% 50%',
+                  backgroundRepeat: 'no-repeat',
+                },
+              ]}
+            />
+          )}
           <View style={styles.body}>
             {/* All Here wordmark — anchors the section to the brand
                 and bridges the hero pic to the title block below. The

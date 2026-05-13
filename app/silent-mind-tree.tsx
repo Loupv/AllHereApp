@@ -1420,19 +1420,28 @@ function CircleNode({
         {done ? (
           <Text style={{ color: '#fff', fontSize: radius * 0.85, fontWeight: '700' }}>✓</Text>
         ) : playable ? (
-          // Play triangle for tappable tracks — slight right offset so
-          // the visual centre of the triangle lands on the dot's centre.
-          <Text
+          // CSS-triangle pure geometry — the Text-based ▶ glyph
+          // carried an inherent baseline / leading offset that left
+          // the triangle visually low in the dot. Borders give us
+          // exact dimensions and a perfect optical centre.
+          // Width = radius * 0.5 for the play arrow's horizontal
+          // reach, height = radius * 0.7 (top+bottom borders).
+          // marginLeft shifts the triangle right by 1/6 of its width
+          // so its centroid (1/3 from the left edge of a triangle)
+          // lands on the dot's centre.
+          <View
             style={{
-              color: accent,
-              fontSize: radius * 0.95,
-              lineHeight: radius * 0.95,
-              marginLeft: radius * 0.2,
-              fontWeight: '700',
+              width: 0,
+              height: 0,
+              borderTopWidth: radius * 0.35,
+              borderTopColor: 'transparent',
+              borderBottomWidth: radius * 0.35,
+              borderBottomColor: 'transparent',
+              borderLeftWidth: radius * 0.55,
+              borderLeftColor: accent,
+              marginLeft: radius * 0.18,
             }}
-          >
-            ▶
-          </Text>
+          />
         ) : null}
       </Animated.View>
     </Pressable>

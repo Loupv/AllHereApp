@@ -127,7 +127,9 @@ export default function QMScreen() {
   const TOP_FLEX = Math.max(0.1, gapTop) / Math.max(1, usableH - playSize - gapTop);
 
   // ---- mode (guided / unguided) ----
-  const [mode, setMode] = useState<Mode>('unguided');
+  // Null = nothing picked yet; the QM tab opens on the two large
+  // mode cards, content reveals only after a tap.
+  const [mode, setMode] = useState<Mode | null>(null);
 
   // ---- audio cues (shared between countdown ticks + round bell) ----
   const bellSoundId = useSessionPrefs(s => s.bellSoundId);
@@ -402,12 +404,16 @@ export default function QMScreen() {
             accent={colors.accentAlt}
           />
 
-          <View style={{ alignItems: 'center', width: '100%', marginTop: spacing.md }}>
-            <ModeToggle mode={mode} onChange={setMode} />
+          <View style={{ width: '100%', marginTop: spacing.md }}>
+            <ModePicker mode={mode} onChange={setMode} />
           </View>
 
+          {/* Content area — only renders once a mode is picked. Before
+              that, only the two ModePicker cards are visible above.
+              `mode === null` keeps the page intentionally sparse so
+              the user makes a deliberate choice. */}
           <View style={{ flex: 1, alignItems: 'center', width: '100%', marginTop: spacing.xl }}>
-            {mode === 'unguided' ? (
+            {mode === null ? null : mode === 'unguided' ? (
               <View style={styles.presetBlock}>
                 <Text style={styles.pickerLabel}>Choose a format</Text>
                 <View style={styles.presetGrid}>
@@ -550,23 +556,49 @@ export default function QMScreen() {
 
 // ---------------------------------------------------------------------------
 
-function ModeToggle({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
+function ModePicker({
+  mode,
+  onChange,
+}: {
+  mode: Mode | null;
+  onChange: (m: Mode) => void;
+}) {
+  // Two stand-alone cards side by side. They aren't a segmented
+  // control anymore (= no pre-selected default) — the user has to
+  // actively pick one, and the content area below stays empty until
+  // a card is tapped. Tapped card shows an accent border + filled
+  // background; other card stays muted.
+  const items: { id: Mode; title: string; subtitle: string }[] = [
+    {
+      id: 'guided',
+      title: 'Guided',
+      subtitle: 'Audio session paired with an SM track',
+    },
+    {
+      id: 'unguided',
+      title: 'Unguided',
+      subtitle: 'Bell-only timer, your own format',
+    },
+  ];
   return (
-    <View style={styles.modeToggle}>
-      {(['guided', 'unguided'] as Mode[]).map(m => {
-        const active = m === mode;
+    <View style={styles.modePicker}>
+      {items.map(it => {
+        const active = it.id === mode;
         return (
           <Pressable
-            key={m}
-            onPress={() => onChange(m)}
+            key={it.id}
+            onPress={() => onChange(it.id)}
             style={({ pressed }) => [
-              styles.modeBtn,
-              active && styles.modeBtnActive,
-              pressed && { opacity: 0.85 },
+              styles.modeCard,
+              active && styles.modeCardActive,
+              pressed && { opacity: 0.88 },
             ]}
           >
-            <Text style={[styles.modeBtnText, active && styles.modeBtnTextActive]}>
-              {m === 'guided' ? 'Guided' : 'Unguided'}
+            <Text style={[styles.modeCardTitle, active && styles.modeCardTitleActive]}>
+              {it.title}
+            </Text>
+            <Text style={styles.modeCardSubtitle}>
+              {it.subtitle}
             </Text>
           </Pressable>
         );
@@ -665,32 +697,48 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1 },
   column: { width: '100%', alignSelf: 'center' },
 
-  modeToggle: {
+  // Two side-by-side cards. Inactive cards stay muted (subtle border
+  // + dim text); active card lights up with the QM teal accent and a
+  // faint fill so the user can see which mode is currently revealing
+  // content below.
+  modePicker: {
     flexDirection: 'row',
-    alignSelf: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: radius.pill,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.10)',
-    padding: 3,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
     marginTop: spacing.sm,
   },
-  modeBtn: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.pill,
+  modeCard: {
+    flex: 1,
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 96,
   },
-  modeBtnActive: {
-    backgroundColor: 'rgba(54,160,158,0.22)',
+  modeCardActive: {
+    borderColor: colors.accentAlt,
+    backgroundColor: 'rgba(54,160,158,0.12)',
   },
-  modeBtnText: {
+  modeCardTitle: {
     ...type.overline,
     color: colors.textDim,
-    fontSize: 11,
-    letterSpacing: 1.4,
+    fontSize: 13,
+    letterSpacing: 2,
+    marginBottom: 6,
   },
-  modeBtnTextActive: {
+  modeCardTitleActive: {
     color: colors.accentAlt,
+  },
+  modeCardSubtitle: {
+    ...type.caption,
+    color: colors.textMuted,
+    fontSize: 11,
+    lineHeight: 15,
+    textAlign: 'center',
   },
 
   presetBlock: {
