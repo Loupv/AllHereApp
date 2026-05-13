@@ -102,10 +102,12 @@ export function AtmosphereBackground({ theme, paused = false }: Props) {
       //   1. paused → skip the GL submit entirely (still keep
       //      the rAF loop alive so we can resume when the home
       //      screen comes back into focus, but no draw work).
-      //   2. 30 fps → only render every other rAF tick. The
-      //      visible motion in these shaders is slow enough that
-      //      30 fps is indistinguishable from 60 fps to the eye.
-      if (!pausedRef.current && (frameIdx & 1) === 0) {
+      //   2. 20 fps → render only every 3rd rAF tick (60→20).
+      //      The visible motion in these shaders is slow enough
+      //      that even 20 fps is indistinguishable from 60 fps to
+      //      the eye — meditation shaders move at ~0.005 cycles/s.
+      //      Was 30 fps; dropped a notch to cool the phone.
+      if (!pausedRef.current && frameIdx % 3 === 0) {
         gl.uniform1f(uTime, (Date.now() - start) / 1000);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         // expo-gl native needs `endFrameEXP`; web has it as a no-op.
