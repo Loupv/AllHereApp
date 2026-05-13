@@ -572,7 +572,7 @@ function ModePicker({
     {
       id: 'guided',
       title: 'Guided',
-      subtitle: 'Audio session paired with an SM track',
+      subtitle: 'Audio session paired with QM guidance',
     },
     {
       id: 'unguided',
