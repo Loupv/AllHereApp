@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import { useLayout, CONTENT_MAX_WIDTH as PLAYER_CONTENT_MAX_WIDTH } from '../hooks/useLayout';
 import { usePlayerStore } from '../player/store';
 import { useProgress, isTrackUnlocked } from '../player/progressStore';
+import { themeForJourneyPosition } from '../shaders';
 import { loadTranscript } from '../content/loadTranscript';
 import { findCueIndex, TranscriptCue } from '../content/transcript';
 import { trackProgram, trackLocation } from '../content/catalog';
@@ -1107,10 +1108,18 @@ function PlayerInner() {
     if (id.startsWith('p3-') || id.startsWith('qm3-')) return 'space';
     if (id.startsWith('p1-') || id.startsWith('qm1-')) return 'earth';
     // Quick Start-screen meditations (home-1min / home-3min / home-qm3)
-    // aren't part of the SM journey arc — they're entry points. Use
-    // the lake atmosphere (same as intros) so they read as a calm
-    // settle-in moment instead of a Part 1 session.
-    if (id.startsWith('home-')) return 'lake';
+    // inherit the user's CURRENT journey atmosphere — same theme the
+    // Start tab is showing in the background. A user who has
+    // unlocked Space shouldn't snap back to Lake just because they
+    // tapped a 3 min quickie; the atmosphere stays continuous.
+    if (id.startsWith('home-')) {
+      const t = themeForJourneyPosition(listened);
+      // The shared shader registry uses 'grass' as a synonym for
+      // 'earth' on this code path, but the Player only knows the
+      // four canonical themes — fold it back.
+      if (t === 'grass' || t === 'default') return 'earth';
+      return t;
+    }
     return 'lake';
   })();
 
