@@ -143,8 +143,7 @@ export type WhisperJsonSegment = {
 };
 export type WhisperJson = { segments: WhisperJsonSegment[] };
 
-export const parseWhisperJson = (raw: string): TranscriptCue[] => {
-  const data: WhisperJson = JSON.parse(raw);
+export const parseWhisperData = (data: WhisperJson): TranscriptCue[] => {
   const allWords: TranscriptWord[] = [];
   for (const seg of data.segments) {
     if (seg.words && seg.words.length) {
@@ -159,6 +158,9 @@ export const parseWhisperJson = (raw: string): TranscriptCue[] => {
   }
   return rebuildBySentence(applyCorrections(allWords));
 };
+
+export const parseWhisperJson = (raw: string): TranscriptCue[] =>
+  parseWhisperData(JSON.parse(raw) as WhisperJson);
 
 export const findCueIndex = (cues: TranscriptCue[], t: number): number => {
   for (let i = 0; i < cues.length; i++) {
