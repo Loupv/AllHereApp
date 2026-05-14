@@ -16,6 +16,14 @@ type OpenOptions = {
    * rainbow hue of the tapped dot into the Player.
    */
   accent?: string;
+  /**
+   * Number of seconds to count down on a settle-in screen before
+   * autoStart fires. Used by the Start screen quick-meditation pills
+   * to mirror the QM Training pre-round countdown UX. When set,
+   * `autoStart` is also implied (the user already tapped Play; we
+   * just want the pre-roll moment before audio starts).
+   */
+  preRollSeconds?: number;
 };
 
 type PlayerState = {
@@ -27,6 +35,8 @@ type PlayerState = {
   autoStart: boolean;
   /** Optional accent override — see OpenOptions.accent. null when default. */
   accentOverride: string | null;
+  /** Pre-roll countdown seconds — consumed once on Player mount. */
+  preRollSeconds: number;
   /**
    * Live "audio is currently playing" flag, mirrored from expo-audio's
    * status inside `Player`. Lives on the store so other parts of the
@@ -36,6 +46,7 @@ type PlayerState = {
   playing: boolean;
   open: (track: AudioTrack, playlist?: AudioTrack[], opts?: OpenOptions) => void;
   consumeAutoStart: () => boolean;
+  consumePreRoll: () => number;
   setPlaying: (p: boolean) => void;
   close: () => void;
   playNext: () => void;
@@ -57,17 +68,22 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   isOpen: true && false,
   autoStart: false,
   accentOverride: null,
+  preRollSeconds: 0,
   playing: false,
   open: (track, playlist, opts) => {
     const pl = playable(playlist && playlist.length ? playlist : [track]);
     const idx = Math.max(0, pl.findIndex((t) => t.id === track.id));
+    const preRoll = Math.max(0, Math.round(opts?.preRollSeconds ?? 0));
     set({
       track: pl[idx] ?? track,
       playlist: pl,
       index: idx,
       isOpen: true,
-      autoStart: !!opts?.autoStart,
+      // A preRoll implies autoStart — the user already pressed Play,
+      // we're just showing the settle-in moment first.
+      autoStart: !!opts?.autoStart || preRoll > 0,
       accentOverride: opts?.accent ?? null,
+      preRollSeconds: preRoll,
     });
   },
   consumeAutoStart: () => {
@@ -75,8 +91,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (v) set({ autoStart: false });
     return v;
   },
+  // One-shot read of the pre-roll seconds — cleared after read so
+  // subsequent track changes (round transitions, Next/Prev) don't
+  // re-arm the countdown.
+  consumePreRoll: () => {
+    const v = get().preRollSeconds;
+    if (v > 0) set({ preRollSeconds: 0 });
+    return v;
+  },
   setPlaying: (p) => set({ playing: p }),
-  close: () => set({ isOpen: false, autoStart: false, playing: false, accentOverride: null }),
+  close: () => set({ isOpen: false, autoStart: false, playing: false, accentOverride: null, preRollSeconds: 0 }),
   playNext: () => {
     const { playlist, index } = get();
     if (index < 0 || index >= playlist.length - 1) return;

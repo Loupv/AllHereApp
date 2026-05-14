@@ -246,9 +246,23 @@ function PlayerInner() {
   // Same idea for hasStarted: when autoStart is true at mount we want
   // the playback chain to engage immediately, not flash the pre-play
   // screen before flipping to true on next render.
-  const [hasStarted, setHasStarted] = useState<boolean>(() =>
-    usePlayerStore.getState().autoStart,
+  // Pre-roll countdown — when the caller passes `preRollSeconds`, the
+  // Player opens, autoStart is implied, but the audio is held back
+  // for this many seconds while a settle-in countdown ticks down on
+  // the player surface (mirrors the QM Training pre-round countdown).
+  // Used for the Start screen's 1 min / 3 min / 3 × 3 min pills.
+  // We consume preRollSeconds AT MOUNT TIME so subsequent round /
+  // playlist changes don't re-arm a stale countdown.
+  const [preRollRemaining, setPreRollRemaining] = useState<number>(() =>
+    usePlayerStore.getState().consumePreRoll(),
   );
+  // hasStarted: false while preRoll is counting down; otherwise honour
+  // the autoStart flag.
+  const [hasStarted, setHasStarted] = useState<boolean>(() => {
+    const s = usePlayerStore.getState();
+    if (s.autoStart && preRollRemaining > 0) return false;
+    return s.autoStart;
+  });
   const [inBreak, setInBreak] = useState(false);
   const [finished, setFinished] = useState(false);
   const [resolvedUri, setResolvedUri] = useState<string | null>(null);
@@ -467,6 +481,22 @@ function PlayerInner() {
   const durationRef = useRef(0);
   useEffect(() => { durationRef.current = duration; }, [duration]);
 
+  // Pre-roll ticker. Decrements `preRollRemaining` once per second
+  // while > 0; when it lands on 0 we flip `hasStarted` so the audio
+  // engine kicks in. The countdown UI lives inside the play-button
+  // slot — see the render below.
+  useEffect(() => {
+    if (preRollRemaining <= 0) return;
+    const t = setTimeout(() => {
+      setPreRollRemaining(r => {
+        const next = r - 1;
+        if (next <= 0) setHasStarted(true);
+        return Math.max(0, next);
+      });
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [preRollRemaining]);
+
   useEffect(() => {
     // Call sites can ask the player to bypass the pre-play screen (big
     // play button on Start, etc.). Consume the one-shot flag once per
@@ -479,7 +509,14 @@ function PlayerInner() {
     // live `playing` flag straight from the store so it's up to date
     // even though this effect is on the new track's render.
     const wasPlaying = usePlayerStore.getState().playing;
-    setHasStarted(!!auto || wasPlaying);
+    // If we still have pre-roll time on the clock, keep hasStarted
+    // false — the pre-roll ticker will flip it to true when the
+    // countdown completes. Without this guard the autoStart logic
+    // would race ahead of the countdown UI. (`preRollRemaining` is
+    // local state already initialised from `consumePreRoll`, so it
+    // doesn't bounce back across subsequent track swaps.)
+    const preRollPending = preRollRemaining > 0;
+    setHasStarted(!preRollPending && (!!auto || wasPlaying));
     setCurrentRound(auto ? (startAtIntro ? 0 : 1) : 1);
     setSelectedRounds(track?.rounds?.max ?? 1);
     setIncludeIntro(!!track?.rounds?.introSource);
@@ -1183,6 +1220,27 @@ function PlayerInner() {
 
         {finished ? (
           <View style={{ width: circleSize, height: circleSize }} />
+        ) : preRollRemaining > 0 ? (
+          // Pre-roll countdown — settle-in moment before the audio
+          // starts. Replaces the play button entirely; ticks down to
+          // 0, at which point `hasStarted` flips and the audio engine
+          // takes over.
+          <View
+            style={[
+              styles.preRollCircle,
+              {
+                width: circleSize,
+                height: circleSize,
+                borderRadius: circleSize / 2,
+                borderColor: accent,
+              },
+            ]}
+          >
+            <Text style={[styles.preRollNumber, { color: accent, fontSize: circleSize * 0.45 }]}>
+              {preRollRemaining}
+            </Text>
+            <Text style={styles.preRollLabel}>get ready…</Text>
+          </View>
         ) : isLoading ? (
           <View style={[styles.loadingCircle, { width: circleSize, height: circleSize, borderRadius: circleSize / 2 }]}>
             <ActivityIndicator size="large" color={accent} style={{ marginBottom: spacing.xs }} />
@@ -1806,4 +1864,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   loadingText: { ...type.overline, color: colors.textMuted, fontSize: 10 },
+  // Pre-roll countdown circle — accent border (no fill) + big number
+  // + small overline label. Sits in the same circle slot as the play
+  // button so the visual anchor is identical.
+  preRollCircle: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    backgroundColor: 'transparent',
+  },
+  preRollNumber: {
+    ...type.display,
+    fontVariant: ['tabular-nums'],
+    lineHeight: undefined,
+    fontWeight: '700',
+  },
+  preRollLabel: {
+    ...type.overline,
+    color: colors.textMuted,
+    fontSize: 10,
+    marginTop: spacing.xs,
+  },
 });
