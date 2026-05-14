@@ -1,6 +1,11 @@
 # Backlog
 
 ## Content
+- [ ] Swap the bell + tick session sounds for cleaner samples. The
+  current `assets/audio/bell.mp3` / `bell_short.mp3` / `tick.mp3` are
+  placeholder-quality; the bell could read warmer and the tick less
+  clicky. Curate a matching set (start bell, end bell, mid-tick) that
+  shares a single sonic identity.
 - [ ] Segment `assets/audio/Home/One minute meditation.mp3`: extract the intro portion so the actual 1-minute practice runs exactly 60s. Either trim the intro off the main file, or split into `intro.mp3` + `practice.mp3` and play intro before the practice (like QM intros).
 - [ ] Retail QM round segmentation where the auto-split misfired (see `/assets/audio/*/Rounds/`):
   - `QM3_6Rounds_Breath…` — round 2 forced

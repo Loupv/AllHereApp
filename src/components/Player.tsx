@@ -183,7 +183,16 @@ function useSmoothTime(
     // time. If status reports a time significantly lower than where we are, it
     // probably lags the actual playback — ignoring it prevents t from jumping
     // backwards, which would otherwise make the karaoke scroll jump up mid-play.
-    const st = statusTime ?? 0;
+    const raw = statusTime ?? 0;
+    // Hard reject NaN / Infinity / negative / absurdly large values. On
+    // Android, expo-audio occasionally reports a non-finite currentTime
+    // right after a source swap (briefly, before the first real tick),
+    // and that single sample was enough to push lastT.current to
+    // Infinity → every transcript word's `revealed` opacity instantly
+    // became 1, i.e. the transcript appeared in full instead of being
+    // typed in word-by-word.
+    if (!Number.isFinite(raw) || raw < 0 || raw > 24 * 3600) return;
+    const st = raw;
     // Allow "real" backwards moves (>1.5s) to pass through (e.g. explicit seek)
     if (st + 1.5 < lastT.current) {
       sync.current = { t: st, at: now0() };
