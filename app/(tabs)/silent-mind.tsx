@@ -1,6 +1,6 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import Svg, { Line, Circle } from 'react-native-svg';
+import Svg, { Line, Circle, Path } from 'react-native-svg';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
@@ -34,13 +34,44 @@ const DIAGRAM_PAD_Y = 14;
 const DIAGRAM_HEIGHT = (DIAGRAM_STEPS.length - 1) * STEP_Y + DIAGRAM_PAD_Y * 2;
 const TRUNK_X = DOT_R + 2;
 const TRUNK_SVG_WIDTH = TRUNK_X + DOT_R + 2;
-// Width tuned for the longest label ("STABILITY & EQUANIMITY" at
-// 11 px / 1.4 letter-spacing — was getting truncated at 180 px).
 const LABELS_WIDTH = 220;
+// Direction-of-travel arrow — vertical dashed line + chevron pointing
+// UP, sits to the left of the trunk so the user reads "walk this from
+// bottom to top". Kept slim (20 px width slot, ~12 px gap to trunk)
+// so it doesn't compete with the actual tree column.
+const ARROW_WIDTH = 20;
+const ARROW_X = ARROW_WIDTH / 2;
+const ARROW_GAP = 12;
+const ARROW_HEAD_Y = DIAGRAM_PAD_Y - 2;
 
 function TreeDiagram() {
   return (
     <View style={styles.diagramRow}>
+      {/* Direction-of-travel hint — dashed vertical line + chevron
+          pointing UP to signal "walk this from bottom to top". Sits
+          to the LEFT of the trunk so it reads as a margin annotation
+          rather than as part of the tree itself. */}
+      <Svg width={ARROW_WIDTH} height={DIAGRAM_HEIGHT}>
+        <Line
+          x1={ARROW_X}
+          y1={DIAGRAM_PAD_Y + 10}
+          x2={ARROW_X}
+          y2={DIAGRAM_HEIGHT - DIAGRAM_PAD_Y}
+          stroke="rgba(255,255,255,0.32)"
+          strokeWidth={1.5}
+          strokeDasharray="3,5"
+          strokeLinecap="round"
+        />
+        <Path
+          d={`M ${ARROW_X - 5} ${ARROW_HEAD_Y + 8} L ${ARROW_X} ${ARROW_HEAD_Y} L ${ARROW_X + 5} ${ARROW_HEAD_Y + 8}`}
+          stroke="rgba(255,255,255,0.32)"
+          strokeWidth={1.5}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+      <View style={{ width: ARROW_GAP }} />
       <Svg width={TRUNK_SVG_WIDTH} height={DIAGRAM_HEIGHT}>
         <Line
           x1={TRUNK_X}
@@ -165,6 +196,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     alignSelf: 'center',
     height: DIAGRAM_HEIGHT,
+    // Nudge the whole diagram (arrow + trunk + labels) to the right
+    // of dead-centre so it sits closer to the visual centre line of
+    // the iPhone after subtracting the bottom tab bar's perceived
+    // weight on the left edge.
+    marginLeft: spacing.xl,
   },
   diagramLabelRow: {
     position: 'absolute',
@@ -199,6 +235,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.xxl,
     paddingHorizontal: spacing.lg,
+    // Match the diagram's right-shift so the caption sits visually
+    // under the diagram column rather than under the page's
+    // geometric centre.
+    marginLeft: spacing.xl,
   },
   enterBtn: {
     alignSelf: 'center',
