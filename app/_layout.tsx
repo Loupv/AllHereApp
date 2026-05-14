@@ -38,7 +38,7 @@ import { EnergyColumn } from '../src/components/EnergyColumn';
 import { AtmosphereBackground as ShaderBackground } from '../src/components/AtmosphereBackground';
 import { VideoBackground } from '../src/components/VideoBackground';
 import { useShaderThemeStore } from '../src/shaders/themeStore';
-import { themeForNextTrack } from '../src/shaders';
+import { themeForJourneyPosition } from '../src/shaders';
 import { useProgress } from '../src/player/progressStore';
 import { WebSwipeBack } from '../src/components/WebSwipeBack';
 import { usePlayerStore } from '../src/player/store';
@@ -70,9 +70,13 @@ export default function RootLayout() {
   // The dev pill override on the home tab still wins (manual cycle
   // through themes for design work).
   const shaderOverride = useShaderThemeStore(s => s.override);
-  const nextTrackIdFn = useProgress(s => s.nextTrackId);
-  const nextId = nextTrackIdFn();
-  const shaderTheme = shaderOverride ?? themeForNextTrack(nextId);
+  // Pick the theme from the user's CURRENT SM JOURNEY POSITION (= the
+  // next-up SM, skipping QM side trips). Was reading from
+  // `nextTrackId()` which includes QMs — that pulled the bg back to
+  // 'earth' whenever the user had a QM pending in part 1, even when
+  // they'd already unlocked Space via SM progress.
+  const listened = useProgress(s => s.listened);
+  const shaderTheme = shaderOverride ?? themeForJourneyPosition(listened);
   // Pause only when the app is backgrounded. The shader keeps
   // running on every screen now (lake on Media/About, the
   // progress-based theme everywhere else).

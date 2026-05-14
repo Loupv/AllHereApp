@@ -48,7 +48,7 @@
 - [ ] Offline caching of audio files.
 
 ## Audit
-- [ ] Verify every Player entry point has a working Close affordance (Start big play, SM tree dot, SM tree bottom-sheet Play, QM Guided list, QM Unguided preset, etc.). The Close X in the top corner should be reachable from every state the player can land in — including 'break', 'error', 'ended'.
-- [ ] Add a pre-roll countdown (3 s) to the Start screen's 1 min / 3 min / 3 × 3 min quick meditations, mirroring the `PRE_ROUND_SECONDS = 5` countdown used at the start of every QM session. Today they jump straight into audio, which feels jarring versus the QM flow.
-- [ ] Audit the Emptiness (`p3-1`) transcript — the end seems to bug. Check timestamp alignment past the last few minutes; possibly truncated, off-by-N, or missing the final words array.
-- [ ] Root shader theme on the Silent Mind TAB (`app/(tabs)/silent-mind.tsx`) stays on `earth` (forest) even when the user has progressed into Part 3 / unlocked Space. The `useShaderThemeStore` / `themeForNextTrack(nextId)` logic in `_layout.tsx` drives the bg by NEXT-UP track id — but on the SM tab the "next" reading isn't being refreshed when the user is past the journey. Decide: should the SM tab atmosphere follow journey peak instead of next-up? Or should the tab override to its own theme?
+- [x] Player Close audit — Close button is unconditionally rendered in the header except during `finished`, which itself auto-closes the Player in `handleRoundEnd`. Verified reachable from `break`, `loading`, `buffering`, `error`, `paused`, `playing`.
+- [x] 3 s pre-roll countdown added to Start quick meditations (1 min / 3 min / 3 × 3 min). Tapped pill replaces its label with the count; other pills dim and disable during the countdown; player opens with `autoStart: true` when the count reaches 0.
+- [x] Emptiness (`p3-1`) transcript end fixed — last 4 segments were Whisper hallucinations (3× repeated "Emptiness entering inside your chest." + "Thank you."). Stripped; transcript now ends at the actual final words ~19:13.
+- [x] Root shader theme now reads the user's SM journey position (next SM after last-listened SM) instead of the global `nextTrackId()`. New `themeForJourneyPosition(listened)` in `src/shaders/index.ts`. A user who unlocked Space via SMs but skipped a QM no longer sees the bg snap back to Earth.

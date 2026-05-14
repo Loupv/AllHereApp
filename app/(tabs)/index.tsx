@@ -137,12 +137,31 @@ export default function StartScreen() {
 
   // Quick-meditation pills — independent from the journey. Each is its
   // own short Start track from `startJourneySteps` (1min / 3min / QM3).
+  // Tapping a pill arms a 3 s pre-roll countdown (mirrors the QM
+  // Training PRE_ROUND_SECONDS = 5 pattern, just shorter for the
+  // bite-sized Start sessions). The pill replaces its label with the
+  // ticking count; other pills go disabled.
+  const [pendingMode, setPendingMode] = useState<{ key: ModeKey; seconds: number } | null>(null);
   const playMode = (key: ModeKey) => {
-    const step = startJourneySteps.find(s => s.id === key);
-    if (!step?.track) return;
-    const pl = startJourneySteps.map(s => s.track).filter(Boolean) as AudioTrack[];
-    openPlayer(step.track, pl, { autoStart: true });
+    if (pendingMode) return; // already counting down
+    setPendingMode({ key, seconds: 3 });
   };
+  useEffect(() => {
+    if (!pendingMode) return;
+    if (pendingMode.seconds <= 0) {
+      const step = startJourneySteps.find(s => s.id === pendingMode.key);
+      setPendingMode(null);
+      if (!step?.track) return;
+      const pl = startJourneySteps.map(s => s.track).filter(Boolean) as AudioTrack[];
+      openPlayer(step.track, pl, { autoStart: true });
+      return;
+    }
+    const t = setTimeout(
+      () => setPendingMode(s => (s ? { ...s, seconds: s.seconds - 1 } : null)),
+      1000,
+    );
+    return () => clearTimeout(t);
+  }, [pendingMode, openPlayer]);
 
   // The avatar shows a generic bust silhouette regardless of provider —
   // simpler & more universal than an initial that may collide with
@@ -249,19 +268,32 @@ export default function StartScreen() {
                   {noOrphan('Instant Meditation')}
                 </Text>
                 <View style={styles.pillsRow}>
-                  {MODES.map(m => (
-                    <Pressable
-                      key={m.key}
-                      onPress={() => playMode(m.key)}
-                      hitSlop={6}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Start ${m.duration} meditation, ${m.short}`}
-                      style={({ pressed }) => [styles.pill, pressed && styles.pillPressed]}
-                    >
-                      <Text style={styles.pillLabel} numberOfLines={1}>{m.duration}</Text>
-                      <Text style={styles.pillSub} numberOfLines={1}>{m.short}</Text>
-                    </Pressable>
-                  ))}
+                  {MODES.map(m => {
+                    const isCounting = pendingMode?.key === m.key;
+                    const otherCounting = !!pendingMode && !isCounting;
+                    return (
+                      <Pressable
+                        key={m.key}
+                        onPress={() => playMode(m.key)}
+                        disabled={!!pendingMode}
+                        hitSlop={6}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Start ${m.duration} meditation, ${m.short}`}
+                        style={({ pressed }) => [
+                          styles.pill,
+                          pressed && styles.pillPressed,
+                          otherCounting && { opacity: 0.35 },
+                        ]}
+                      >
+                        <Text style={styles.pillLabel} numberOfLines={1}>
+                          {isCounting ? `${pendingMode!.seconds}` : m.duration}
+                        </Text>
+                        <Text style={styles.pillSub} numberOfLines={1}>
+                          {isCounting ? 'GET READY' : m.short}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
               </Animated.View>
 
