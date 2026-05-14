@@ -288,11 +288,14 @@ export default function QMScreen() {
         <Pressable
           onPress={closeSession}
           hitSlop={12}
-          style={[styles.sessionClose, { top: insets.top + spacing.md }]}
+          // (tabs)/_layout already wraps everything in a View with
+          // paddingTop: insets.top, so this `top` is measured from
+          // below the status bar — no need to re-add insets.top here.
+          style={[styles.sessionClose, { top: spacing.md }]}
         >
           <Text style={styles.sessionCloseText}>Close</Text>
         </Pressable>
-        <View style={[styles.content, { alignItems: 'center', paddingTop: insets.top + spacing.xl }]}>
+        <View style={[styles.content, { alignItems: 'center', paddingTop: spacing.xl }]}>
           <View style={[styles.column, { maxWidth: columnMax, alignItems: 'center', flex: 1 }]}>
             <View style={{ flex: TOP_FLEX, alignItems: 'center', width: '100%' }}>
               <Text style={[styles.roundBarText, { color: colors.accentAlt }, phase === 'break' && styles.roundBarBreak]}>
@@ -410,7 +413,7 @@ export default function QMScreen() {
     <Background color={colors.bgTabAlt}>
       <Stack.Screen options={{ title: '' }} />
       <SwipeTabs current="qm">
-      <View style={[styles.content, { alignItems: 'center', paddingTop: insets.top, flex: 1 }]}>
+      <View style={[styles.content, { alignItems: 'center', flex: 1 }]}>
         <View style={[styles.column, { maxWidth: columnMax, flex: 1 }]}>
           <ProgramHeader
             eyebrow={qmProgram.eyebrow}
