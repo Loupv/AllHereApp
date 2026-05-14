@@ -17,10 +17,11 @@ const EARTH_VIDEO = require('../../assets/video/earth-hero.mp4');
 type Props = { paused?: boolean };
 
 // Slower-than-real-time playback so the texture drifts gently rather
-// than rolling at scenic speed. Half the previous 0.6× setting —
-// at 0.3× the surface barely moves, the eddies feel like ambient
-// breath rather than scenic motion.
-const PLAYBACK_RATE = 0.3;
+// than rolling at scenic speed. 0.3× was too slow — the player's
+// frame interpolation was visibly stuttering. 0.5× is the sweet
+// spot: clean half-rate playback (engines handle the 2× divisor
+// well) and still notably more contemplative than scenic speed.
+const PLAYBACK_RATE = 0.5;
 
 export function VideoBackground({ paused = false }: Props) {
   const player = useVideoPlayer(EARTH_VIDEO, (p) => {
