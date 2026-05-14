@@ -9,7 +9,11 @@
     "web": "expo start --web",
     "build:web": "WEB_BUILD=1 expo export --platform web",
     "gen:waveforms": "node scripts/gen-waveforms.mjs",
-    "gen:wp-map": "node scripts/gen-wp-audio-map.mjs"
+    "gen:wp-map": "node scripts/gen-wp-audio-map.mjs",
+    "dev:android": "bash scripts/dev-android.sh",
+    "ship": "node scripts/ship.mjs",
+    "ship:android": "node scripts/ship.mjs --android",
+    "ship:ios": "node scripts/ship.mjs --ios"
   },
   "dependencies": {
     "@expo-google-fonts/montserrat": "^0.4.2",
