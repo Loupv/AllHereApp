@@ -99,7 +99,15 @@ export default function StartScreen() {
   const user = useAuth(s => s.user);
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { isTablet, columnMax, playSize, playCenterY } = useLayout();
+  const { isTablet, columnMax, playSize, playCenterY: sharedPlayCenterY } = useLayout();
+  // Nudge Start's circle UP from the shared `playCenterY`. The
+  // shared value targets ~45 % of usable height — the Player's flex
+  // layout actually lands the circle a touch higher (~38-40 %),
+  // because of the transcript + waveform + bottom controls stacked
+  // beneath it. Without this offset the circle visibly drops down
+  // when going Start → Player. QM Training keeps the unmodified
+  // shared value so its session screen layout doesn't shift.
+  const playCenterY = sharedPlayCenterY - 56;
   const usableH = Math.max(360, height - insets.top - insets.bottom);
   const isTall = !isTablet && usableH >= 820;
 
