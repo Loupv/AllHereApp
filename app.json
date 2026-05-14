@@ -34,6 +34,7 @@
       "appleTeamId": "3YWPZYHW99"
     },
     "android": {
+      "package": "org.allhere.silentmind",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#00102E"
