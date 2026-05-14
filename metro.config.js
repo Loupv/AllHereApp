@@ -2,7 +2,11 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-config.resolver.assetExts = [...config.resolver.assetExts, 'wjson'];
+// wjson transcripts are loaded via require() in audioRegistry.ts — treat them
+// as source modules (inline JSON) rather than assets. This avoids an Android
+// build error where foo.mp3 and foo.wjson land in raw/ with the same resource
+// ID (Android strips extensions when generating resource names → collision).
+config.resolver.sourceExts = [...config.resolver.sourceExts, 'wjson'];
 
 // Workaround for a Metro / expo-asset URL-encoding mismatch visible in
 // the device log as:
