@@ -873,13 +873,12 @@ export default function SilentMindTreeScreen() {
               const topYClamped = Math.min(topY + PARTICLE_TOP_PAD, yBottom - 8);
               const yRange = yBottom - topYClamped;
               if (yRange <= 0) return null;
-              // 1 particle / 6 px — each particle renders as core
-              // + halo (2 ellipses), so we cap conservatively at 120
-              // to keep the per-frame SVG cost low on long ranges.
-              // The phone was warming up running 480 animated SVG
-              // ellipses; halving the field is invisible visually but
-              // visible on the battery meter.
-              const PARTICLE_COUNT = Math.max(20, Math.min(120, Math.round(yRange / 6)));
+              // 1 particle / 12 px — each particle renders as core
+              // + halo (2 ellipses), so we cap at 60 (= 120 ellipses
+              // on the trunk). Was 120 / 6 px / 240 ellipses, which
+              // ran the phone warm; at the density we use the trunk
+              // still reads as a continuous stream of mist.
+              const PARTICLE_COUNT = Math.max(20, Math.min(60, Math.round(yRange / 12)));
               const trunkParticles = Array.from({ length: PARTICLE_COUNT }, (_, k) => {
                 const phase = k / PARTICLE_COUNT;
                 // Three independent deterministic seeds — opacity/size,
