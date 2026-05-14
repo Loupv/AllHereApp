@@ -8,6 +8,10 @@ const config = getDefaultConfig(__dirname);
 // ID (Android strips extensions when generating resource names → collision).
 config.resolver.sourceExts = [...config.resolver.sourceExts, 'wjson'];
 
+// Custom transformer for .wjson files: wraps raw JSON as `module.exports = <json>`
+// so Babel doesn't choke on it (Babel expects JS syntax, not bare JSON).
+config.transformer.babelTransformerPath = require.resolve('./wjson-transformer.js');
+
 // Workaround for a Metro / expo-asset URL-encoding mismatch visible in
 // the device log as:
 //   ENOENT: no such file or directory, scandir
