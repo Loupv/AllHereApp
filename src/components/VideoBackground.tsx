@@ -16,12 +16,13 @@ const EARTH_VIDEO = require('../../assets/video/earth-hero.mp4');
  */
 type Props = { paused?: boolean };
 
-// Slower-than-real-time playback so the texture drifts gently rather
-// than rolling at scenic speed. 0.3× was too slow — the player's
-// frame interpolation was visibly stuttering. 0.5× is the sweet
-// spot: clean half-rate playback (engines handle the 2× divisor
-// well) and still notably more contemplative than scenic speed.
-const PLAYBACK_RATE = 0.5;
+// The slow drift is now BAKED INTO the asset: earth-hero.mp4 was
+// re-encoded with `minterpolate` (motion-compensated frame
+// interpolation in ffmpeg) to 30 fps over a 2× duration window —
+// what looks like 0.5× scenic speed is the asset's native cadence.
+// We play it at 1× so the engine just decodes authored frames at
+// their authored rate, no runtime slowdown (= no stutter).
+const PLAYBACK_RATE = 1.0;
 
 export function VideoBackground({ paused = false }: Props) {
   const player = useVideoPlayer(EARTH_VIDEO, (p) => {
