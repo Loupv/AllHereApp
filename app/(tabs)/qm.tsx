@@ -304,7 +304,14 @@ export default function QMScreen() {
                       ? `· BREAK · between round ${currentRound} and ${currentRound + 1} ·`
                       : `ROUND ${currentRound} / ${roundsCount}`}
               </Text>
-              {phase !== 'done' ? (
+              {/* Round-indicator dots — hidden during the pre-round
+                  countdown. The dots read as a "rounds-count selector"
+                  before the session has actually started, which
+                  isn't what they are; they're a live progress
+                  indicator. Suppress them until phase === 'round'
+                  (and 'break', which is between rounds) so the
+                  countdown screen stays minimal. */}
+              {phase === 'round' || phase === 'break' ? (
                 <View style={styles.dotsRow}>
                   {Array.from({ length: roundsCount }, (_, i) => {
                     const state = i + 1 < currentRound ? 'done' : i + 1 === currentRound ? 'current' : 'upcoming';
