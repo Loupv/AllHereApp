@@ -137,14 +137,15 @@ export default function StartScreen() {
 
   // Quick-meditation pills — independent from the journey. Each is its
   // own short Start track from `startJourneySteps` (1min / 3min / QM3).
-  // Pass `preRollSeconds: 3` so the Player shows a settle-in countdown
-  // before the audio starts (mirrors the QM Training pre-round
-  // countdown — same place, same shape, just shorter at 3 s).
+  // Pass `preRollSeconds: 5` so the Player shows a settle-in countdown
+  // before the audio starts (matches QM Training's PRE_ROUND_SECONDS
+  // — same place, same shape, same duration so the settle-in rhythm
+  // reads as one consistent pattern across the app).
   const playMode = (key: ModeKey) => {
     const step = startJourneySteps.find(s => s.id === key);
     if (!step?.track) return;
     const pl = startJourneySteps.map(s => s.track).filter(Boolean) as AudioTrack[];
-    openPlayer(step.track, pl, { autoStart: true, preRollSeconds: 3 });
+    openPlayer(step.track, pl, { autoStart: true, preRollSeconds: 5 });
   };
 
   // The avatar shows a generic bust silhouette regardless of provider —
