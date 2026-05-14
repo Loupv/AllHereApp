@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { useLayout, CONTENT_MAX_WIDTH as PLAYER_CONTENT_MAX_WIDTH } from '../hooks/useLayout';
 import { usePlayerStore } from '../player/store';
 import { useProgress, isTrackUnlocked } from '../player/progressStore';
-import { themeForJourneyPosition } from '../shaders';
+import { themeForJourneyPosition, JOURNEY_ACCENTS } from '../shaders';
 import { loadTranscript } from '../content/loadTranscript';
 import { findCueIndex, TranscriptCue } from '../content/transcript';
 import { trackProgram, trackLocation } from '../content/catalog';
@@ -1074,11 +1074,23 @@ function PlayerInner() {
   const canSeek = duration > 0;
   const description = track.description ?? (track.rounds ? QM_DESCRIPTION : DEFAULT_DESCRIPTION);
   const rounds = track.rounds;
-  // Default accent: QM = teal, SM = magenta. The journey-tree screen
-  // overrides this with the rainbow hue of the dot the user tapped, so
-  // the Player visually inherits the level's colour.
+  // Default accent — derive from the track's JOURNEY PART so the
+  // Player's button / progress bar take the same colour the SM tree
+  // uses for that part. The journey tree's per-dot rainbow override
+  // still wins via `accentOverride`. home-* tracks are blue (a
+  // fixed identity for the Start tab); fallback for unknown ids is
+  // the legacy magenta / teal split.
   const accentOverride = usePlayerStore(s => s.accentOverride);
-  const accent = accentOverride ?? (rounds ? colors.accentAlt : colors.accent);
+  const trackId = track?.id ?? '';
+  const partAccent = (() => {
+    if (trackId.startsWith('intro-')) return JOURNEY_ACCENTS.intro;
+    if (trackId.startsWith('p1-') || trackId.startsWith('qm1-')) return JOURNEY_ACCENTS.part1;
+    if (trackId.startsWith('p2-') || trackId.startsWith('qm2-')) return JOURNEY_ACCENTS.part2;
+    if (trackId.startsWith('p3-') || trackId.startsWith('qm3-')) return JOURNEY_ACCENTS.part3;
+    if (trackId.startsWith('home-')) return JOURNEY_ACCENTS.part2; // start blue
+    return rounds ? colors.accentAlt : colors.accent;
+  })();
+  const accent = accentOverride ?? partAccent;
   const accentBg = rounds ? colors.accentAltSoft : colors.accentSoft;
 
   // Precomputed waveform peaks for the currently-playing audio source.

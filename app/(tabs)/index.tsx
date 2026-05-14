@@ -21,7 +21,6 @@ import {
 } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { useProgress } from '../../src/player/progressStore';
-import { accentForJourneyPosition } from '../../src/shaders';
 import { useAuth } from '../../src/auth/authStore';
 import { colors, radius, spacing, type } from '../../src/theme';
 import { noOrphan } from '../../src/utils/noOrphan';
@@ -85,15 +84,17 @@ function BustIcon({ size, color }: { size: number; color: string }) {
  * the QM tail). When everything's been listened it falls back to the
  * very first track (replay).
  */
+// Fixed "Start" blue — used for both the big play button and the
+// quick-meditation pills. The big play button STAYS blue regardless
+// of journey progression (it's the visual identity of the Start
+// tab). When the user taps it, the Player itself picks an accent
+// from the track's part (intro/p1/p2/p3), so the in-Player UI
+// adapts but the button doesn't.
+const START_BLUE = '#3D6BBA';
+
 export default function StartScreen() {
   const openPlayer = usePlayerStore(s => s.open);
   const listened = useProgress(s => s.listened);
-  // Journey-aware accent — the big play button + pill shadows + the
-  // colour we hand to the Player when a quick meditation opens.
-  // Fresh user (intro) → gold; part 1 → green; part 2 → blue;
-  // part 3 → purple. Keeps the visual identity of "Start" tied to
-  // the user's progression instead of a fixed magenta accent.
-  const journeyAccent = accentForJourneyPosition(listened);
   const nextTrackId = useProgress(s => s.nextTrackId);
   const user = useAuth(s => s.user);
   const { height } = useWindowDimensions();
@@ -155,11 +156,11 @@ export default function StartScreen() {
     openPlayer(step.track, pl, {
       autoStart: true,
       preRollSeconds: 5,
-      // Player inherits the same accent the Start pills carry —
-      // matches the journey position so the colour transition from
-      // pre-player → player is continuous instead of snapping to
-      // SM magenta.
-      accent: journeyAccent,
+      // Pills + their Player UI both stay fixed blue — these
+      // tracks aren't part of the SM journey so the Player
+      // shouldn't pick up a part-specific colour from the user's
+      // progression.
+      accent: START_BLUE,
     });
   };
 
@@ -277,7 +278,7 @@ export default function StartScreen() {
                       accessibilityLabel={`Start ${m.duration} meditation, ${m.short}`}
                       style={({ pressed }) => [
                         styles.pill,
-                        { shadowColor: journeyAccent },
+                        { shadowColor: START_BLUE },
                         pressed && styles.pillPressed,
                       ]}
                     >
@@ -303,7 +304,7 @@ export default function StartScreen() {
         <CircleButton
           mode="pre"
           size={playSize}
-          accent={journeyAccent}
+          accent={START_BLUE}
           onPress={onPlayNext}
         />
       </View>
