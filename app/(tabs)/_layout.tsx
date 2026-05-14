@@ -167,7 +167,12 @@ export default function TabsLayout() {
     // teal "QUANTIFIED MEDITATION" eyebrow on QM were the most visible
     // victims — they're tinted accent colours that get lost in the
     // dead-pixel area at the top of OLED iPhones.
-    <View style={[styles.root, { paddingTop: insets.top }]}>
+    // paddingBottom: insets.bottom lifts the tab bar above the Android
+    // gesture-nav handle (edgeToEdgeEnabled=true in app.json lets content
+    // draw under it by default). The gesture-nav strip itself stays
+    // transparent so the shader behind shows through — the bar just
+    // doesn't get clipped anymore.
+    <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
     <Tabs
       // Bar lives at the bottom; the navigator itself still uses
       // PagerView for content + swipe gestures.
