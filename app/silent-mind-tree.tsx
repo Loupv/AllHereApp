@@ -538,10 +538,14 @@ export default function SilentMindTreeScreen() {
     if (targetPage === settledPage.current) return;
     isSnapping.current = true;
     settledPage.current = targetPage;
-    setCurrentPageIdx(targetPage);
     setScrollLocked(true);
     const targetY = targetPage * pageH;
     scrollRef.current?.scrollTo({ y: targetY, animated: true });
+    // Defer the React state update one frame so the native scroll
+    // animation gets to start before we reconcile this ~1300-line
+    // component (dozens of useAnimatedStyle hooks). Without the
+    // defer, Android visibly stutters at the start of each snap.
+    requestAnimationFrame(() => setCurrentPageIdx(targetPage));
     setTimeout(() => {
       scrollRef.current?.scrollTo({ y: targetY, animated: false });
       isSnapping.current = false;
@@ -563,10 +567,11 @@ export default function SilentMindTreeScreen() {
     );
     isSnapping.current = true;
     settledPage.current = targetPage;
-    setCurrentPageIdx(targetPage);
     setScrollLocked(true);
     const targetY = targetPage * pageH;
     scrollRef.current?.scrollTo({ y: targetY, animated: true });
+    // Same one-frame defer as goToPage — see comment there.
+    requestAnimationFrame(() => setCurrentPageIdx(targetPage));
     setTimeout(() => {
       // Hard-clamp to the target page on lock release. Some scroll
       // sources on web (mouse wheel, trackpad) keep firing events
