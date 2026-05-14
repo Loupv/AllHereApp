@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, SlideInDown, SlideOutDown, FadeOut } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
-import { useAuth } from '../auth/authStore';
 import { useProgress } from '../player/progressStore';
 import { colors, radius, spacing, type } from '../theme';
 
@@ -20,14 +19,16 @@ type Props = {
  *   – greeting + email (passive context)
  *   – Reset progress (with a 2-step confirm so a misclick can't wipe
  *     someone's run through the program)
- *   – Sign out
+ *
+ * (Sign out was removed — there's no real auth gate yet, the guest user
+ * is created automatically on first launch, so a logout button just
+ * dropped people back onto the same screen with no observable effect.)
  *
  * Implemented as a modal with an opaque scrim + slide-up sheet — keeps
  * the rest of the app static behind it instead of pushing a route, so
  * dismissing returns the user exactly where they were on Start.
  */
 export function AccountSheet({ visible, onClose }: Props) {
-  const logout = useAuth(s => s.logout);
   const resetProgress = useProgress(s => s.resetProgress);
   const insets = useSafeAreaInsets();
   const [confirmingReset, setConfirmingReset] = useState(false);
@@ -105,13 +106,6 @@ export function AccountSheet({ visible, onClose }: Props) {
                   This clears every "listened" mark.
                 </Text>
               ) : null}
-            </Pressable>
-
-            <Pressable
-              onPress={() => { logout(); onClose(); }}
-              style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-            >
-              <Text style={styles.rowLabel}>Sign out</Text>
             </Pressable>
 
             <Pressable
