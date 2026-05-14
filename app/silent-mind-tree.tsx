@@ -227,24 +227,34 @@ export default function SilentMindTreeScreen() {
   const trunkClock = useSharedValue(0);
   const branchClock = useSharedValue(0);
   useEffect(() => {
-    // One MONOTONIC withTiming instead of withRepeat — the latter
-    // resets the value to 0 at each iteration boundary, which made
-    // particles whose phase ≈ 0 "teleport" visibly (alpha was
-    // technically 0 at the wrap moment but Reanimated's
-    // interpolation could still emit a perceptible flicker).
-    // Animating to a big target over a proportionally long
-    // duration keeps the clock smoothly increasing forever; the
-    // `% 1` inside each particle's worklet handles the wrap with
-    // no discontinuity.
-    const CYCLES_AHEAD = 10000;
-    trunkClock.value = withTiming(CYCLES_AHEAD, {
-      duration: 200000 * CYCLES_AHEAD,
-      easing: Easing.linear,
-    });
-    branchClock.value = withTiming(CYCLES_AHEAD, {
-      duration: 50000 * CYCLES_AHEAD,
-      easing: Easing.linear,
-    });
+    // Particle "frame rate": each clock tick advances the particles
+    // by 1 / PARTICLE_FPS of a second. Each AnimatedEllipse worklet
+    // still evaluates at the native 60 Hz, but it reads the same
+    // clock value for 3 frames in a row → reanimated emits only one
+    // native style commit per 3 frames per ellipse, cutting SVG
+    // GPU work by ~3× on the ~240 trunk+halo ellipses without any
+    // visible difference (particles drift < 1 px per tick).
+    //
+    // Previously we drove these with two long withTiming() chains on
+    // the UI thread (200000 × 10000 ms for the trunk, 50000 × 10000
+    // for the branch). The new path uses a JS-side setInterval which
+    // costs one shared-value write per 50 ms — negligible — and lets
+    // us throttle the visible cadence with a single constant.
+    const PARTICLE_FPS = 20;
+    const STEP_MS = 1000 / PARTICLE_FPS;
+    // Original cycle durations (kept identical so motion speed is
+    // unchanged): trunk = 200 s / cycle, branch = 50 s / cycle.
+    const TRUNK_CYCLE_MS = 200_000;
+    const BRANCH_CYCLE_MS = 50_000;
+    const start = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      trunkClock.value = elapsed / TRUNK_CYCLE_MS;
+      branchClock.value = elapsed / BRANCH_CYCLE_MS;
+    };
+    tick(); // prime so the very first frame already has phase coverage
+    const id = setInterval(tick, STEP_MS);
+    return () => clearInterval(id);
   }, [trunkClock, branchClock]);
 
   // Responsive layout sizing.
