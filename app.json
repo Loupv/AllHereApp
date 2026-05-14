@@ -30,7 +30,8 @@
           "audio"
         ],
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "appleTeamId": "3YWPZYHW99"
     },
     "android": {
       "adaptiveIcon": {

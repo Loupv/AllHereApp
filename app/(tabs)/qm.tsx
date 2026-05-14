@@ -282,7 +282,7 @@ export default function QMScreen() {
       <Background color={colors.bgTabAlt}>
         <Stack.Screen options={{ title: '' }} />
         <SwipeTabs current="qm">
-        <View style={[styles.content, { alignItems: 'center', paddingTop: insets.top, paddingBottom: tabPad }]}>
+        <View style={[styles.content, { alignItems: 'center', paddingTop: insets.top }]}>
           <View style={[styles.column, { maxWidth: columnMax, alignItems: 'center', flex: 1 }]}>
             <View style={{ flex: TOP_FLEX, alignItems: 'center', width: '100%' }}>
               <Text style={[styles.roundBarText, { color: colors.accentAlt }, phase === 'break' && styles.roundBarBreak]}>
@@ -337,39 +337,44 @@ export default function QMScreen() {
               </View>
             </View>
             <View style={{ height: playSize }} />
-            <View style={{ flex: 1, alignItems: 'center', width: '100%' }}>
-              {phase !== 'done' ? (
-                <View style={styles.controlsStack}>
-                  {/* Skip is only useful during the break — we hide it
-                      during countdown ('Start now') and round ('End
-                      round') because it collides visually with the big
-                      play / pause CircleButton sitting at the same
-                      vertical position. The bell + duration drive
-                      those phases on their own. */}
-                  {phase === 'break' ? (
-                    <Pressable
-                      onPress={skipPhase}
-                      hitSlop={10}
-                      style={[styles.skipBtn, styles.skipBtnBreakOffset]}
-                    >
-                      <Text style={[styles.skipBtnText, { color: colors.accentAlt }]}>
-                        Skip break →
-                      </Text>
-                    </Pressable>
-                  ) : null}
-                  <Pressable onPress={closeSession} hitSlop={10} style={styles.exitLink}>
-                    <Text style={styles.exitLinkText}>Exit training</Text>
-                  </Pressable>
-                </View>
-              ) : (
-                <View style={styles.controlsStack}>
-                  <Pressable onPress={closeSession} style={styles.donePill}>
-                    <Text style={[styles.donePillText, { color: colors.accentAlt }]}>Reset</Text>
-                  </Pressable>
-                </View>
-              )}
-            </View>
+            <View style={{ flex: 1, width: '100%' }} />
           </View>
+        </View>
+        {/* Skip-break + Exit (or Reset on done) — anchored to the
+            BOTTOM of the screen above the tab bar, NOT inside the
+            flex column. The column gets compressed by paddingBottom
+            and would shove the controls into the play button's Y
+            range; absolute positioning anchored on tabPad keeps both
+            clear of each other. */}
+        <View
+          style={[
+            styles.sessionControls,
+            { bottom: tabPad },
+          ]}
+          pointerEvents="box-none"
+        >
+          {phase !== 'done' ? (
+            <>
+              {phase === 'break' ? (
+                <Pressable
+                  onPress={skipPhase}
+                  hitSlop={10}
+                  style={[styles.skipBtn, styles.skipBtnBreakOffset]}
+                >
+                  <Text style={[styles.skipBtnText, { color: colors.accentAlt }]}>
+                    Skip break →
+                  </Text>
+                </Pressable>
+              ) : null}
+              <Pressable onPress={closeSession} hitSlop={10} style={styles.exitLink}>
+                <Text style={styles.exitLinkText}>Exit training</Text>
+              </Pressable>
+            </>
+          ) : (
+            <Pressable onPress={closeSession} style={styles.donePill}>
+              <Text style={[styles.donePillText, { color: colors.accentAlt }]}>Reset</Text>
+            </Pressable>
+          )}
         </View>
         {phase !== 'done' ? (
           <View
@@ -939,6 +944,20 @@ const styles = StyleSheet.create({
   // Exit affordance — was too dim/small to read as the Close button
   // for the QM session. Now overline-tracked + textMuted (not
   // textDim), with a bit more padding for a comfy tap target.
-  exitLink: { marginTop: spacing.xl, paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.lg },
+  exitLink: { paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.lg },
   exitLinkText: { ...type.overline, color: colors.textMuted, fontSize: 12, letterSpacing: 1.8 },
+  // Absolutely positioned controls strip — anchored above the tab bar
+  // (bottom: tabPad) so the column flex layout above can stay
+  // uncompressed and the play button keeps its centered Y. Without
+  // this anchor the controlsStack sat inside the bottom flex section
+  // and got pushed UP into the play button's Y range when we tried
+  // to clear the tab bar via padding.
+  sessionControls: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
 });
