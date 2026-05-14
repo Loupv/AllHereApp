@@ -1082,7 +1082,12 @@ function PlayerInner() {
     if (id.startsWith('intro-')) return 'lake';
     if (id.startsWith('p2-') || id.startsWith('qm2-')) return 'sky';
     if (id.startsWith('p3-') || id.startsWith('qm3-')) return 'space';
-    if (id.startsWith('p1-') || id.startsWith('qm1-') || id.startsWith('home-')) return 'earth';
+    if (id.startsWith('p1-') || id.startsWith('qm1-')) return 'earth';
+    // Quick Start-screen meditations (home-1min / home-3min / home-qm3)
+    // aren't part of the SM journey arc — they're entry points. Use
+    // the lake atmosphere (same as intros) so they read as a calm
+    // settle-in moment instead of a Part 1 session.
+    if (id.startsWith('home-')) return 'lake';
     return 'lake';
   })();
 
