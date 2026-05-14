@@ -4,6 +4,10 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   useAnimatedProps,
+  useAnimatedScrollHandler,
+  useAnimatedRef,
+  scrollTo,
+  runOnJS,
   withRepeat,
   withSequence,
   withTiming,
@@ -169,7 +173,11 @@ export default function SilentMindTreeScreen() {
   const { width: winW, height: winH } = useWindowDimensions();
   const listened = useProgress(s => s.listened);
   const openPlayer = usePlayerStore(s => s.open);
-  const scrollRef = useRef<ScrollView>(null);
+  // useAnimatedRef so the worklet-side scroll handler can drive the
+  // ScrollView directly via reanimated's scrollTo() helper (UI thread,
+  // zero bridge crossing). JS-side code can still call
+  // `scrollRef.current?.scrollTo(...)` exactly like before.
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
 
   const layers = useMemo(() => buildLayers(), []);
 
@@ -520,6 +528,12 @@ export default function SilentMindTreeScreen() {
   // Result: one continuous motion that lands on the next page centre.
   const settledPage = useRef(initialPageIdx);
   const isSnapping = useRef(false);
+  // UI-thread mirrors of the two JS refs above. The scroll worklet
+  // (useAnimatedScrollHandler) reads these on the UI thread — it can't
+  // touch the refs — and JS-side snap entry points keep them in sync
+  // when they fire (goToPage, web wheel handler, settle timeout).
+  const settledPageSV = useSharedValue(initialPageIdx);
+  const isSnappingSV = useSharedValue(0);
   const setScrollLocked = (locked: boolean) => {
     try {
       // setNativeProps is the cheapest way to toggle scrollEnabled on
@@ -537,54 +551,75 @@ export default function SilentMindTreeScreen() {
     if (targetPage < 0 || targetPage >= pageOrder.length) return;
     if (targetPage === settledPage.current) return;
     isSnapping.current = true;
+    isSnappingSV.value = 1;
     settledPage.current = targetPage;
+    settledPageSV.value = targetPage;
     setScrollLocked(true);
     const targetY = targetPage * pageH;
     scrollRef.current?.scrollTo({ y: targetY, animated: true });
     // Defer the React state update one frame so the native scroll
-    // animation gets to start before we reconcile this ~1300-line
+    // animation gets to start before we reconcile this ~2200-line
     // component (dozens of useAnimatedStyle hooks). Without the
     // defer, Android visibly stutters at the start of each snap.
     requestAnimationFrame(() => setCurrentPageIdx(targetPage));
     setTimeout(() => {
       scrollRef.current?.scrollTo({ y: targetY, animated: false });
       isSnapping.current = false;
+      isSnappingSV.value = 0;
       setScrollLocked(false);
     }, 480);
   };
 
-  const onScrollNative = (e: any) => {
-    const y = e?.nativeEvent?.contentOffset?.y ?? 0;
-    scrollY.value = y;
-    if (isSnapping.current) return;
-    const settledY = settledPage.current * pageH;
-    const delta = y - settledY;
-    if (Math.abs(delta) <= 6) return; // ignore micro-jitter
-    const direction = Math.sign(delta);
-    const targetPage = Math.max(
-      0,
-      Math.min(pageOrder.length - 1, settledPage.current + direction),
-    );
+  // JS-side bookkeeping after the worklet has already detected a snap
+  // and dispatched the native scrollTo. We only get here once per page
+  // change (vs the old JS-thread onScroll which fired 60×/sec just to
+  // update scrollY.value), so the heavy React reconciliation is paid
+  // exactly once per page transition instead of every animation frame.
+  const onSnapStarted = (targetPage: number) => {
     isSnapping.current = true;
     settledPage.current = targetPage;
     setScrollLocked(true);
     const targetY = targetPage * pageH;
-    scrollRef.current?.scrollTo({ y: targetY, animated: true });
-    // Same one-frame defer as goToPage — see comment there.
     requestAnimationFrame(() => setCurrentPageIdx(targetPage));
     setTimeout(() => {
-      // Hard-clamp to the target page on lock release. Some scroll
-      // sources on web (mouse wheel, trackpad) keep firing events
-      // even with scrollEnabled=false — without this, a second wheel
-      // tick during the animation would land us mid-way to the
-      // PAGE-AFTER-TARGET, and the next onScroll tick would advance
-      // again ("two pages at once"). Forcing the position back here
-      // means one gesture = one page, full stop.
+      // Hard-clamp to the target page on lock release — see comment
+      // history; some scroll sources (web wheel) emit events even with
+      // scrollEnabled=false and a stale tick can land mid-page.
       scrollRef.current?.scrollTo({ y: targetY, animated: false });
       isSnapping.current = false;
+      isSnappingSV.value = 0;
       setScrollLocked(false);
     }, 480);
   };
+
+  // Worklet-side scroll handler — runs on the UI thread directly, no
+  // bridge crossing per scroll event. Writes scrollY.value (drives the
+  // background-crossfade + footer-label worklets), detects snap
+  // conditions, and dispatches the native scroll + a one-shot
+  // runOnJS to the JS-side bookkeeping above. On Android this is the
+  // difference between smooth and stutter when the JS thread is busy
+  // reconciling.
+  const pageOrderLength = pageOrder.length;
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (e) => {
+      'worklet';
+      const y = e.contentOffset.y;
+      scrollY.value = y;
+      if (isSnappingSV.value) return;
+      const settledY = settledPageSV.value * pageH;
+      const delta = y - settledY;
+      if (Math.abs(delta) <= 6) return; // ignore micro-jitter
+      const direction = delta > 0 ? 1 : -1;
+      let target = settledPageSV.value + direction;
+      if (target < 0) target = 0;
+      if (target > pageOrderLength - 1) target = pageOrderLength - 1;
+      isSnappingSV.value = 1;
+      settledPageSV.value = target;
+      // Animated scroll on the UI thread.
+      scrollTo(scrollRef, 0, target * pageH, true);
+      runOnJS(onSnapStarted)(target);
+    },
+  });
 
   // Page boundaries (= page index × pageH) drive the shader crossfade
   // worklets. The boundary between P3 and P2 sits at the bottom of P3's
@@ -664,10 +699,15 @@ export default function SilentMindTreeScreen() {
       if (targetPage === settledPage.current) return;
       locked = true;
       isSnapping.current = true;
+      isSnappingSV.value = 1;
       settledPage.current = targetPage;
+      settledPageSV.value = targetPage;
       setCurrentPageIdx(targetPage);
       scrollRef.current?.scrollTo({ y: targetPage * pageH, animated: true });
-      setTimeout(() => { isSnapping.current = false; }, 700);
+      setTimeout(() => {
+        isSnapping.current = false;
+        isSnappingSV.value = 0;
+      }, 700);
     };
     window.addEventListener('wheel', handleWheel, { passive: false });
     return () => {
@@ -747,7 +787,7 @@ export default function SilentMindTreeScreen() {
         ref={scrollRef as never}
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
-        onScroll={onScrollNative}
+        onScroll={scrollHandler}
         scrollEventThrottle={16}
         decelerationRate="fast"
         // Lock the scroll past intro (the last page). Without these,
