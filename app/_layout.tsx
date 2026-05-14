@@ -1,17 +1,8 @@
 import { useEffect, useState } from 'react';
 import { kv } from '../src/content/kv';
 import { useNotifications } from '../src/player/notificationStore';
-import { Platform, View, Image, StyleSheet } from 'react-native';
+import { View, Image, StyleSheet } from 'react-native';
 
-// BG visual config:
-//   - Web: full animated treatment — gradient breathes, energy column
-//     drifts. Browser GPUs handle it for free.
-//   - Native (iOS/Android): same gradient + energy column rendered, but
-//     with all live worklets disabled (`staticMode`). The visual
-//     identity is preserved, only the perpetual per-frame work is gone
-//     — that's what was making screen transitions feel sticky on iPhone.
-const BG_FX_ENABLED = true;
-const BG_STATIC_MODE = Platform.OS !== 'web';
 import Animated, {
   useAnimatedStyle, useSharedValue, withTiming, Easing,
   FadeIn, FadeOut,
@@ -33,8 +24,6 @@ import { IntroSplash } from '../src/components/IntroSplash';
 import { setAudioModeAsync } from 'expo-audio';
 import { Player } from '../src/components/Player';
 import { VideoPlayerModal } from '../src/components/VideoPlayerModal';
-import { AnimatedGradient } from '../src/components/AnimatedGradient';
-import { EnergyColumn } from '../src/components/EnergyColumn';
 import { AtmosphereBackground as ShaderBackground } from '../src/components/AtmosphereBackground';
 import { VideoBackground } from '../src/components/VideoBackground';
 import { useShaderThemeStore } from '../src/shaders/themeStore';
@@ -112,9 +101,6 @@ export default function RootLayout() {
     }).catch(() => { /* no-op on web — expo-audio's web build is a stub */ });
   }, []);
 
-  // Global ambient ripple-field — lines visible everywhere, drift
-  // animation only runs while audio is actually playing.
-  const audioPlaying = usePlayerStore(s => s.playing);
   // Player open flag — drives a global fade on the entire navigator
   // tree so every screen (Start tab, SM/QM tabs, detail pages…)
   // dissolves together when the audio Player overlay opens, no
@@ -159,40 +145,6 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.root}>
     <View style={styles.root}>
       <StatusBar style="light" />
-      {/* DEV TOGGLE — flip BG_FX_ENABLED to bring the animated
-          background back. Disabled on native right now while we
-          investigate whether the EnergyColumn + AnimatedGradient pair
-          is what's making screen / overlay transitions feel sticky on
-          iPhone. Both layers run reanimated worklets at 60 Hz across
-          the whole viewport, which adds up alongside the new
-          PagerView. With them off you'll get a flat `colors.bg` fill
-          behind everything — same colour, no motion — so any change
-          in transition fluidity points right back at these. */}
-      {BG_FX_ENABLED ? (
-        <>
-          {/* Shared atmospheric gradient — sits at the root so every
-              screen renders against the same backdrop. `staticMode`
-              skips the breath + centre-Y chase on native so the SVG
-              renders once and stays. */}
-          <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            <AnimatedGradient
-              centerY={0.55}
-              animateCenter={false}
-              staticMode={BG_STATIC_MODE}
-            />
-          </View>
-          {/* Global energy column. `staticMode` pins the time clock so
-              every WaveLine renders a single fixed path, no per-frame
-              UI-thread work. Web keeps the live drift. */}
-          <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            <EnergyColumn
-              opacity={0.75}
-              active={audioPlaying}
-              staticMode={BG_STATIC_MODE}
-            />
-          </View>
-        </>
-      ) : null}
       {/* Atmospheric shader behind everything — rendered at root
           level so it stays visible behind the audio Player overlay
           (which fades the navigator below). Each option is keyed +
