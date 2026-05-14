@@ -24,7 +24,7 @@
     },
     "ios": {
       "bundleIdentifier": "org.allhere.silentmind",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "infoPlist": {
         "UIBackgroundModes": [
           "audio"
