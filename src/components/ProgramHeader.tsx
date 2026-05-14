@@ -1,4 +1,4 @@
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, Platform } from 'react-native';
 import { colors, spacing, type } from '../theme';
 import { noOrphan } from '../utils/noOrphan';
 
@@ -78,10 +78,12 @@ export function ProgramHeader({ eyebrow, title, subtitle, description, accent }:
 const styles = StyleSheet.create({
   root: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    // Generous bottom padding so the section title is clearly its own
-    // beat before the audio-list panel / volet cards below it.
-    paddingBottom: spacing.xxl,
+    // Android phones don't reserve room for an iPhone notch / Dynamic
+    // Island, so the top of the header sits closer to the status bar
+    // already; trim the vertical paddings on Android to lift the rest
+    // of the page up without re-centring everything.
+    paddingTop: Platform.OS === 'android' ? spacing.sm : spacing.lg,
+    paddingBottom: Platform.OS === 'android' ? spacing.lg : spacing.xxl,
     alignItems: 'center',
     // gap between eyebrow → title → description bumped (md → lg) so
     // the three lines breathe instead of stacking tight. Combined with

@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Line, Circle, Path } from 'react-native-svg';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
@@ -185,7 +185,10 @@ const styles = StyleSheet.create({
   diagramCenter: {
     flex: 1,
     justifyContent: 'center',
-    paddingVertical: spacing.lg,
+    // Android phones have less iPhone-style notch padding to absorb, so
+    // we trim the diagram's vertical breathing room to keep the Enter
+    // button visible above the fold without scrolling.
+    paddingVertical: Platform.OS === 'android' ? spacing.xs : spacing.lg,
   },
   // Diagram block — trunk SVG + labels in a single row, centred as
   // a unit so the WHOLE block (trunk + labels) lands at the column
