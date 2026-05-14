@@ -11,12 +11,27 @@
  * delegates everything else to the default Expo Babel transformer.
  */
 
-const upstreamTransformer = require(
-  require.resolve(
+// @expo/metro-config lives under expo/node_modules locally (nested) but is
+// hoisted to the top-level node_modules on CI / fresh installs. Try both.
+function resolveExpoBabelTransformer() {
+  const candidates = [
     'expo/node_modules/@expo/metro-config/build/babel-transformer',
-    { paths: [__dirname] },
-  )
-);
+    '@expo/metro-config/build/babel-transformer',
+  ];
+  for (const id of candidates) {
+    try {
+      return require.resolve(id, { paths: [__dirname] });
+    } catch {
+      // try the next one
+    }
+  }
+  throw new Error(
+    `wjson-transformer: cannot find @expo/metro-config babel-transformer ` +
+      `(tried: ${candidates.join(', ')})`,
+  );
+}
+
+const upstreamTransformer = require(resolveExpoBabelTransformer());
 
 module.exports.transform = function (transformerOptions) {
   const { src, filename } = transformerOptions;
