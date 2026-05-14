@@ -8,6 +8,7 @@ import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { ProgramHeader } from '../../src/components/ProgramHeader';
 import { CircleButton } from '../../src/components/CircleButton';
 import { useLayout } from '../../src/hooks/useLayout';
+import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
 import { qmProgram, silentMindVolets, trackDuration, type AudioTrack } from '../../src/content/catalog';
 import { useSessionPrefs } from '../../src/player/sessionPrefs';
 import { useProgress, isTrackUnlocked } from '../../src/player/progressStore';
@@ -121,6 +122,7 @@ function buildGuidedItems(): GuidedItem[] {
 export default function QMScreen() {
   const { columnMax, playSize, playCenterY } = useLayout();
   const insets = useSafeAreaInsets();
+  const tabPad = useTabBarPadding();
   const { height: winH } = useWindowDimensions();
   const usableH = Math.max(360, winH - insets.top - insets.bottom);
   const gapTop = playCenterY - insets.top - playSize / 2;
@@ -280,7 +282,7 @@ export default function QMScreen() {
       <Background color={colors.bgTabAlt}>
         <Stack.Screen options={{ title: '' }} />
         <SwipeTabs current="qm">
-        <View style={[styles.content, { alignItems: 'center', paddingTop: insets.top }]}>
+        <View style={[styles.content, { alignItems: 'center', paddingTop: insets.top, paddingBottom: tabPad }]}>
           <View style={[styles.column, { maxWidth: columnMax, alignItems: 'center', flex: 1 }]}>
             <View style={{ flex: TOP_FLEX, alignItems: 'center', width: '100%' }}>
               <Text style={[styles.roundBarText, { color: colors.accentAlt }, phase === 'break' && styles.roundBarBreak]}>
@@ -934,6 +936,9 @@ const styles = StyleSheet.create({
   },
   donePillText: { ...type.overline, fontSize: 11, letterSpacing: 1.6 },
 
-  exitLink: { marginTop: spacing.xl, paddingVertical: spacing.sm },
-  exitLinkText: { ...type.caption, color: colors.textDim },
+  // Exit affordance — was too dim/small to read as the Close button
+  // for the QM session. Now overline-tracked + textMuted (not
+  // textDim), with a bit more padding for a comfy tap target.
+  exitLink: { marginTop: spacing.xl, paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.lg },
+  exitLinkText: { ...type.overline, color: colors.textMuted, fontSize: 12, letterSpacing: 1.8 },
 });
