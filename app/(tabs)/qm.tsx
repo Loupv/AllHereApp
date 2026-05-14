@@ -282,7 +282,17 @@ export default function QMScreen() {
       <Background color={colors.bgTabAlt}>
         <Stack.Screen options={{ title: '' }} />
         <SwipeTabs current="qm">
-        <View style={[styles.content, { alignItems: 'center', paddingTop: insets.top }]}>
+        {/* Top-left Close button — mirrors the audio Player overlay's
+            close affordance. Replaces the bottom "Exit training" link
+            so the gesture matches the rest of the app. */}
+        <Pressable
+          onPress={closeSession}
+          hitSlop={12}
+          style={[styles.sessionClose, { top: insets.top + spacing.md }]}
+        >
+          <Text style={styles.sessionCloseText}>Close</Text>
+        </Pressable>
+        <View style={[styles.content, { alignItems: 'center', paddingTop: insets.top + spacing.xl }]}>
           <View style={[styles.column, { maxWidth: columnMax, alignItems: 'center', flex: 1 }]}>
             <View style={{ flex: TOP_FLEX, alignItems: 'center', width: '100%' }}>
               <Text style={[styles.roundBarText, { color: colors.accentAlt }, phase === 'break' && styles.roundBarBreak]}>
@@ -340,12 +350,10 @@ export default function QMScreen() {
             <View style={{ flex: 1, width: '100%' }} />
           </View>
         </View>
-        {/* Skip-break + Exit (or Reset on done) — anchored to the
-            BOTTOM of the screen above the tab bar, NOT inside the
-            flex column. The column gets compressed by paddingBottom
-            and would shove the controls into the play button's Y
-            range; absolute positioning anchored on tabPad keeps both
-            clear of each other. */}
+        {/* Skip-break (during break) + Reset (on done) — anchored to
+            the bottom of the screen above the tab bar. The Exit
+            training link has moved to a top-left Close button, so
+            this strip is only the round-flow controls now. */}
         <View
           style={[
             styles.sessionControls,
@@ -353,28 +361,22 @@ export default function QMScreen() {
           ]}
           pointerEvents="box-none"
         >
-          {phase !== 'done' ? (
-            <>
-              {phase === 'break' ? (
-                <Pressable
-                  onPress={skipPhase}
-                  hitSlop={10}
-                  style={[styles.skipBtn, styles.skipBtnBreakOffset]}
-                >
-                  <Text style={[styles.skipBtnText, { color: colors.accentAlt }]}>
-                    Skip break →
-                  </Text>
-                </Pressable>
-              ) : null}
-              <Pressable onPress={closeSession} hitSlop={10} style={styles.exitLink}>
-                <Text style={styles.exitLinkText}>Exit training</Text>
-              </Pressable>
-            </>
-          ) : (
+          {phase === 'break' ? (
+            <Pressable
+              onPress={skipPhase}
+              hitSlop={10}
+              style={[styles.skipBtn, styles.skipBtnBreakOffset]}
+            >
+              <Text style={[styles.skipBtnText, { color: colors.accentAlt }]}>
+                Skip break →
+              </Text>
+            </Pressable>
+          ) : null}
+          {phase === 'done' ? (
             <Pressable onPress={closeSession} style={styles.donePill}>
               <Text style={[styles.donePillText, { color: colors.accentAlt }]}>Reset</Text>
             </Pressable>
-          )}
+          ) : null}
         </View>
         {phase !== 'done' ? (
           <View
@@ -941,11 +943,17 @@ const styles = StyleSheet.create({
   },
   donePillText: { ...type.overline, fontSize: 11, letterSpacing: 1.6 },
 
-  // Exit affordance — was too dim/small to read as the Close button
-  // for the QM session. Now overline-tracked + textMuted (not
-  // textDim), with a bit more padding for a comfy tap target.
-  exitLink: { paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.lg },
-  exitLinkText: { ...type.overline, color: colors.textMuted, fontSize: 12, letterSpacing: 1.8 },
+  // Top-left Close button — mirrors the audio Player overlay's
+  // close affordance so the gesture is the same across every player
+  // surface in the app.
+  sessionClose: {
+    position: 'absolute',
+    left: spacing.lg,
+    zIndex: 10,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  sessionCloseText: { ...type.caption, color: colors.text },
   // Absolutely positioned controls strip — anchored above the tab bar
   // (bottom: tabPad) so the column flex layout above can stay
   // uncompressed and the play button keeps its centered Y. Without
