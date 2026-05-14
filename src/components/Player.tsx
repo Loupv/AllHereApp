@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, PanResponder, Platform, useWindowDimensions, ActivityIndicator } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,6 +22,11 @@ import { colors, radius, spacing, type } from '../theme';
 import { noOrphan } from '../utils/noOrphan';
 import { CircleButton } from './CircleButton';
 import { WaveformProgress } from './WaveformProgress';
+
+// Tick used for the pre-roll countdown — same asset QM Training
+// uses for its `PRE_ROUND_SECONDS` ticks, so the audible cadence
+// matches across both surfaces.
+const TICK_SOURCE = require('../../assets/audio/tick.mp3');
 
 /**
  * Normalize a filename stem into the same key used by scripts/gen-waveforms.mjs.
@@ -318,6 +323,15 @@ function PlayerInner() {
   const player = useAudioPlayer(resolvedUri ?? undefined);
   const status = useAudioPlayerStatus(player);
 
+  // Tick player for the pre-roll countdown — same UX as QM Training,
+  // a single audible tick on each second mark before the audio
+  // starts. Always-mounted so the first tick on session start is
+  // already loaded.
+  const tickPlayer = useAudioPlayer(TICK_SOURCE);
+  const playTick = useCallback(() => {
+    try { tickPlayer.seekTo(0); tickPlayer.play(); } catch {}
+  }, [tickPlayer]);
+
   const [cues, setCues] = useState<TranscriptCue[]>([]);
   const [scrubbing, setScrubbing] = useState(false);
   // While the player is catching up after a seek, `pendingSeekTo` holds
@@ -484,18 +498,27 @@ function PlayerInner() {
   // Pre-roll ticker. Decrements `preRollRemaining` once per second
   // while > 0; when it lands on 0 we flip `hasStarted` so the audio
   // engine kicks in. The countdown UI lives inside the play-button
-  // slot — see the render below.
+  // slot — see the render below. Each visible second mark fires a
+  // tick sound to match the QM Training pre-round audible cue.
+  const didTickInitial = useRef(false);
   useEffect(() => {
     if (preRollRemaining <= 0) return;
+    // Fire a tick on the FIRST render of the countdown too (so the
+    // user hears the "5" beat, not just 4/3/2/1).
+    if (!didTickInitial.current) {
+      didTickInitial.current = true;
+      playTick();
+    }
     const t = setTimeout(() => {
       setPreRollRemaining(r => {
         const next = r - 1;
+        if (next > 0) playTick();
         if (next <= 0) setHasStarted(true);
         return Math.max(0, next);
       });
     }, 1000);
     return () => clearTimeout(t);
-  }, [preRollRemaining]);
+  }, [preRollRemaining, playTick]);
 
   useEffect(() => {
     // Call sites can ask the player to bypass the pre-play screen (big
