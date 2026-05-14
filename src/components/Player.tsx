@@ -257,18 +257,30 @@ function PlayerInner() {
   // for this many seconds while a settle-in countdown ticks down on
   // the player surface (mirrors the QM Training pre-round countdown).
   // Used for the Start screen's 1 min / 3 min / 3 × 3 min pills.
-  // We consume preRollSeconds AT MOUNT TIME so subsequent round /
-  // playlist changes don't re-arm a stale countdown.
+  // We READ preRollSeconds at mount (no side-effect — calling
+  // `set()` from a useState initializer triggers React's
+  // "Cannot update a component while rendering a different
+  // component" warning). The actual clear happens in a useEffect
+  // below, where side effects are allowed.
   const [preRollRemaining, setPreRollRemaining] = useState<number>(() =>
-    usePlayerStore.getState().consumePreRoll(),
+    usePlayerStore.getState().preRollSeconds,
   );
   // hasStarted: false while preRoll is counting down; otherwise honour
   // the autoStart flag.
   const [hasStarted, setHasStarted] = useState<boolean>(() => {
     const s = usePlayerStore.getState();
-    if (s.autoStart && preRollRemaining > 0) return false;
+    if (s.autoStart && s.preRollSeconds > 0) return false;
     return s.autoStart;
   });
+  // Clear the store-level preRollSeconds AFTER mount so subsequent
+  // round / playlist swaps don't see a stale value. Runs once
+  // (empty deps) — local `preRollRemaining` state is already
+  // initialised above and carries the ticker forward.
+  useEffect(() => {
+    if (usePlayerStore.getState().preRollSeconds > 0) {
+      usePlayerStore.setState({ preRollSeconds: 0 });
+    }
+  }, []);
   const [inBreak, setInBreak] = useState(false);
   const [finished, setFinished] = useState(false);
   const [resolvedUri, setResolvedUri] = useState<string | null>(null);
@@ -536,9 +548,9 @@ function PlayerInner() {
     // If we still have pre-roll time on the clock, keep hasStarted
     // false — the pre-roll ticker will flip it to true when the
     // countdown completes. Without this guard the autoStart logic
-    // would race ahead of the countdown UI. (`preRollRemaining` is
-    // local state already initialised from `consumePreRoll`, so it
-    // doesn't bounce back across subsequent track swaps.)
+    // would race ahead of the countdown UI. `preRollRemaining` is
+    // local state, so it doesn't bounce back across subsequent
+    // track swaps.
     const preRollPending = preRollRemaining > 0;
     setHasStarted(!preRollPending && (!!auto || wasPlaying));
     setCurrentRound(auto ? (startAtIntro ? 0 : 1) : 1);

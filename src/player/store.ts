@@ -46,7 +46,6 @@ type PlayerState = {
   playing: boolean;
   open: (track: AudioTrack, playlist?: AudioTrack[], opts?: OpenOptions) => void;
   consumeAutoStart: () => boolean;
-  consumePreRoll: () => number;
   setPlaying: (p: boolean) => void;
   close: () => void;
   playNext: () => void;
@@ -89,14 +88,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   consumeAutoStart: () => {
     const v = get().autoStart;
     if (v) set({ autoStart: false });
-    return v;
-  },
-  // One-shot read of the pre-roll seconds — cleared after read so
-  // subsequent track changes (round transitions, Next/Prev) don't
-  // re-arm the countdown.
-  consumePreRoll: () => {
-    const v = get().preRollSeconds;
-    if (v > 0) set({ preRollSeconds: 0 });
     return v;
   },
   setPlaying: (p) => set({ playing: p }),
