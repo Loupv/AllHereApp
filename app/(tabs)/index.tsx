@@ -21,6 +21,7 @@ import {
 } from '../../src/content/catalog';
 import { usePlayerStore } from '../../src/player/store';
 import { useProgress } from '../../src/player/progressStore';
+import { accentForJourneyPosition } from '../../src/shaders';
 import { useAuth } from '../../src/auth/authStore';
 import { colors, radius, spacing, type } from '../../src/theme';
 import { noOrphan } from '../../src/utils/noOrphan';
@@ -87,6 +88,12 @@ function BustIcon({ size, color }: { size: number; color: string }) {
 export default function StartScreen() {
   const openPlayer = usePlayerStore(s => s.open);
   const listened = useProgress(s => s.listened);
+  // Journey-aware accent — the big play button + pill shadows + the
+  // colour we hand to the Player when a quick meditation opens.
+  // Fresh user (intro) → gold; part 1 → green; part 2 → blue;
+  // part 3 → purple. Keeps the visual identity of "Start" tied to
+  // the user's progression instead of a fixed magenta accent.
+  const journeyAccent = accentForJourneyPosition(listened);
   const nextTrackId = useProgress(s => s.nextTrackId);
   const user = useAuth(s => s.user);
   const { height } = useWindowDimensions();
@@ -145,7 +152,15 @@ export default function StartScreen() {
     const step = startJourneySteps.find(s => s.id === key);
     if (!step?.track) return;
     const pl = startJourneySteps.map(s => s.track).filter(Boolean) as AudioTrack[];
-    openPlayer(step.track, pl, { autoStart: true, preRollSeconds: 5 });
+    openPlayer(step.track, pl, {
+      autoStart: true,
+      preRollSeconds: 5,
+      // Player inherits the same accent the Start pills carry —
+      // matches the journey position so the colour transition from
+      // pre-player → player is continuous instead of snapping to
+      // SM magenta.
+      accent: journeyAccent,
+    });
   };
 
   // The avatar shows a generic bust silhouette regardless of provider —
@@ -260,7 +275,11 @@ export default function StartScreen() {
                       hitSlop={6}
                       accessibilityRole="button"
                       accessibilityLabel={`Start ${m.duration} meditation, ${m.short}`}
-                      style={({ pressed }) => [styles.pill, pressed && styles.pillPressed]}
+                      style={({ pressed }) => [
+                        styles.pill,
+                        { shadowColor: journeyAccent },
+                        pressed && styles.pillPressed,
+                      ]}
                     >
                       <Text style={styles.pillLabel} numberOfLines={1}>{m.duration}</Text>
                       <Text style={styles.pillSub} numberOfLines={1}>{m.short}</Text>
@@ -284,7 +303,7 @@ export default function StartScreen() {
         <CircleButton
           mode="pre"
           size={playSize}
-          accent="#9D8AE8"
+          accent={journeyAccent}
           onPress={onPlayNext}
         />
       </View>
