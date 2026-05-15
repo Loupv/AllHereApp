@@ -43,6 +43,15 @@ const PAIR_FIXES: Record<string, [string, string]> = {
   'watching your': ['Watch', 'your'],
 };
 
+// 3-word Whisper hallucinations collapsed back to a single spoken word.
+// Match is on the *lowercased core* of the three consecutive tokens
+// (punctuation stripped); the replacement word inherits the full time
+// span [first.start, third.end] so the karaoke highlight still feels
+// natural over the whole hallucinated stretch.
+const TRIPLE_FIXES: Record<string, string> = {
+  "i'm to observe": 'Observe',
+};
+
 const TOKEN_FIXES: Record<string, string> = {
   'allhere': 'All Here',
 };
@@ -81,8 +90,25 @@ const applyCorrections = (words: TranscriptWord[]): TranscriptWord[] => {
       continue;
     }
 
-    // 2-word phrase substitutions
+    // 3-word phrase substitutions (try first so a longer match wins
+    // over a shorter prefix). Output is a single word covering the
+    // full time span of the original three tokens.
     const next = words[i + 1];
+    const next2 = words[i + 2];
+    if (next && next2) {
+      const [cCore] = splitTrailingPunct(w.text.toLowerCase());
+      const [nCore] = splitTrailingPunct(next.text.toLowerCase());
+      const [n2Core, n2Punct] = splitTrailingPunct(next2.text.toLowerCase());
+      const tripleKey = `${cCore} ${nCore} ${n2Core}`;
+      const tripleSub = TRIPLE_FIXES[tripleKey];
+      if (tripleSub) {
+        out.push({ text: tripleSub + n2Punct, start: w.start, end: next2.end });
+        i += 2;
+        continue;
+      }
+    }
+
+    // 2-word phrase substitutions
     if (next) {
       const [cCore] = splitTrailingPunct(w.text.toLowerCase());
       const [nCore, nPunct] = splitTrailingPunct(next.text.toLowerCase());
