@@ -486,7 +486,16 @@ export const videoItems: VideoItem[] = [
     title: 'The Quantified Meditation System™',
     subtitle: 'Real-time window into the meditative mind',
     duration: '4:32',
-    embedUrl: 'https://www.youtube.com/embed/GkLzaHzdtoc',
+    // Embed params:
+    //   fs=1            explicit fullscreen authorisation (defaults to 1
+    //                   but we set it so the host iframe / WebView always
+    //                   forwards the request — some webviews enforce it).
+    //   playsinline=1   iOS: keep video inline on play (no auto-fullscreen)
+    //                   so the user can manually fullscreen via the player
+    //                   button instead of the OS taking over immediately.
+    //   modestbranding=1 hide the YT watermark.
+    //   rel=0           no related-video grid when the video ends.
+    embedUrl: 'https://www.youtube.com/embed/GkLzaHzdtoc?fs=1&playsinline=1&modestbranding=1&rel=0',
     poster: require('../../assets/images/hero/space.jpg'),
     kind: 'video',
     remote: true,
@@ -496,7 +505,7 @@ export const videoItems: VideoItem[] = [
     title: 'Zenbu Koko Installation',
     subtitle: 'Extended-reality meditation capsule demonstration',
     duration: '3:45',
-    embedUrl: 'https://www.youtube.com/embed/HmEGX0_Dh9U',
+    embedUrl: 'https://www.youtube.com/embed/HmEGX0_Dh9U?fs=1&playsinline=1&modestbranding=1&rel=0',
     poster: require('../../assets/images/xr-platform.png'),
     kind: 'video',
     remote: true,
@@ -506,7 +515,7 @@ export const videoItems: VideoItem[] = [
     title: 'The Silent Mind Platform',
     subtitle: 'Where meditation meets science & technology',
     duration: '5:20',
-    embedUrl: 'https://www.youtube.com/embed/HghfgUIleBQ',
+    embedUrl: 'https://www.youtube.com/embed/HghfgUIleBQ?fs=1&playsinline=1&modestbranding=1&rel=0',
     poster: require('../../assets/images/hero/sky.jpg'),
     kind: 'video',
     remote: true,
