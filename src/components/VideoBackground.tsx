@@ -87,18 +87,26 @@ export function VideoBackground(_: Props) {
     ],
   }));
 
+  // Anchor to the top-left of the WINDOW with explicit winW/winH —
+  // `StyleSheet.absoluteFillObject` alone collapses to whatever the
+  // nearest positioned ancestor's bounds are, and on the silent-mind-tree
+  // screen that's an Animated.View whose resolved height is shorter
+  // than the window (the reanimated layout pipeline measures the
+  // wrapper before the scrollview lays itself out and the height never
+  // catches up). Fixing the outer at (winW, winH) decouples us from the
+  // parent rect — everything inside then cascades from this known box.
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-      <Animated.View style={[{ width: winW, height: winH }, kbStyle]}>
+    <View
+      pointerEvents="none"
+      style={{ position: 'absolute', top: 0, left: 0, width: winW, height: winH }}
+    >
+      <Animated.View style={[StyleSheet.absoluteFillObject, kbStyle]}>
         {Platform.OS === 'ios' && videoUri ? (
-          <EarthVideoView
-            source={videoUri}
-            style={{ width: winW, height: winH }}
-          />
+          <EarthVideoView source={videoUri} style={StyleSheet.absoluteFillObject} />
         ) : (
           <Image
             source={EARTH_STILL}
-            style={{ width: winW, height: winH }}
+            style={StyleSheet.absoluteFillObject}
             contentFit="cover"
           />
         )}
