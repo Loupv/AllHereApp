@@ -15,13 +15,37 @@ export const BUNDLED_AUDIO = {
   bell: require('../../assets/audio/bell.mp3'),
   bellShort: require('../../assets/audio/bell_short.mp3'),
   tick: require('../../assets/audio/tick.mp3'),
-  // QM3 Home rounds (first 3 rounds only, bundled for offline home practice)
+  // QM3 — Breathing Body (qm1-2) bundled portion: rounds 1-3 + inters
+  // 1-2. Rounds 4-6 + inters 3-5 stream from WP.
   qm3Br1: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01.mp3'),
   qm3Br2: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02.mp3'),
   qm3Br3: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round03.mp3'),
   qm3Inter1: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01_inter.mp3'),
   qm3Inter2: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02_inter.mp3'),
+  // home-qm3 (the Start screen "3x3" quick CTA) gets its own dedicated
+  // audio so it can evolve independently of the QM3 — Breathing Body
+  // (qm1-2) recording. Same 3 rounds + 2 inters shape; files live under
+  // assets/audio/Home/ThreeTimesThree/.
+  home3x3Round1: require('../../assets/audio/Home/ThreeTimesThree/breath7_round01.mp3'),
+  home3x3Round2: require('../../assets/audio/Home/ThreeTimesThree/breath7_round02.mp3'),
+  home3x3Round3: require('../../assets/audio/Home/ThreeTimesThree/breath7_round03.mp3'),
+  home3x3Inter1: require('../../assets/audio/Home/ThreeTimesThree/breath7_round01_inter.mp3'),
+  home3x3Inter2: require('../../assets/audio/Home/ThreeTimesThree/breath7_round02_inter.mp3'),
 } as const;
+
+// ---------------------------------------------------------------------------
+// QM Unguided presets — Emily voice, bell-driven, no per-round guidance.
+// Audio is hosted on WordPress (allhere.org) and resolved via WP_AUDIO_MAP
+// below. The full mp3s under assets/audio/QMUnguided/QM3_Xrounds_*.mp3
+// were segmented at the cycle boundaries into:
+//   - 2 intros (user-customised, 5×3 and 12×3 specific)
+//   - 1 shared round audio (qmu_round.mp3 — bell + 175s silence,
+//     identical for every round of both presets — downloaded once and
+//     replayed N times by the Player)
+//   - 4 + 11 = 15 inter clips (end-voice + bells + voice "round X+1")
+//   - 2 outros (closing bell + "session complete" tail)
+// Filenames (= WP basenames): qmu_round.mp3, qmu{5,12}_intro.mp3,
+// qmu{5,12}_inter{01..N}.mp3, qmu{5,12}_outro.mp3.
 
 // All transcripts are bundled (small .wjson files, ~5KB each, total ~250KB).
 // The audio .mp3 stay remote on WordPress, but transcripts must be local for offline playback.
@@ -50,13 +74,20 @@ export const BUNDLED_TRANSCRIPTS = {
   qm3_round4: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round04.wjson'),
   qm3_round5: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round05.wjson'),
   qm3_round6: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round06.wjson'),
-  qm3_round7: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round07.wjson'),
   qm3_inter1: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01_inter.wjson'),
   qm3_inter2: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02_inter.wjson'),
   qm3_inter3: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round03_inter.wjson'),
   qm3_inter4: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round04_inter.wjson'),
   qm3_inter5: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round05_inter.wjson'),
   qm3_inter6: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round06_inter.wjson'),
+  // home-qm3 (Start screen 3x3 CTA) per-round + per-inter transcripts.
+  // Separate from qm3_round*/qm3_inter* so the 3x3 content can evolve
+  // independently of QM3 — Breathing Body (qm1-2).
+  home3x3_round1: require('../../assets/audio/Home/ThreeTimesThree/breath7_round01.wjson'),
+  home3x3_round2: require('../../assets/audio/Home/ThreeTimesThree/breath7_round02.wjson'),
+  home3x3_round3: require('../../assets/audio/Home/ThreeTimesThree/breath7_round03.wjson'),
+  home3x3_inter1: require('../../assets/audio/Home/ThreeTimesThree/breath7_round01_inter.wjson'),
+  home3x3_inter2: require('../../assets/audio/Home/ThreeTimesThree/breath7_round02_inter.wjson'),
   // QMPart1 — QM5 (Center of Gravity)
   qm5: require('../../assets/audio/QMPart1/Words/QM5_5rounds_Center of Gravity.wjson'),
   qm5_round1: require('../../assets/audio/QMPart1/Rounds/QM5_5rounds_Center of Gravity/gravity5_round01.wjson'),
@@ -81,6 +112,26 @@ export const BUNDLED_TRANSCRIPTS = {
   qm23_inter3: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round03_inter.wjson'),
   qm23_inter4: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round04_inter.wjson'),
   qm23_inter5: require('../../assets/audio/QMPart2/Rounds/QM3_6rounds_ErkinGuided_UnfollowAndWitness/unfollow6_round05_inter.wjson'),
+  // QM Unguided — Emily voice. Audio is remote (WP); transcripts stay
+  // bundled so word-highlight works offline. Rounds are silence-only,
+  // no transcripts needed.
+  qmu5_intro: require('../../assets/audio/QMUnguided/Words/qmu5_intro.wjson'),
+  qmu5_inter1: require('../../assets/audio/QMUnguided/Words/qmu5_inter01.wjson'),
+  qmu5_inter2: require('../../assets/audio/QMUnguided/Words/qmu5_inter02.wjson'),
+  qmu5_inter3: require('../../assets/audio/QMUnguided/Words/qmu5_inter03.wjson'),
+  qmu5_inter4: require('../../assets/audio/QMUnguided/Words/qmu5_inter04.wjson'),
+  qmu12_intro: require('../../assets/audio/QMUnguided/Words/qmu12_intro.wjson'),
+  qmu12_inter1: require('../../assets/audio/QMUnguided/Words/qmu12_inter01.wjson'),
+  qmu12_inter2: require('../../assets/audio/QMUnguided/Words/qmu12_inter02.wjson'),
+  qmu12_inter3: require('../../assets/audio/QMUnguided/Words/qmu12_inter03.wjson'),
+  qmu12_inter4: require('../../assets/audio/QMUnguided/Words/qmu12_inter04.wjson'),
+  qmu12_inter5: require('../../assets/audio/QMUnguided/Words/qmu12_inter05.wjson'),
+  qmu12_inter6: require('../../assets/audio/QMUnguided/Words/qmu12_inter06.wjson'),
+  qmu12_inter7: require('../../assets/audio/QMUnguided/Words/qmu12_inter07.wjson'),
+  qmu12_inter8: require('../../assets/audio/QMUnguided/Words/qmu12_inter08.wjson'),
+  qmu12_inter9: require('../../assets/audio/QMUnguided/Words/qmu12_inter09.wjson'),
+  qmu12_inter10: require('../../assets/audio/QMUnguided/Words/qmu12_inter10.wjson'),
+  qmu12_inter11: require('../../assets/audio/QMUnguided/Words/qmu12_inter11.wjson'),
 } as const;
 
 import { WP_AUDIO_MAP } from './wpAudioMap.generated';
@@ -112,7 +163,11 @@ export function getAudioSource(trackId: string, roundIndex?: number): AudioSourc
   // the resolve threw "Audio source not found" and the Player got
   // stuck loading.
   if (trackId === 'home-qm3' && roundIndex !== undefined) {
-    const homeQm3Rounds = [BUNDLED_AUDIO.qm3Br1, BUNDLED_AUDIO.qm3Br2, BUNDLED_AUDIO.qm3Br3];
+    const homeQm3Rounds = [
+      BUNDLED_AUDIO.home3x3Round1,
+      BUNDLED_AUDIO.home3x3Round2,
+      BUNDLED_AUDIO.home3x3Round3,
+    ];
     const src = homeQm3Rounds[roundIndex];
     if (src !== undefined) return { bundled: src };
   }
@@ -130,6 +185,21 @@ export function getAudioSource(trackId: string, roundIndex?: number): AudioSourc
 
   if (trackId in bundledMap) {
     return { bundled: bundledMap[trackId] };
+  }
+
+  // QM Unguided presets — audio remote on WP, transcripts bundled.
+  // `roundIndex === undefined` resolves to the intro mp3; any round
+  // index resolves to the SHARED round audio (qmu_round.mp3 — bell +
+  // 175s silence) since every round of every preset is identical and
+  // the Player can replay the same cached file N times.
+  if (trackId === 'qmu-5' || trackId === 'qmu-12') {
+    if (roundIndex === undefined) {
+      const introFile = trackId === 'qmu-5' ? 'qmu5_intro.mp3' : 'qmu12_intro.mp3';
+      const url = REMOTE_PATTERN(introFile);
+      return url ? { remote: url } : null;
+    }
+    const url = REMOTE_PATTERN('qmu_round.mp3');
+    return url ? { remote: url } : null;
   }
 
   // Map remote tracks by explicit ID → filename mapping
@@ -172,21 +242,15 @@ export function getAudioSource(trackId: string, roundIndex?: number): AudioSourc
   };
 
   if (trackId in qmRoundMap && roundIndex !== undefined) {
-    // qm1-2 drops its first round (per the catalog's `max: 6` and the
-    // user's edit) — round 1 in the player corresponds to the source
-    // file's round 02. We shift the index here so every consumer
-    // (Player, prefetch, transcript) sees the same shifted view of
-    // the audio. Other QM tracks aren't shifted.
-    const sourceRoundIndex = trackId === 'qm1-2' ? roundIndex + 1 : roundIndex;
-    // qm1-2 source rounds 02 + 03 are bundled (= original qm3Br2,
-    // qm3Br3 — same files as home-qm3 rounds 2 and 3). Player round
-    // 1 → qm3Br2, player round 2 → qm3Br3. Player round 3+ → remote.
-    if (trackId === 'qm1-2' && sourceRoundIndex >= 1 && sourceRoundIndex <= 2) {
-      const bundled = [BUNDLED_AUDIO.qm3Br2, BUNDLED_AUDIO.qm3Br3][sourceRoundIndex - 1];
+    // qm1-2: rounds 1..3 are bundled (qm3Br1..3, the same files as the
+    // Start screen home-qm3 quick CTA). Rounds 4..6 stream from WP.
+    // File naming is direct: player round N → file ${pattern}0N.mp3.
+    if (trackId === 'qm1-2' && roundIndex >= 0 && roundIndex <= 2) {
+      const bundled = [BUNDLED_AUDIO.qm3Br1, BUNDLED_AUDIO.qm3Br2, BUNDLED_AUDIO.qm3Br3][roundIndex];
       return { bundled };
     }
     const { folder, pattern } = qmRoundMap[trackId];
-    const roundNum = String(sourceRoundIndex + 1).padStart(2, '0');
+    const roundNum = String(roundIndex + 1).padStart(2, '0');
     const fileName = `${pattern}${roundNum}.mp3`;
     const url = REMOTE_PATTERN(`${folder}/${fileName}`);
     return url ? { remote: url } : null;
@@ -208,13 +272,20 @@ export function getTranscriptSource(
   // QM rounds — per-round/per-inter transcripts
   if (roundIndex !== undefined) {
     const roundNum = roundIndex + 1;
-    if (trackId === 'qm1-2') {
-      // Same +1 shift as the audio sources — player round N maps to
-      // source round/inter N+1 because the first round was dropped.
-      const sourceNum = roundNum + 1;
+    if (trackId === 'home-qm3') {
       const key = isInter
-        ? `qm3_inter${sourceNum}` as keyof typeof BUNDLED_TRANSCRIPTS
-        : `qm3_round${sourceNum}` as keyof typeof BUNDLED_TRANSCRIPTS;
+        ? `home3x3_inter${roundNum}` as keyof typeof BUNDLED_TRANSCRIPTS
+        : `home3x3_round${roundNum}` as keyof typeof BUNDLED_TRANSCRIPTS;
+      const t = BUNDLED_TRANSCRIPTS[key];
+      if (t !== undefined) return { bundled: t };
+    }
+    if (trackId === 'qm1-2') {
+      // Direct mapping: player round N → qm3_roundN transcript,
+      // player inter N → qm3_interN transcript. Filenames align with
+      // the round/inter numbers shown in the UI.
+      const key = isInter
+        ? `qm3_inter${roundNum}` as keyof typeof BUNDLED_TRANSCRIPTS
+        : `qm3_round${roundNum}` as keyof typeof BUNDLED_TRANSCRIPTS;
       const t = BUNDLED_TRANSCRIPTS[key];
       if (t !== undefined) return { bundled: t };
     }
@@ -230,6 +301,22 @@ export function getTranscriptSource(
       const t = BUNDLED_TRANSCRIPTS[key];
       if (t !== undefined) return { bundled: t };
     }
+    // QM Unguided rounds are silence-only — no transcript to surface.
+    // Returning null here is treated as "no words to highlight", which
+    // is what we want for the meditation portion of each round.
+    if (trackId === 'qmu-5' || trackId === 'qmu-12') {
+      return null;
+    }
+  }
+
+  // QM Unguided intros (Emily's per-preset welcome — transcribed via
+  // Whisper, stored bundled so word-highlight works offline even
+  // though the audio itself streams from WP).
+  if (trackId === 'qmu-5' && roundIndex === undefined) {
+    return { bundled: BUNDLED_TRANSCRIPTS.qmu5_intro };
+  }
+  if (trackId === 'qmu-12' && roundIndex === undefined) {
+    return { bundled: BUNDLED_TRANSCRIPTS.qmu12_intro };
   }
 
   // Single-track transcripts
@@ -278,7 +365,8 @@ export function isBundled(trackId: string): boolean {
     'qm3-home-inter-01': BUNDLED_AUDIO.qm3Inter1,
     'qm3-home-inter-02': BUNDLED_AUDIO.qm3Inter2,
   };
-  return trackId in bundledMap;
+  if (trackId in bundledMap) return true;
+  return false;
 }
 
 /**
@@ -287,9 +375,21 @@ export function isBundled(trackId: string): boolean {
  * @param interIndex - Inter index (0-based, between rounds)
  */
 export function getInterSource(trackId: string, interIndex: number): AudioSource | null {
+  // QM Unguided presets — inter audio remote on WP. Inters are
+  // distinct (each one announces "end of round X" + "round X+1" with
+  // the specific numbers spoken), so they can't be dedup'd like the
+  // rounds — one URL per inter index.
+  if (trackId === 'qmu-5' || trackId === 'qmu-12') {
+    const max = trackId === 'qmu-5' ? 4 : 11;
+    if (interIndex >= max) return null;
+    const prefix = trackId === 'qmu-5' ? 'qmu5' : 'qmu12';
+    const num = String(interIndex + 1).padStart(2, '0');
+    const url = REMOTE_PATTERN(`${prefix}_inter${num}.mp3`);
+    return url ? { remote: url } : null;
+  }
   // home-qm3: bundled inters (only 2 — between rounds 1-2 and 2-3).
   if (trackId === 'home-qm3') {
-    const homeQm3Inters = [BUNDLED_AUDIO.qm3Inter1, BUNDLED_AUDIO.qm3Inter2];
+    const homeQm3Inters = [BUNDLED_AUDIO.home3x3Inter1, BUNDLED_AUDIO.home3x3Inter2];
     const src = homeQm3Inters[interIndex];
     return src !== undefined ? { bundled: src } : null;
   }
@@ -315,16 +415,14 @@ export function getInterSource(trackId: string, interIndex: number): AudioSource
   if (trackId in qmInterMap) {
     const config = qmInterMap[trackId];
     if (interIndex >= config.maxInters) return null;
-    // Same shift as the rounds: qm1-2 player inter N corresponds to
-    // source inter N+1, since we dropped the first round (and with it
-    // the first break).
-    const sourceInterIndex = trackId === 'qm1-2' ? interIndex + 1 : interIndex;
-    // qm1-2 source inter 02 is bundled (= qm3Inter2). Player inter 1
-    // → qm3Inter2; player inter 2+ → remote.
-    if (trackId === 'qm1-2' && sourceInterIndex === 1) {
-      return { bundled: BUNDLED_AUDIO.qm3Inter2 };
+    // qm1-2: inters 1..2 are bundled (qm3Inter1..2). Inters 3..5
+    // stream from WP. File naming is direct: player inter N → file
+    // ${pattern}0N_inter.mp3.
+    if (trackId === 'qm1-2' && interIndex >= 0 && interIndex <= 1) {
+      const bundled = [BUNDLED_AUDIO.qm3Inter1, BUNDLED_AUDIO.qm3Inter2][interIndex];
+      return { bundled };
     }
-    const interNum = String(sourceInterIndex + 1).padStart(2, '0');
+    const interNum = String(interIndex + 1).padStart(2, '0');
     const fileName = `${config.pattern}${interNum}_inter.mp3`;
     const url = REMOTE_PATTERN(`${config.folder}/${fileName}`);
     return url ? { remote: url } : null;
@@ -350,7 +448,33 @@ export function getInterTranscriptSource(trackId: string, interIndex: number): A
     const t = BUNDLED_TRANSCRIPTS[`qm23_inter${interNum}` as keyof typeof BUNDLED_TRANSCRIPTS];
     if (t !== undefined) return { bundled: t };
   }
+  if (trackId === 'qmu-5') {
+    const t = BUNDLED_TRANSCRIPTS[`qmu5_inter${interNum}` as keyof typeof BUNDLED_TRANSCRIPTS];
+    if (t !== undefined) return { bundled: t };
+  }
+  if (trackId === 'qmu-12') {
+    const t = BUNDLED_TRANSCRIPTS[`qmu12_inter${interNum}` as keyof typeof BUNDLED_TRANSCRIPTS];
+    if (t !== undefined) return { bundled: t };
+  }
 
+  return null;
+}
+
+/**
+ * Get the outro audio source for tracks that declare one (currently the
+ * QM Unguided presets — closing bell + "session complete" voice that
+ * plays after the final round). Audio remote on WP. No outro transcript
+ * is published (the tail is short and largely environmental).
+ */
+export function getOutroSource(trackId: string): AudioSource | null {
+  if (trackId === 'qmu-5') {
+    const url = REMOTE_PATTERN('qmu5_outro.mp3');
+    return url ? { remote: url } : null;
+  }
+  if (trackId === 'qmu-12') {
+    const url = REMOTE_PATTERN('qmu12_outro.mp3');
+    return url ? { remote: url } : null;
+  }
   return null;
 }
 

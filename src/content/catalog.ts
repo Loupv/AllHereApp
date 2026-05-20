@@ -1,4 +1,9 @@
-import { getAudioSource, getTranscriptSource, BUNDLED_AUDIO, BUNDLED_TRANSCRIPTS } from './audioRegistry';
+import {
+  getAudioSource,
+  getTranscriptSource,
+  BUNDLED_AUDIO,
+  BUNDLED_TRANSCRIPTS,
+} from './audioRegistry';
 
 export type RoundsConfig = {
   max: number;
@@ -13,6 +18,20 @@ export type RoundsConfig = {
   roundInterTranscripts?: (number | string | null)[];
   introSource?: number | string;
   introTranscript?: number | string;
+  // When true, the Player surfaces the "Include intro" toggle and
+  // starts playback from the intro (round 0) when autoStart is set.
+  // Used for tracks whose intro audio is resolved via the audioRegistry
+  // resolver (`getAudioSource(trackId)` with no roundIndex) rather than
+  // declared inline. Existing tracks that declare `introSource` keep
+  // working — both signals are checked.
+  hasIntro?: boolean;
+  // When true, the Player enters an `inOutro` state after the final
+  // round and resolves the outro audio via the audioRegistry's
+  // `getOutroSource(trackId)`. Used for QM Unguided sessions where the
+  // closing bell + "session complete" voice live in a separate clip
+  // (otherwise the last round would be asymmetric). When the outro
+  // audio ends, the Player closes.
+  hasOutro?: boolean;
 };
 
 /**
@@ -51,6 +70,10 @@ export function trackProgram(id: string): 'silent-mind' | 'qm' | null {
   for (const v of qmVolets) {
     if (v.tracks.some(t => t.id === id)) return 'qm';
   }
+  // Unguided presets aren't part of any volet — they're standalone
+  // bell-driven sessions opened from the QM tab. Still resolve as 'qm'
+  // so the Player shows the QM Training eyebrow / accent.
+  if (qmUnguidedPresets.some(t => t.id === id)) return 'qm';
   return null;
 }
 
@@ -225,11 +248,9 @@ export const silentMindVolets: Volet[] = [
       {
         id: 'qm1-2', title: 'QM3 — Breathing Body',
         description: 'Turn the mind towards the breathing process — notice the body exhaling, inhaling, then resting attention on the natural breath.',
-        // Original recording has 7 rounds + 6 inters; the first round
-        // and the first break were dropped per the user's edit, so the
-        // session now runs 6 rounds. The audioRegistry shifts the
-        // round-index resolution by +1 to keep playing files
-        // breath7_round02..07 + breath7_round02..06_inter.
+        // 6 rounds + 5 inters. File naming is direct: player round N
+        // resolves to breath7_round0N.mp3 / breath7_round0N_inter.mp3
+        // (rounds 1..3 + inters 1..2 bundled, rest streamed from WP).
         rounds: {
           max: 6, roundLengthMinutes: 3, breakSeconds: 60,
         },
@@ -447,6 +468,52 @@ export const qmVolets: Volet[] = [
       { id: 'qm3-2', title: 'The Dark Practice (QM)', comingSoon: true },
       { id: 'qm3-3', title: 'The Light Practice (QM)', comingSoon: true },
     ],
+  },
+];
+
+/**
+ * QM Unguided audio presets — bell-driven sessions with Emily's voice
+ * cueing each round. Two formats segmented from the source recordings
+ * at the bells (intro / round / inter-round), so the global Player's
+ * existing rounds loop drives playback the same way as the QM guided
+ * tracks. Not part of `qmVolets` because they're standalone presets
+ * opened from the QM tab's Unguided mode, not journey tracks.
+ *
+ * The "Custom…" entry in the QM tab keeps the legacy app-triggered
+ * bell timer for other formats (3×3, 5×5, etc.).
+ */
+export const qmUnguidedPresets: AudioTrack[] = [
+  {
+    id: 'qmu-5',
+    title: 'QM3 · 5 rounds',
+    description:
+      'Five rounds of three minutes with one-minute breaks. Bell + voice cues — no per-round guidance.',
+    rounds: {
+      max: 5,
+      roundLengthMinutes: 3,
+      breakSeconds: 60,
+      // intro / rounds / inters / outro all live remote on WP — the
+      // Player resolves them via audioRegistry's getAudioSource /
+      // getInterSource / getOutroSource using the track id. The
+      // `hasIntro` / `hasOutro` flags tell the Player there ARE these
+      // phases so it surfaces the toggle / enters the outro state;
+      // actual URLs are fetched on demand.
+      hasIntro: true,
+      hasOutro: true,
+    },
+  },
+  {
+    id: 'qmu-12',
+    title: 'QM3 · 12 rounds',
+    description:
+      'Twelve rounds of three minutes with one-minute breaks. Extended bell-driven session.',
+    rounds: {
+      max: 12,
+      roundLengthMinutes: 3,
+      breakSeconds: 60,
+      hasIntro: true,
+      hasOutro: true,
+    },
   },
 ];
 
