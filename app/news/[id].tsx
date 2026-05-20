@@ -44,7 +44,15 @@ export default function NewsArticleScreen() {
     <Background>
       <Stack.Screen options={{ title: '' }} />
       <BackButton />
-      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top }]}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingTop: insets.top }]}
+        // iOS default delaysContentTouches=true holds the touch for
+        // 150 ms before passing it to inner Pressables. During a
+        // momentum scroll that delay reads as the scroll "freezing"
+        // when you re-touch — the new drag should pick up the
+        // motion seamlessly instead.
+        delaysContentTouches={false}
+      >
         <View style={[styles.column, { maxWidth: columnMax }]}>
           {/* Title + meta render BEFORE the embed so the BackButton
               chevron lands over the dark header band, not the video

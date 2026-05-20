@@ -1,6 +1,14 @@
+import { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Line, Circle, Path } from 'react-native-svg';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
@@ -131,6 +139,29 @@ export default function SilentMindScreen() {
   const router = useRouter();
   const tabPad = useTabBarPadding();
   const { columnMax } = useLayout();
+
+  // Slow continuous glow on the Enter CTA — accent-tinted box-shadow
+  // pulses from a small soft halo to a wider, brighter one on a
+  // 2.6 s sine cycle. No scale, no button-opacity change: only the
+  // surrounding glow breathes so the button itself stays anchored
+  // in place.
+  const breath = useSharedValue(0);
+  useEffect(() => {
+    breath.value = withRepeat(
+      withTiming(1, { duration: 1300, easing: Easing.inOut(Easing.sin) }),
+      -1, true,
+    );
+  }, [breath]);
+  const enterBtnGlowStyle = useAnimatedStyle(() => {
+    const t = breath.value;
+    // accent = #9E3694 → rgb(158, 54, 148)
+    const alpha = (0.22 + t * 0.42).toFixed(2);
+    const blur = 8 + t * 12;
+    return {
+      boxShadow: `0 0 ${blur}px rgba(158, 54, 148, ${alpha})`,
+    };
+  });
+
   return (
     <Background color={colors.bgTab}>
       <SwipeTabs current="silent-mind">
@@ -156,15 +187,31 @@ export default function SilentMindScreen() {
               </Text>
             </View>
 
-            <Pressable
-              onPress={() => router.push('/silent-mind-tree' as never)}
-              style={({ pressed }) => [
-                styles.enterBtn,
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              <Text style={styles.enterBtnLabel}>Enter</Text>
-            </Pressable>
+            {/* Slot wrapper takes flex:1 to soak up the space below
+                the diagram block and centres the Enter button inside,
+                so the button sits halfway between the caption above
+                and the tab bar below — equidistant regardless of
+                screen height. The breath lives on an Animated.View
+                wrapper around the Pressable (animatedProps on a
+                Pressable's function-style don't reliably thread the
+                animated values — wrapping is safer). */}
+            <View style={styles.enterBtnSlot}>
+              {/* Glow lives on an Animated.View wrapper so we can
+                  animate a CSS-style boxShadow (RN 0.76+ supports it
+                  cross-platform). The Pressable inside stays still —
+                  only the halo behind it pulses. */}
+              <Animated.View style={[styles.enterBtnGlow, enterBtnGlowStyle]}>
+                <Pressable
+                  onPress={() => router.push('/silent-mind-tree' as never)}
+                  style={({ pressed }) => [
+                    styles.enterBtn,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <Text style={styles.enterBtnLabel}>Enter</Text>
+                </Pressable>
+              </Animated.View>
+            </View>
           </View>
         </ScrollView>
       </SwipeTabs>
@@ -240,16 +287,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     // Match the diagram's right-shift so the caption sits visually
     // under the diagram column rather than under the page's
-    // geometric centre.
+    // geometric centre — but apply the same shift on both edges so
+    // the text itself has equal breathing room L / R (was visibly
+    // closer to the right edge than the left).
     marginLeft: spacing.xl,
+    marginRight: spacing.xl,
+  },
+  // Slot that hosts the Enter button — takes whatever vertical
+  // space remains under the diagram and centres the button inside.
+  // The result: Enter sits equidistant between the "Walk the tree…"
+  // caption above and the tab bar below, regardless of screen size.
+  enterBtnSlot: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  // Wrapper that carries the pulsing accent boxShadow. Same border-
+  // radius as the button so the shadow's silhouette matches the
+  // pill outline; the wrapper itself has no fill or border.
+  enterBtnGlow: {
+    borderRadius: radius.pill,
   },
   enterBtn: {
     alignSelf: 'center',
-    // Pushed down further from the diagram caption — gives the CTA
-    // its own beat at the bottom of the page instead of crowding the
-    // explainer text.
-    marginTop: spacing.xxl + spacing.md,
-    marginBottom: spacing.xl,
     paddingVertical: spacing.sm + 4,
     paddingHorizontal: spacing.xl + spacing.md,
     borderRadius: radius.pill,

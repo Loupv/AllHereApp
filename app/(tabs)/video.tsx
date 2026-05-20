@@ -99,10 +99,22 @@ export default function VideoScreen() {
   const video = useVideoFeed(videoItems);
   const news = useNewsFeed(newsArticles);
 
-  const rows: MediaRow[] = [
+  // The video feed (WP types 'in-the-headlines' / 'podcast') and the
+  // news feed (WP 'post') can return the SAME numeric WP id when a
+  // single article is tagged into both (a press mention republished
+  // as a podcast episode, etc.). Both pre-pend `wp-` to the id, so a
+  // same-id duplicate is harmless to dedup here — pick whichever row
+  // came first (video.items wins since it's listed first).
+  const seenIds = new Set<string>();
+  const rows: MediaRow[] = [];
+  for (const r of [
     ...video.items.map(toVideoRow),
     ...news.items.map(toNewsRow),
-  ];
+  ]) {
+    if (seenIds.has(r.id)) continue;
+    seenIds.add(r.id);
+    rows.push(r);
+  }
   // Sort newest-first when a date is available, otherwise keep insertion
   // order so bundled placeholders stay grouped.
   rows.sort((a, b) => {

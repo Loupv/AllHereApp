@@ -8,7 +8,7 @@ import {
   ParamListBase,
   TabNavigationState,
 } from '@react-navigation/native';
-import { Pressable, Text, View, Image, StyleSheet, useWindowDimensions } from 'react-native';
+import { Pressable, Text, View, Image, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts } from '../../src/theme';
 import { useNotifications } from '../../src/player/notificationStore';
@@ -237,7 +237,15 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemibold,
     fontSize: 9,
     lineHeight: 12,
-    letterSpacing: 0.6,
+    // Android with uppercase + letterSpacing has a long-running bug
+    // where the trailing letter's right-side bearing is clipped — the
+    // "t" in ABOUT, the "a" in MEDIA at certain widths, etc. The
+    // text wraps in a tight box and the last character gets shaved.
+    // Lowering letterSpacing a touch + adding 2 px of horizontal
+    // padding leaves enough breathing room on the trailing edge to
+    // avoid the clip without visibly changing the tracking.
+    letterSpacing: Platform.OS === 'android' ? 0.4 : 0.6,
+    paddingHorizontal: 2,
     textTransform: 'uppercase',
     textAlign: 'center',
     includeFontPadding: false,

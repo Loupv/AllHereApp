@@ -11,6 +11,15 @@
   - `QM3_6Rounds_Breath…` — round 2 forced
   - `QM3_7rounds_Breath…` — round 3 too short
   - `QM5_5rounds_Center of Gravity` — round 5 truncated by outro silence
+  - `QM3_7rounds_Breath and Self-Observation/breath7_round02_inter.mp3`
+    contains the "end of round THREE" audio instead of "end of round
+    two" (heard at end of round 2 in the session). The accompanying
+    `.wjson` is correct ("End of round two." at 7.00–8.90s) — only the
+    mp3 content is mis-aligned. Same broken file mirrored on WP CDN
+    (`wp-content/uploads/2026/04/breath7_round02_inter.mp3`, identical
+    `content-length: 2400454`), so re-uploading the corrected segment
+    fixes both clients. Requires the original master mp3 to re-slice;
+    not in repo or on WP CDN that I could find.
 - [ ] Add `introSource` to each QM `rounds` config once intro files are split out.
 - [ ] Replace video placeholders (Big Buck Bunny etc.) with final cuts.
 - [ ] Silent Flute tab currently has placeholder entries — wire real tracks.

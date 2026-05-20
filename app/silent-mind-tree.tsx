@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, useWindowDimensions, Platform } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, useWindowDimensions, Platform, AppState } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -226,6 +226,18 @@ export default function SilentMindTreeScreen() {
   // when the user lands on the screen).
   const trunkClock = useSharedValue(0);
   const branchClock = useSharedValue(0);
+  // Single bob shared value driving BOTH the up and the down
+  // ScrollHints — passed down as a prop so the two chevrons (when
+  // both visible) read the same phase and bob in perfect sync.
+  // Mounting one later than the other doesn't desync them; the
+  // shared value has been ramping the whole time.
+  const scrollHintBob = useSharedValue(0);
+  useEffect(() => {
+    scrollHintBob.value = withRepeat(
+      withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.sin) }),
+      -1, true,
+    );
+  }, [scrollHintBob]);
   useEffect(() => {
     // Particle "frame rate": each clock tick advances the particles
     // by 1 / PARTICLE_FPS of a second. Each AnimatedEllipse worklet
@@ -247,14 +259,37 @@ export default function SilentMindTreeScreen() {
     const TRUNK_CYCLE_MS = 200_000;
     const BRANCH_CYCLE_MS = 50_000;
     const start = Date.now();
+    let id: ReturnType<typeof setInterval> | undefined;
     const tick = () => {
       const elapsed = Date.now() - start;
       trunkClock.value = elapsed / TRUNK_CYCLE_MS;
       branchClock.value = elapsed / BRANCH_CYCLE_MS;
     };
-    tick(); // prime so the very first frame already has phase coverage
-    const id = setInterval(tick, STEP_MS);
-    return () => clearInterval(id);
+    const startTicker = () => {
+      if (id) return;
+      tick(); // prime so the very first frame already has phase coverage
+      id = setInterval(tick, STEP_MS);
+    };
+    const stopTicker = () => {
+      if (id) { clearInterval(id); id = undefined; }
+    };
+    // Pause the 20 Hz particle ticker while the app is backgrounded.
+    // The SM tree screen stays mounted in the navigation stack while
+    // the user plays an audio (Player overlay), so this setInterval
+    // would otherwise keep firing — and writing shared values that
+    // reanimated tries to commit on the UI thread — even with the
+    // screen locked. Burning CPU in background past iOS's 48 s /
+    // 60 s watchdog triggers `memorystatus: killing due to cpulimit
+    // violation` and kills our audio playback at ~45 s.
+    if (AppState.currentState === 'active') startTicker();
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') startTicker();
+      else stopTicker();
+    });
+    return () => {
+      stopTicker();
+      sub.remove();
+    };
   }, [trunkClock, branchClock]);
 
   // Responsive layout sizing.
@@ -1065,10 +1100,15 @@ export default function SilentMindTreeScreen() {
       {currentPageIdx > 0 ? (
         <View
           pointerEvents="box-none"
-          style={[styles.scrollHintTopWrap, { top: insets.top + 24 }]}
+          // top offset reduced by 3 px (vs original 24) to compensate
+          // for the larger glyph: lineHeight 22 vs 16 shifts the visual
+          // centre down by (22-16)/2 = 3 px. Keeps the chevron at the
+          // exact same screen Y as before the visibility boost.
+          style={[styles.scrollHintTopWrap, { top: insets.top + 21 }]}
         >
           <ScrollHint
             direction="up"
+            bob={scrollHintBob}
             onPress={() => goToPage(currentPageIdx - 1)}
           />
         </View>
@@ -1082,10 +1122,16 @@ export default function SilentMindTreeScreen() {
       pageOrder[currentPageIdx] !== 'intro' ? (
         <View
           pointerEvents="box-none"
-          style={[styles.scrollHintBottomWrap, { bottom: insets.bottom + 168 }]}
+          // bottom offset reduced by 3 px (vs original 168) — same
+          // compensation as the top wrap, but mirrored: anchored by
+          // `bottom`, the larger glyph's centre sits 3 px farther
+          // from the bottom edge, so we drop the wrap to bring it
+          // back to the original screen Y.
+          style={[styles.scrollHintBottomWrap, { bottom: insets.bottom + 165 }]}
         >
           <ScrollHint
             direction="down"
+            bob={scrollHintBob}
             onPress={() => goToPage(currentPageIdx + 1)}
           />
         </View>
@@ -1232,18 +1278,16 @@ function HeaderPartLabel({
 // means the chevron isn't present at all on the first / last page).
 function ScrollHint({
   direction,
+  bob,
   onPress,
 }: {
   direction: 'up' | 'down';
+  /** Shared bob value supplied by the parent so both chevrons
+   *  (when both are mounted) read the EXACT same phase and stay
+   *  in lockstep. Cadence + amplitude live at the call site. */
+  bob: SharedValue<number>;
   onPress: () => void;
 }) {
-  const bob = useSharedValue(0);
-  useEffect(() => {
-    bob.value = withRepeat(
-      withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
-      -1, true,
-    );
-  }, []);
   // Bob is computed in the CHILD's frame (always negative translateY),
   // and the wrapper applies a static 180° rotation for the down
   // chevron. This separation matters:
@@ -1253,16 +1297,18 @@ function ScrollHint({
   //   • the parent's static rotation also flips the bob direction
   //     for free — child bobs "up" → screen-down for the rotated
   //     down chevron, screen-up for the up chevron, both correct.
-  const animStyle = useAnimatedStyle(() => {
-    return { transform: [{ translateY: -bob.value * 5 }] };
-  });
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -bob.value * 10 }],
+    // Pulse 0.85 → 1, peak when the chevron is at the top of its arc.
+    opacity: 0.85 + bob.value * 0.15,
+  }));
   return (
     <Pressable
       onPress={onPress}
       hitSlop={16}
       style={({ pressed }) => [
         direction === 'up' ? styles.scrollHintUp : styles.scrollHintDown,
-        { opacity: pressed ? 0.95 : 0.65 },
+        { opacity: pressed ? 0.95 : 1 },
       ]}
     >
       <View
@@ -2278,11 +2324,12 @@ const styles = StyleSheet.create({
   },
   scrollHintGlyph: {
     color: colors.text,
-    fontSize: 16,
-    lineHeight: 16,
+    fontSize: 22,
+    lineHeight: 22,
     textShadowColor: 'rgba(0,0,0,0.55)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+    fontWeight: '600',
   },
   // Static 180° rotation for the down chevron — applied on a plain
   // View wrapper so it doesn't conflict with the inner Animated.View's

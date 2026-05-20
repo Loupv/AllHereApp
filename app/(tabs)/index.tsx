@@ -92,6 +92,14 @@ function BustIcon({ size, color }: { size: number; color: string }) {
 // adapts but the button doesn't.
 const START_BLUE = '#3D6BBA';
 
+// Vertical room reserved for the next-track title + duration meta
+// block that sits just above the CircleButton. The block is
+// absolutely positioned relative to `playCenterY` (not laid out in
+// the ScrollView flow) so it stays a fixed distance above the
+// circle on every screen size. Big enough for a 2-line title (~56)
+// + 4 px gap + meta row (~20) + 12 px clearance above the circle.
+const JOURNEY_TEXT_RESERVED_HEIGHT = 96;
+
 export default function StartScreen() {
   const openPlayer = usePlayerStore(s => s.open);
   const listened = useProgress(s => s.listened);
@@ -236,31 +244,21 @@ export default function StartScreen() {
                   crossfade — only the inner glyph changes (▶ here,
                   pause bars / live ring on the Player) and the rest
                   of the Start UI fades around it. */}
+              {/* Journey block was previously a flex container that
+                  held the title + meta INSIDE the ScrollView and a
+                  spacer "reserving" the absolute button's Y. On small
+                  phones the flex weights moved the title down far
+                  enough that it landed on top of the button (which is
+                  absolute, anchored to the screen — not the flow).
+                  Now the title + meta render OUTSIDE the ScrollView
+                  alongside the CircleButton (see below) so both share
+                  the same playCenterY anchor and can never collide.
+                  The empty spacer here keeps the flex flow honest so
+                  the pills row underneath still lands at the right Y. */}
               <Animated.View
                 style={styles.journeyBlock}
                 entering={reveal ? FadeInDown.delay(220).duration(550) : undefined}
               >
-                {/* "INTRODUCTION · 1 / 3" style eyebrow now lives in
-                    the Player above its play circle (same vertical
-                    position as the next-track title block here) — we
-                    don't print it twice on the Start screen. */}
-                {nextTrack ? (
-                  <Text style={styles.nextTitle} numberOfLines={2}>
-                    {noOrphan(nextTrack.title)}
-                  </Text>
-                ) : null}
-                {nextTrack ? (
-                  <View style={styles.metaRow}>
-                    <KindIcon kind="audio" color={colors.textMuted} size={14} />
-                    {nextDuration ? (
-                      <Text style={styles.metaLabel}>{nextDuration}</Text>
-                    ) : null}
-                  </View>
-                ) : null}
-                {/* Spacer reserves the CircleButton's vertical
-                    footprint; the button itself is pinned absolutely
-                    below so its centre sits at playCenterY — the same
-                    screen Y as QM Training and the Player. */}
                 <View style={{ height: playSize }} />
               </Animated.View>
 
@@ -302,6 +300,46 @@ export default function StartScreen() {
           </ScrollView>
         </View>
       </SwipeTabs>
+
+      {/* Journey title + duration meta — anchored to the same
+          playCenterY reference as the CircleButton below, so they
+          always sit a fixed distance above it regardless of the
+          screen height or the surrounding flex layout. Solves a
+          collision that showed up on shorter phones (e.g. 390×844),
+          where the flow-laid-out title/meta could overrun the
+          screen-Y-anchored absolute CircleButton.
+          `bottom: playSize + 12` puts the block right above the
+          circle with a 12 px breathing margin; vertical room below
+          (`top: ...`) is left unbounded so a 2-line title still
+          drops naturally upward instead of clipping. */}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: undefined,
+          top: playCenterY - playSize / 2 - JOURNEY_TEXT_RESERVED_HEIGHT,
+          height: JOURNEY_TEXT_RESERVED_HEIGHT - 12,
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          paddingBottom: 12,
+        }}
+      >
+        {nextTrack ? (
+          <Text style={styles.nextTitle} numberOfLines={2}>
+            {noOrphan(nextTrack.title)}
+          </Text>
+        ) : null}
+        {nextTrack ? (
+          <View style={styles.metaRow}>
+            <KindIcon kind="audio" color={colors.textMuted} size={14} />
+            {nextDuration ? (
+              <Text style={styles.metaLabel}>{nextDuration}</Text>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
 
       {/* Play button pinned at the shared playCenterY so it lands at
           the same screen Y as QM Training and the Player overlay. */}
@@ -406,8 +444,12 @@ const styles = StyleSheet.create({
   spacerBottom: { flex: 1, minHeight: spacing.md },
   bottomFloor: { flex: 1, minHeight: spacing.sm },
 
-  // Journey block — the page's primary action.
+  // Journey block — the page's primary action. Two distinct
+  // siblings: textGroup (title + meta) on top, button slot below.
   journeyBlock: { alignItems: 'center' },
+  // (journeyText style removed — the title + meta block is now
+  // absolutely positioned alongside the CircleButton, anchored to
+  // playCenterY directly, so no separate flow container is needed.)
   // Media meta row — sits below the next-track title as a quiet
   // descriptor of what's about to play (audio + duration). Headphones
   // icon flips to a play glyph when the track is a video. Tight gap
@@ -425,7 +467,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: spacing.md,
   },
   metaLabel: {
     ...type.caption,
