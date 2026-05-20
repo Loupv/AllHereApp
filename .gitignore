@@ -43,6 +43,11 @@ yarn-error.*
 # Raw QM audio originals (kept locally for re-segmentation, not shipped)
 assets/audio/excluded/
 
+# Local-only big audio originals — Emily-voice QM Unguided masters
+# (>100 MB each, GitHub hard limit). The runtime fetches qmu-5 / qmu-12
+# from WordPress; these locals are only used for editing / re-segmenting.
+assets/audio/QMUnguided/QM3_*rounds_EmilyUnguided.mp3
+
 # Remote audio (.mp3) — served from WordPress, not bundled
 # Transcripts (.wjson) and waveforms ARE kept in git/bundle (small, needed offline)
 assets/audio/Part0/*.mp3
