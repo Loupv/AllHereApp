@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { Pressable, Text, View, StyleSheet } from 'react-native';
+import { AppState, Pressable, Text, View, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle,
   withRepeat, withTiming, withSequence, withDelay, Easing,
+  cancelAnimation,
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { colors, type } from '../theme';
@@ -77,46 +78,67 @@ export function CircleButton({ mode, onPress, breakProgress = 0, breakLabel, siz
   const voiceActive = useSharedValue(0);
 
   useEffect(() => {
-    // Use the reverse=true mode of withRepeat so each cycle is one
-    // continuous tween (0 → 1 → 0 → 1…) instead of two separate
-    // withTiming legs glued by withSequence. The withSequence form
-    // had a subtly visible discontinuity at the loop boundary —
-    // every other cycle's first leg started from a different value
-    // than the prior cycle ended at, producing a tiny "snap". The
-    // reverse-loop variant always carries the same animation factory
-    // forward, with reanimated handling the bounce between cycles
-    // on the worklet thread.
-    breath.value = withRepeat(
-      withTiming(1, { duration: 3600, easing: Easing.inOut(Easing.sin) }),
-      -1, true,
-    );
-    glowPulse.value = withRepeat(
-      withTiming(1, { duration: 2700, easing: Easing.inOut(Easing.sin) }),
-      -1, true,
-    );
-    // Sway oscillates around 0; -1 → +1 is twice the swing of breath.
-    // Start at -1 so the bounce stays symmetric (otherwise the first
-    // cycle's range was 0 → +1 → -1 → +1 — visibly faster than later
-    // cycles).
-    sway.value = -1;
-    sway.value = withRepeat(
-      withTiming(1, { duration: 9000, easing: Easing.inOut(Easing.sin) }),
-      -1, true,
-    );
-    // Expanding ripple ring — same rhythm as the SM tree CircleNode's
-    // ripple so the Start play button reads as part of the same
-    // family of "available, tap me" cues. Cycle: invisible reset (1 ms)
-    // → expand 0→1 over 2800 ms (ring grows + fades) → 2 s hold so
-    // emanations feel like deliberate exhales rather than a continuous
-    // chain.
-    ripple.value = withRepeat(
-      withSequence(
-        withTiming(0, { duration: 1 }),
-        withTiming(1, { duration: 2800, easing: Easing.out(Easing.quad) }),
-        withDelay(2000, withTiming(1, { duration: 1 })),
-      ),
-      -1, false,
-    );
+    // The withRepeat(-1) loops below run on the UI / reanimated worklet
+    // thread, which counts toward iOS's background CPU watchdog (48 s
+    // of CPU per 60 s). Four simultaneous looped sin tweens were a
+    // measurable share of the ~89 % background CPU that jetsam'd us
+    // around the 45-s mark while QM audio was streaming. We start them
+    // only while the app is foreground, cancel them on background, and
+    // restart on resume.
+    const start = () => {
+      // Use the reverse=true mode of withRepeat so each cycle is one
+      // continuous tween (0 → 1 → 0 → 1…) instead of two separate
+      // withTiming legs glued by withSequence. The withSequence form
+      // had a subtly visible discontinuity at the loop boundary —
+      // every other cycle's first leg started from a different value
+      // than the prior cycle ended at, producing a tiny "snap". The
+      // reverse-loop variant always carries the same animation factory
+      // forward, with reanimated handling the bounce between cycles
+      // on the worklet thread.
+      breath.value = withRepeat(
+        withTiming(1, { duration: 3600, easing: Easing.inOut(Easing.sin) }),
+        -1, true,
+      );
+      glowPulse.value = withRepeat(
+        withTiming(1, { duration: 2700, easing: Easing.inOut(Easing.sin) }),
+        -1, true,
+      );
+      // Sway oscillates around 0; -1 → +1 is twice the swing of breath.
+      // Start at -1 so the bounce stays symmetric (otherwise the first
+      // cycle's range was 0 → +1 → -1 → +1 — visibly faster than later
+      // cycles).
+      sway.value = -1;
+      sway.value = withRepeat(
+        withTiming(1, { duration: 9000, easing: Easing.inOut(Easing.sin) }),
+        -1, true,
+      );
+      // Expanding ripple ring — same rhythm as the SM tree CircleNode's
+      // ripple so the Start play button reads as part of the same
+      // family of "available, tap me" cues. Cycle: invisible reset (1 ms)
+      // → expand 0→1 over 2800 ms (ring grows + fades) → 2 s hold so
+      // emanations feel like deliberate exhales rather than a continuous
+      // chain.
+      ripple.value = withRepeat(
+        withSequence(
+          withTiming(0, { duration: 1 }),
+          withTiming(1, { duration: 2800, easing: Easing.out(Easing.quad) }),
+          withDelay(2000, withTiming(1, { duration: 1 })),
+        ),
+        -1, false,
+      );
+    };
+    const stop = () => {
+      cancelAnimation(breath);
+      cancelAnimation(glowPulse);
+      cancelAnimation(sway);
+      cancelAnimation(ripple);
+    };
+    if (AppState.currentState === 'active') start();
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') start();
+      else stop();
+    });
+    return () => { stop(); sub.remove(); };
   }, []);
 
   useEffect(() => {

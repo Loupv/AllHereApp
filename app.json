@@ -2,7 +2,7 @@
   "expo": {
     "name": "AllHereApp",
     "slug": "AllHereApp",
-    "version": "1.1.5",
+    "version": "1.1.7",
     "scheme": "allhere",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,6 +12,7 @@
       "assets/fonts/**",
       "assets/audio/Home/**",
       "assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/**",
+      "assets/audio/QMUnguided/Words/**",
       "assets/audio/bell.mp3",
       "assets/audio/bell_short.mp3",
       "assets/audio/tick.mp3"
@@ -20,7 +21,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#00102E"
     },
     "ios": {
       "bundleIdentifier": "org.allhere.silentmind",

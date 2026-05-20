@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, ScrollView, PanResponder, Platform, useWindowDimensions, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ScrollView, PanResponder, Platform, useWindowDimensions, ActivityIndicator, AppState } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,7 +17,7 @@ import { trackProgram, trackLocation } from '../content/catalog';
 import { AtmosphereBackground } from './AtmosphereBackground';
 import { VideoBackground } from './VideoBackground';
 import { resolveAudioSource, prefetchAudio } from '../content/audioResolver';
-import { getAudioSource, getInterSource, getTranscriptSource, getInterTranscriptSource } from '../content/audioRegistry';
+import { getAudioSource, getInterSource, getOutroSource, getTranscriptSource, getInterTranscriptSource } from '../content/audioRegistry';
 import { WAVEFORMS } from '../content/waveforms.generated';
 import { colors, radius, spacing, type } from '../theme';
 import { noOrphan } from '../utils/noOrphan';
@@ -205,6 +205,12 @@ function useSmoothTime(
   }, [statusTime]);
   useEffect(() => {
     let raf = 0;
+    // Cancel the rAF entirely while backgrounded — the previous fix
+    // skipped setT() but kept rescheduling requestAnimationFrame
+    // 60×/s, which on iOS still wakes the JS thread enough to
+    // contribute to the 48-s-CPU-per-60-s background watchdog. The
+    // smoothed time is purely a UI concern (karaoke / scrubber), so
+    // freezing the whole loop while nothing is visible is harmless.
     const tick = () => {
       const now = now0();
       const dt = (now - sync.current.at) / 1000;
@@ -215,8 +221,14 @@ function useSmoothTime(
       setT(monotonic);
       raf = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    const start = () => { if (!raf) raf = requestAnimationFrame(tick); };
+    const stop = () => { if (raf) { cancelAnimationFrame(raf); raf = 0; } };
+    if (AppState.currentState === 'active') start();
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') start();
+      else stop();
+    });
+    return () => { stop(); sub.remove(); };
   }, [playing]);
   return t;
 }
@@ -244,7 +256,12 @@ function PlayerInner() {
   // crosses the 80 % mark.
 
   const [selectedRounds, setSelectedRounds] = useState(track?.rounds?.max ?? 1);
-  const [includeIntro, setIncludeIntro] = useState(!!track?.rounds?.introSource);
+  // A track "has an intro" if it either declares an inline introSource
+  // (legacy) or sets the hasIntro flag (resolver-based, e.g. QM
+  // Unguided). Both paths route through the same Player state — round 0
+  // is the intro phase, then round 1 onwards is the meditation.
+  const trackHasIntro = !!(track?.rounds?.introSource || track?.rounds?.hasIntro);
+  const [includeIntro, setIncludeIntro] = useState(trackHasIntro);
   // Lazy init mirrors the [track?.id] effect's branching so the very
   // first render already lands on the right round source + transcript
   // when the Player is opened with autoStart=true. Without this, the
@@ -255,7 +272,8 @@ function PlayerInner() {
   const [currentRound, setCurrentRound] = useState<number>(() => {
     if (!track) return 1;
     const auto = usePlayerStore.getState().autoStart;
-    if (auto && track.rounds?.introSource) return 0;
+    const hasIntroLocal = !!(track.rounds?.introSource || track.rounds?.hasIntro);
+    if (auto && hasIntroLocal) return 0;
     return 1;
   });
   // Same idea for hasStarted: when autoStart is true at mount we want
@@ -291,6 +309,12 @@ function PlayerInner() {
     }
   }, []);
   const [inBreak, setInBreak] = useState(false);
+  // `inOutro` is set true after the last round of a rounds-based track
+  // when `rounds.outroSource` is defined. While true, the Player plays
+  // the outro clip (e.g. a closing bell + "session complete" voice for
+  // QM Unguided) instead of closing immediately. When the outro ends,
+  // the Player closes the same way a non-outro session would have.
+  const [inOutro, setInOutro] = useState(false);
   const [finished, setFinished] = useState(false);
   const [resolvedUri, setResolvedUri] = useState<string | null>(null);
   const [isResolving, setIsResolving] = useState(false);
@@ -302,6 +326,16 @@ function PlayerInner() {
   const roundSource = (() => {
     if (!track) return undefined;
     const r = track.rounds;
+    // Outro plays after the last round when rounds.hasOutro is set.
+    // Short-circuit before the break / round branches so the outro
+    // audio is resolved regardless of currentRound / inBreak state.
+    // The actual source is fetched via the registry in the resolve
+    // effect below; here we only need a truthy non-string sentinel so
+    // dependent prefetch / waveform paths know "something's loading".
+    if (inOutro) {
+      const outro = track && getOutroSource(track.id);
+      return outro?.bundled ?? outro?.remote ?? undefined;
+    }
     if (inBreak) {
       const interSrc = r?.roundInters?.[currentRound - 1];
       if (interSrc) return interSrc;
@@ -311,7 +345,14 @@ function PlayerInner() {
       const interReg = getInterSource(track.id, currentRound - 1);
       return interReg?.bundled ?? interReg?.remote ?? undefined;
     }
-    if (currentRound === 0) return r?.introSource;
+    if (currentRound === 0) {
+      // hasIntro tracks (QM Unguided) resolve the intro URL via the
+      // registry rather than declaring it inline. Fall through to the
+      // registry lookup when introSource isn't set but hasIntro is.
+      if (r?.introSource) return r.introSource;
+      const reg = track ? getAudioSource(track.id, undefined) : null;
+      return reg?.bundled ?? reg?.remote ?? undefined;
+    }
     if (r?.roundSources && r.roundSources[currentRound - 1]) return r.roundSources[currentRound - 1];
     if (track.source) return track.source;
     // Registry: bundled require (Asset has a stable .name) wins over
@@ -342,14 +383,37 @@ function PlayerInner() {
   })();
 
   // Only create player once we have a resolved URI
-  const player = useAudioPlayer(resolvedUri ?? undefined);
+  // keepAudioSessionActive: true → expo-audio won't deactivate the
+  // AVAudioSession on pause(). We rely on this for lock-screen Now
+  // Playing controls: setActiveForLockScreen only publishes its
+  // metadata into MPNowPlayingInfoCenter while the session is
+  // active, so a defensive pause() during track load (we issue a
+  // few in the source-swap chain) would otherwise tear down the
+  // session right when the user is about to lock the screen, and
+  // the lock-screen card would never appear.
+  // updateInterval: 1000 — drop the default 500 ms status polling rate.
+  // Each tick reads AVPlayer state + republishes Now Playing metadata
+  // on iOS (AudioPlayer.swift::updateStatus auto-fires
+  // MediaController.updateNowPlayingInfo when isActiveForLockScreen).
+  // 1 s is fine for the scrubber UI and halves the background CPU
+  // cost; combined with the redundant-heartbeat removal below, this
+  // keeps us comfortably under iOS's 48 s/min watchdog.
+  const player = useAudioPlayer(resolvedUri ?? undefined, { keepAudioSessionActive: true, updateInterval: 1000 });
   const status = useAudioPlayerStatus(player);
 
   // Tick player for the pre-roll countdown — same UX as QM Training,
   // a single audible tick on each second mark before the audio
   // starts. Always-mounted so the first tick on session start is
   // already loaded.
-  const tickPlayer = useAudioPlayer(TICK_SOURCE);
+  // keepAudioSessionActive: true on EVERY player in the app — expo-audio
+  // deactivates the global AVAudioSession when any non-flagged player
+  // pauses or completes (AudioModule.swift::Function("pause") line
+  // ~200), which silently kills our long-form background playback after
+  // ~45 s when iOS gives up on the suspended session.
+  // updateInterval: 5000 — tickPlayer is idle except during pre-roll
+  // countdown; no reason to poll status at 2 Hz like the main player.
+  // Default 500 ms × every helper × CPU = background watchdog kill.
+  const tickPlayer = useAudioPlayer(TICK_SOURCE, { keepAudioSessionActive: true, updateInterval: 5000 });
   const playTick = useCallback(() => {
     try { tickPlayer.seekTo(0); tickPlayer.play(); } catch {}
   }, [tickPlayer]);
@@ -378,6 +442,94 @@ function PlayerInner() {
   // then jump several cues later.
   const autoScrollAt = useRef(0);
 
+  // Lock-screen Now Playing controls. expo-audio exposes
+  // setActiveForLockScreen on the player; once active, iOS pipes the
+  // metadata into MPNowPlayingInfoCenter and Android into a
+  // MediaSession + foreground-service notification, both of which the
+  // OS shows on the lock screen / control centre with play/pause.
+  //
+  // We call setActiveForLockScreen aggressively — every time the
+  // track / round / break / status changes — because expo-audio's
+  // native side is idempotent (it just resets the active player
+  // pointer + republishes the dict each call). Re-publishing on
+  // every status tick also ensures the lock-screen elapsed-time
+  // bar stays in sync with the actual playback position.
+  const lockScreenActive = useRef(false);
+
+  // Resolve the app icon to a local file:// URI once on mount. iOS's
+  // MPNowPlayingInfoCenter reads artwork via URLSession.dataTask which
+  // accepts file:// URLs, so a bundled require() works as long as
+  // Asset has populated its localUri. We hold the URI in state and
+  // pass it through lockScreenInfo so every track + round transition
+  // re-publishes the same artwork to the lock-screen card.
+  const [artworkUri, setArtworkUri] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const asset = Asset.fromModule(require('../../assets/icon.png'));
+        await asset.downloadAsync();
+        if (!cancelled) setArtworkUri(asset.localUri ?? asset.uri);
+      } catch (err) {
+        console.warn('artwork resolution failed:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const lockScreenInfo = useMemo(() => {
+    if (!track?.id) return null;
+    const program = trackProgram(track.id);
+    const programLabel =
+      program === 'silent-mind' ? 'Silent Mind'
+      : program === 'qm'        ? 'QM Training'
+      :                            'All Here';
+    let title = track.title;
+    if (track.rounds && track.rounds.max > 1) {
+      const total = track.rounds.max;
+      if (currentRound === 0) title = `${track.title} — Intro`;
+      else if (inBreak)       title = `${track.title} — Break ${currentRound}/${total}`;
+      else                    title = `${track.title} — Round ${currentRound}/${total}`;
+    }
+    return { title, artist: programLabel, albumTitle: 'All Here', artworkUrl: artworkUri };
+  }, [track?.id, track?.title, track?.rounds?.max, currentRound, inBreak, artworkUri]);
+
+  // Activate the lock-screen Now Playing card once per (track, metadata,
+  // player) tuple. We DELIBERATELY don't run a periodic heartbeat here:
+  // expo-audio's `AudioPlayer.updateStatus` (AudioPlayer.swift line
+  // ~127) already re-fires `MediaController.updateNowPlayingInfo` on
+  // every status tick while `isActiveForLockScreen` is true — so the
+  // card stays fresh automatically. Adding a JS-side `setInterval`
+  // republish on top of that doubled the publish rate and contributed
+  // to the iOS 48 s/min CPU watchdog killing the app at ~45 s into
+  // backgrounded playback.
+  useEffect(() => {
+    if (!track?.id || !lockScreenInfo) {
+      if (lockScreenActive.current) {
+        try { player.clearLockScreenControls(); } catch (err) { console.warn('clearLockScreenControls failed:', err); }
+        lockScreenActive.current = false;
+      }
+      return;
+    }
+    // Wait until the player is ACTUALLY playing before registering with
+    // MPNowPlayingInfoCenter. iOS's MRDElectedPlayerController only
+    // elects the lock-screen card holder when it sees `selectionReason=
+    // is playing` at registration time; calling setActiveForLockScreen
+    // a few ms too early (while AVPlayer is still in the buffering /
+    // paused state) causes the card to never appear, and subsequent
+    // calls are deduped because `canBeNowPlaying` is already YES.
+    // Confirmed in Console.app: qmu-5 worked because its registration
+    // happened to land during playback; qm1-2 (bundled file, starts
+    // instantly) was registering before status.playing flipped to true.
+    if (!status.playing) return;
+    try {
+      player.setActiveForLockScreen(true, lockScreenInfo);
+      lockScreenActive.current = true;
+    } catch (err) {
+      console.warn('setActiveForLockScreen failed:', err);
+    }
+  }, [track?.id, lockScreenInfo, status.playing, status.duration, player]);
+
   // Resolve audio source (bundled or remote with download)
   useEffect(() => {
     if (!track?.id) {
@@ -402,6 +554,25 @@ function PlayerInner() {
       setIsResolving(true);
       setResolveError(null);
       try {
+        // Outro shortcut: hasOutro flag in catalog → audioRegistry's
+        // getOutroSource(trackId) returns either a bundled require() or
+        // a remote WP URL. Player resolves both shapes locally here,
+        // since resolveAudioSource is shaped around (round, inter)
+        // pairs and adding a third axis for outros would bloat it.
+        if (inOutro && track.rounds?.hasOutro) {
+          const outro = getOutroSource(track.id);
+          if (outro?.bundled) {
+            const asset = Asset.fromModule(outro.bundled);
+            await asset.downloadAsync();
+            setResolvedUri(asset.localUri ?? asset.uri);
+          } else if (outro?.remote) {
+            setResolvedUri(outro.remote);
+          } else {
+            throw new Error(`No outro source for track "${track.id}"`);
+          }
+          setDownloadProgress(0);
+          return;
+        }
         const resolved = await resolveAudioSource(
           track.id,
           roundIndex,
@@ -422,7 +593,7 @@ function PlayerInner() {
     };
 
     resolve();
-  }, [track?.id, currentRound, inBreak]);
+  }, [track?.id, currentRound, inBreak, inOutro]);
 
   // Prefetch next round of the current track AND the next track in the
   // playlist while playback is going so the user gets instant start when
@@ -547,7 +718,7 @@ function PlayerInner() {
     // play button on Start, etc.). Consume the one-shot flag once per
     // track swap so it doesn't re-fire on future round changes.
     const auto = usePlayerStore.getState().consumeAutoStart();
-    const startAtIntro = !!(auto && track?.rounds?.introSource);
+    const startAtIntro = !!(auto && (track?.rounds?.introSource || track?.rounds?.hasIntro));
     // Preserve hasStarted across an in-playlist Next/Prev: if the user
     // was already actively playing, the new track should auto-play
     // too instead of dropping back to the pre-play screen. We read the
@@ -564,8 +735,9 @@ function PlayerInner() {
     setHasStarted(!preRollPending && (!!auto || wasPlaying));
     setCurrentRound(auto ? (startAtIntro ? 0 : 1) : 1);
     setSelectedRounds(track?.rounds?.max ?? 1);
-    setIncludeIntro(!!track?.rounds?.introSource);
+    setIncludeIntro(!!(track?.rounds?.introSource || track?.rounds?.hasIntro));
     setInBreak(false);
+    setInOutro(false);
     setFinished(false);
     endedHandled.current = false;
     roundChangedAt.current = 0;
@@ -692,14 +864,19 @@ function PlayerInner() {
     const didFinish = (status as any).didJustFinish || (t > 2 && t >= duration - 0.15 && t < duration + 1 && !status.playing);
     if (didFinish && !endedHandled.current) {
       endedHandled.current = true;
-      if (inBreak) {
+      if (inOutro) {
+        // Outro audio finished — close the Player. No further round /
+        // inter / outro state to advance to.
+        try { player.pause(); } catch {}
+        close();
+      } else if (inBreak) {
         // Inter ended → advance to next round
         endBreak();
       } else {
         handleRoundEnd();
       }
     }
-  }, [t, duration, status.playing, hasStarted, inBreak, finished]);
+  }, [t, duration, status.playing, hasStarted, inBreak, inOutro, finished]);
 
   // Aggressive pause — used at round / break transitions where the
   // outgoing audio's tail (often a closing bell) was bleeding into the
@@ -726,9 +903,18 @@ function PlayerInner() {
     }
     const hasMore = track?.rounds && currentRound < selectedRounds;
     if (!hasMore) {
-      // No end-of-audio splash — the "AUDIO ENDED" panel added little
-      // value and interrupted the after-practice settle. Just dismiss
+      // After the last round: if the catalog declares hasOutro (closing
+      // bell + "session complete" for QM Unguided), enter the outro
+      // phase and let it play through before closing. Otherwise dismiss
       // the player; the user lands back wherever they opened it from.
+      // (The "AUDIO ENDED" splash was removed — it added little value
+      // and interrupted the after-practice settle.)
+      if (track?.rounds?.hasOutro && !inOutro) {
+        setInOutro(true);
+        roundChangedAt.current = Date.now();
+        endedHandled.current = false;
+        return;
+      }
       pauseHard();
       close();
       return;
@@ -816,14 +1002,22 @@ function PlayerInner() {
 
   const currentCueIdx = useMemo(() => (cues.length ? findCueIndex(cues, t) : -1), [cues, t]);
 
-  // Auto-scroll fires only on cue boundary changes, not on every
-  // status tick. The previous version recomputed an interpolated Y
-  // every ~100 ms and applied it with `animated: false`, which on
-  // native produced a visible per-tick tremble (each scrollTo hard-
-  // snapped the offset by ~5–10 px). Snapping once per cue with
-  // `animated: true` lets RN do a single smooth animation between
-  // lines — karaoke still tracks the voice but the bar reads as a
-  // continuous glide rather than a stutter.
+  // Auto-scroll interpolates Y continuously based on where `t` sits
+  // *within* the current cue. The transcript glides at the pace of
+  // the voice instead of snapping line-by-line at each cue boundary.
+  //
+  //  - cur     = top Y of the currently-spoken cue
+  //  - nextY   = top Y of the next cue (or cur + 60 if last cue)
+  //  - frac    = 0…1 progress of `t` inside [cue.start, nextCue.start]
+  //  - y       = lerp(cur, nextY, frac)
+  //  - targetY = y − 50 (lands the current line ~50 px below the top
+  //              of the 130 px transcript window, past the mask fade)
+  //
+  // `animated: false` because the per-tick interpolation IS the
+  // animation — letting RN animate each tiny scrollTo would compound
+  // its easing on top of ours and stutter. The change-detection
+  // (`< 1 px` skip) keeps us from spamming the native scroll when
+  // the interpolated Y hasn't moved enough to be visible.
   useEffect(() => {
     if (!hasStarted || inBreak) return;
     if (currentCueIdx < 0) return;
@@ -837,15 +1031,24 @@ function PlayerInner() {
     if (scrubbing || pendingSeekTo != null) return;
     const cur = cueLayouts.current[currentCueIdx];
     if (cur == null) return;
-    // Offset lands the current line ~50 px below the top of the
-    // 130 px transcript window (just past the CSS mask fade).
-    const targetY = Math.max(0, cur - 50);
+    const next = cueLayouts.current[currentCueIdx + 1];
+    const cue = cues[currentCueIdx];
+    const nextCue = cues[currentCueIdx + 1];
+    const nextY = next != null ? next : cur + 60;
+    const span = Math.max(0.01, (nextCue ? nextCue.start : cue.end) - cue.start);
+    const frac = Math.max(0, Math.min(1, (t - cue.start) / span));
+    const y = cur + (nextY - cur) * frac;
+    const targetY = Math.max(0, y - 50);
     if (Math.abs(targetY - expectedScrollY.current) < 1) return;
     expectedScrollY.current = targetY;
+    // First scroll after a user-scroll lock expires is animated as a
+    // catch-up; subsequent per-tick updates are unanimated so the
+    // continuous interpolation reads as one smooth glide.
+    const animated = nextScrollAnimated.current;
     nextScrollAnimated.current = false;
     autoScrollAt.current = Date.now();
-    scrollRef.current?.scrollTo({ y: targetY, animated: true });
-  }, [currentCueIdx, hasStarted, inBreak, scrubbing, pendingSeekTo]);
+    scrollRef.current?.scrollTo({ y: targetY, animated });
+  }, [currentCueIdx, t, cues, hasStarted, inBreak, scrubbing, pendingSeekTo]);
 
   const markUserScrolling = () => {
     userScrollingUntil.current = Date.now() + 5000;
@@ -942,25 +1145,38 @@ function PlayerInner() {
   const commitSeekRef = useRef(commitSeek);
   useEffect(() => { commitSeekRef.current = commitSeek; });
 
-  // Release the post-seek pin only once playback ACTUALLY resumes at
-  // the target — i.e. engineState transitioned out of 'buffering' AND
-  // currentTime landed near the target. The earlier check (just
-  // |currentTime - target| < 0.5) cleared the pin while the engine
-  // was still rebuffering, so the timeline briefly snapped back to a
-  // stale currentTime before jumping to the new position. Safety
-  // timeout 4s for slow networks; the user can scrub again to retry.
+  // Release the post-seek pin once playback has demonstrably reached
+  // the target. Two effects are needed because the old single effect
+  // re-ran on every status.currentTime tick and kept resetting the 4s
+  // safety timeout — meaning if the convergence check never matched
+  // (e.g. with updateInterval: 1000 ms the polled currentTime can
+  // jump from the old position past target+0.5s in one go), the pin
+  // stayed forever and the displayed time stuck at the seek target
+  // while the audio kept playing. Symptom: "tap timeline to 0, audio
+  // restarts but time display stays at 00:00."
+  const seenNearTargetRef = useRef(false);
+  useEffect(() => { seenNearTargetRef.current = false; }, [pendingSeekTo]);
   useEffect(() => {
     if (pendingSeekTo == null) return;
-    const converged =
-      engineState === 'playing' &&
-      Math.abs(status.currentTime - pendingSeekTo) < 0.5;
-    if (converged) {
-      setPendingSeekTo(null);
-      return;
+    // Wider threshold to absorb the gap between polled status ticks
+    // (updateInterval: 1000 ms) — the engine may report the new
+    // position one tick after the seek, by which time currentTime
+    // could already be past target + 0.5s on backward seeks.
+    if (Math.abs(status.currentTime - pendingSeekTo) < 1.5) {
+      seenNearTargetRef.current = true;
     }
+    if (seenNearTargetRef.current && engineState === 'playing') {
+      setPendingSeekTo(null);
+    }
+  }, [pendingSeekTo, status.currentTime, engineState]);
+  // Safety fallback: clear the pin after 4s no matter what. Runs in
+  // its own effect with ONLY [pendingSeekTo] as deps so the timer
+  // doesn't get cancelled by every status.currentTime change.
+  useEffect(() => {
+    if (pendingSeekTo == null) return;
     const id = setTimeout(() => setPendingSeekTo(null), 4000);
     return () => clearTimeout(id);
-  }, [pendingSeekTo, status.currentTime, engineState]);
+  }, [pendingSeekTo]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -1324,7 +1540,7 @@ function PlayerInner() {
             mode="pre"
             accent={accent}
             onPress={() => {
-              const startAtIntro = rounds?.introSource && includeIntro;
+              const startAtIntro = (rounds?.introSource || rounds?.hasIntro) && includeIntro;
               setHasStarted(true);
               setCurrentRound(startAtIntro ? 0 : 1);
               endedHandled.current = false;
@@ -1381,7 +1597,7 @@ function PlayerInner() {
             {rounds ? (
               <View style={styles.paramsCard}>
                 <View style={styles.sliderHeader}>
-                  {rounds.introSource ? (
+                  {(rounds.introSource || rounds.hasIntro) ? (
                     <View style={styles.introToggleRow}>
                       <Pressable onPress={() => setIncludeIntro(s => !s)} style={styles.introToggle}>
                         <View style={[styles.switch, includeIntro && [styles.switchOn, { backgroundColor: accent }]]}>

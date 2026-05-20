@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["EarthVideoModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.earthvideo.EarthVideoModule"]
+  }
+}

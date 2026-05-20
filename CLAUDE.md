@@ -3,6 +3,55 @@
 Conventions and gotchas specific to this repo. Read `context.md` for the
 what / why, and `references.md` for pointers to canonical files.
 
+## ⚠️ Worktree vs main — read this BEFORE any build or Bash command
+
+The dev environment runs from a **git worktree** at
+`/Users/vuarness/Documents/GitHub/AllHereApp/.claude/worktrees/<name>/`,
+but the **app must always be built and assets must always be written
+into the main checkout** at `/Users/vuarness/Documents/GitHub/AllHereApp/`.
+
+We've been burnt by this 4+ times. The rules are non-negotiable:
+
+1. **Every Bash command that depends on cwd MUST start with**
+   `cd /Users/vuarness/Documents/GitHub/AllHereApp &&`.
+   This includes: `npx expo run:ios`, `pod install`, `npm install`,
+   `npm run gen:waveforms`, and anything else that reads `package.json`,
+   `app.json`, `ios/`, `android/`, or assets via relative paths.
+
+2. **Every Edit / Write tool call MUST use an absolute path under
+   `/Users/vuarness/Documents/GitHub/AllHereApp/`.**
+   Never use relative paths — they resolve against the worktree and
+   silently land in the wrong place.
+
+3. **Every Bash `cp`, `mv`, `rm`, etc. MUST use absolute paths** for
+   both source and destination. `cp file.webp assets/video/` will go to
+   the worktree's assets dir; `cp file.webp /Users/vuarness/.../AllHereApp/assets/video/` goes to main.
+
+4. **Symptoms that you've been building the worktree by mistake:**
+   - The .app file is named `AllHereApp.app` instead of `AllHere.app`
+   - Build output starts `Signing AllHereApp » AllHereApp.app`
+   - The home-screen icon label is "AllHereApp" not "Silent Mind"
+   - DerivedData path doesn't match the previous successful build's
+   - Recent code changes don't appear in the running app
+   If you see ANY of these, stop, `cd /Users/vuarness/Documents/GitHub/AllHereApp`,
+   and rebuild. Do not assume the wrong app is "close enough" — it isn't.
+
+5. **The cwd does NOT persist between Bash calls.** Each `npx expo run:ios`
+   needs its own `cd /Users/vuarness/Documents/GitHub/AllHereApp && …`
+   prefix — you cannot `cd` once and expect later calls to inherit it.
+
+6. **`pwd` at the top of a build command is a cheap sanity check** —
+   if it prints the worktree path, the command will write to the
+   worktree. Abort and prepend the `cd`.
+
+Main repo's iOS project: `ios/AllHereApp.xcodeproj`, `PRODUCT_NAME = AllHere`.
+Worktree's iOS project: `ios/AllHereApp.xcodeproj`, `PRODUCT_NAME = AllHereApp`.
+The PRODUCT_NAME divergence is the easiest tell that you've built the wrong tree.
+
+If you must run from worktree cwd (e.g. quick `grep`/`ls` to inspect
+state), that's fine — just don't `expo run:ios` or `cp asset` without
+the explicit absolute-path discipline above.
+
 ## Stack
 
 - Expo SDK 54, React Native 0.81, TypeScript 5.9

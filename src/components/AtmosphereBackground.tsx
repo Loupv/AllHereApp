@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { AppState, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 // Module-level shared start time so the shader clock survives a
 // theme switch (which remounts the GLView via key={theme}). Set
@@ -95,28 +95,42 @@ export function AtmosphereBackground({ theme, paused = false }: Props) {
     const start = sharedStart;
     let stopped = false;
     let frameIdx = 0;
+    let rafId = 0;
+    // Background guard: when iOS locks the screen or the app goes to
+    // background, we MUST stop calling rAF entirely (not just skip GL
+    // submit) — even a do-nothing rAF callback still wakes the JS
+    // thread 60×/s, which contributed to the 48-s-CPU-per-60-s iOS
+    // background watchdog killing the app while audio was streaming.
+    let appStateActive = AppState.currentState === 'active';
     const draw = () => {
       if (stopped) return;
       frameIdx++;
-      // Two GPU-saving knobs at once:
-      //   1. paused → skip the GL submit entirely (still keep
-      //      the rAF loop alive so we can resume when the home
-      //      screen comes back into focus, but no draw work).
-      //   2. 20 fps → render only every 3rd rAF tick (60→20).
-      //      The visible motion in these shaders is slow enough
-      //      that even 20 fps is indistinguishable from 60 fps to
-      //      the eye — meditation shaders move at ~0.005 cycles/s.
-      //      Was 30 fps; dropped a notch to cool the phone.
-      if (!pausedRef.current && frameIdx % 3 === 0) {
+      if (!pausedRef.current && appStateActive && frameIdx % 3 === 0) {
         gl.uniform1f(uTime, (Date.now() - start) / 1000);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         // expo-gl native needs `endFrameEXP`; web has it as a no-op.
         if (typeof gl.endFrameEXP === 'function') gl.endFrameEXP();
       }
-      requestAnimationFrame(draw);
+      if (appStateActive) {
+        rafId = requestAnimationFrame(draw);
+      }
     };
-    draw();
-    (gl as any).__shaderStop = () => { stopped = true; };
+    const sub = AppState.addEventListener('change', (s) => {
+      const wasActive = appStateActive;
+      appStateActive = s === 'active';
+      if (appStateActive && !wasActive && !stopped) {
+        // Resume: kick the loop again. Skip ahead one tick boundary
+        // so the very first resumed frame submits GL again.
+        frameIdx = 2;
+        rafId = requestAnimationFrame(draw);
+      }
+    });
+    rafId = requestAnimationFrame(draw);
+    (gl as any).__shaderStop = () => {
+      stopped = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      sub.remove();
+    };
   }, [fragSrc]);
 
   return (

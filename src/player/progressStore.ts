@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { silentMindVolets, qmVolets, introAudios, QM_TO_SM_PAIRING } from '../content/catalog';
 import { kv } from '../content/kv';
 
@@ -133,3 +135,29 @@ export const useProgress = create<State>((set, get) => ({
     kv.set(STORAGE_KEY, {});
   },
 }));
+
+// Native cold-start hydration. `kv.get` is synchronous and on native it
+// reads from an in-memory cache that's EMPTY when the JS bundle first
+// evaluates — meaning the `initialListened` above falls back to `{}` on
+// every fresh launch and the next `markListened` call would overwrite
+// the on-disk progress with that empty map. Read AsyncStorage directly
+// on boot, then merge whatever survives on disk back into the store so
+// the user's SM-tree progress (and the journey unlocks that depend on
+// it) persist across app updates and cold starts.
+if (Platform.OS !== 'web') {
+  AsyncStorage.getItem(STORAGE_KEY)
+    .then((raw) => {
+      if (!raw) return;
+      try {
+        const stored = JSON.parse(raw) as Record<string, true>;
+        // Merge instead of overwrite: any `markListened` that landed
+        // between module-init and this hydrate (e.g. user tapping a
+        // track fast enough to beat the AsyncStorage read) is kept.
+        const merged = { ...stored, ...useProgress.getState().listened };
+        useProgress.setState({ listened: merged });
+      } catch {
+        /* corrupted JSON — drop, the user will rebuild progress */
+      }
+    })
+    .catch(() => { /* AsyncStorage unavailable — nothing to hydrate */ });
+}

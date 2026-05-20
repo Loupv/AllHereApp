@@ -21,7 +21,7 @@ import {
   Montserrat_900Black,
 } from '@expo-google-fonts/montserrat';
 import { IntroSplash } from '../src/components/IntroSplash';
-import { setAudioModeAsync } from 'expo-audio';
+import { setAudioModeAsync, setIsAudioActiveAsync } from 'expo-audio';
 import { Player } from '../src/components/Player';
 import { VideoPlayerModal } from '../src/components/VideoPlayerModal';
 import { AtmosphereBackground as ShaderBackground } from '../src/components/AtmosphereBackground';
@@ -92,13 +92,36 @@ export default function RootLayout() {
   // and the Android `FOREGROUND_SERVICE_MEDIA_PLAYBACK` permission in
   // app.json — those grant the *capability*; this call activates it.
   useEffect(() => {
-    setAudioModeAsync({
-      playsInSilentMode: true,
-      shouldPlayInBackground: true,
-      allowsRecording: false,
-      interruptionMode: 'mixWithOthers',
-      shouldRouteThroughEarpiece: false,
-    }).catch(() => { /* no-op on web — expo-audio's web build is a stub */ });
+    // `interruptionMode: 'doNotMix'` — the AVAudioSession on iOS
+    // gets a Playback category with NO mixable options, which is the
+    // only configuration iOS recognises as a "primary audio app"
+    // eligible for the Lock-screen Now Playing card. Anything else
+    // (mixWithOthers / duckOthers) flags the session as Mixable and
+    // iOS silently refuses to publish MPNowPlayingInfo — confirmed
+    // in os_log:
+    //   [MediaPlayback/Default] [Mixable] ... NowPlayingApp:NO
+    //   Session ... is not applicable for nowPlaying consideration
+    // For Android, doNotMix translates to a regular AUDIOFOCUS_GAIN
+    // request, which the foreground-service intent honours the same
+    // way as duckOthers — JS stays alive through the screen lock.
+    (async () => {
+      try {
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          shouldPlayInBackground: true,
+          allowsRecording: false,
+          interruptionMode: 'doNotMix',
+          shouldRouteThroughEarpiece: false,
+        });
+        // Activate the AVAudioSession up-front so the lock-screen
+        // Now Playing info we set on the Player's audio actually
+        // gets accepted by iOS — MPNowPlayingInfoCenter silently
+        // ignores publish calls while the session is inactive.
+        await setIsAudioActiveAsync(true);
+      } catch (err) {
+        console.warn('Audio setup failed:', err);
+      }
+    })();
   }, []);
 
   // Player open flag — drives a global fade on the entire navigator
