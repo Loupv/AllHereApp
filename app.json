@@ -25,7 +25,7 @@
     },
     "ios": {
       "bundleIdentifier": "org.allhere.silentmind",
-      "buildNumber": "1.0.15",
+      "buildNumber": "1.0.18",
       "supportsTablet": false,
       "infoPlist": {
         "UIBackgroundModes": [

@@ -39,7 +39,20 @@ private final class DisplayLinkProxy {
 }
 
 class EarthVideoView: ExpoView {
-  private let displayLayer = AVSampleBufferDisplayLayer()
+  // Make the view's BACKING layer be the AVSampleBufferDisplayLayer
+  // itself, instead of carrying a separate sublayer. This means the
+  // view's bounds and the display layer's bounds are the same CALayer
+  // bounds — no race between RN's setFrame calls and a manual
+  // displayLayer.frame = bounds in layoutSubviews. UIKit guarantees
+  // layer.frame == view.frame automatically.
+  override class var layerClass: AnyClass {
+    return AVSampleBufferDisplayLayer.self
+  }
+  private var displayLayer: AVSampleBufferDisplayLayer {
+    // Safe force-unwrap: layerClass guarantees the type.
+    return layer as! AVSampleBufferDisplayLayer
+  }
+
   private var reader: AVAssetReader?
   private var trackOutput: AVAssetReaderTrackOutput?
   private var displayLink: CADisplayLink?
@@ -57,19 +70,6 @@ class EarthVideoView: ExpoView {
     // fills.
     displayLayer.videoGravity = .resizeAspectFill
     displayLayer.backgroundColor = UIColor.black.cgColor
-    layer.addSublayer(displayLayer)
-  }
-
-  override func layoutSubviews() {
-    super.layoutSubviews()
-    // Wrap the frame update in a no-animation transaction — without
-    // this, rotating or laying out triggers a CALayer animation that
-    // briefly shrinks the displayLayer to its old bounds while the
-    // sample buffers stream in at the new size.
-    CATransaction.begin()
-    CATransaction.setDisableActions(true)
-    displayLayer.frame = bounds
-    CATransaction.commit()
   }
 
   func setSource(_ url: URL) {

@@ -18,7 +18,6 @@ import Animated, {
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Ellipse } from 'react-native-svg';
-import { LinearGradient } from 'expo-linear-gradient';
 
 // Animated wrapper around react-native-svg's <Path> so we can drive
 // stroke opacity / width from a Reanimated shared value (the tree's
@@ -1061,29 +1060,6 @@ export default function SilentMindTreeScreen() {
           dim band to render against. Drawn AFTER the ScrollView so
           they sit on top, but BEFORE the chevrons + tagline + footer
           so those still render above the fade. */}
-      <View
-        pointerEvents="none"
-        style={[styles.treeEdgeTop, { top: 0, height: insets.top + 150 }]}
-      >
-        <LinearGradient
-          colors={['rgba(0,16,46,0.92)', 'rgba(0,16,46,0)']}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </View>
-      <View
-        pointerEvents="none"
-        style={[styles.treeEdgeBottom, { bottom: 0, height: insets.bottom + 210 }]}
-      >
-        <LinearGradient
-          colors={['rgba(0,16,46,0)', 'rgba(0,16,46,0.92)']}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </View>
-
       {/* The italic tagline "The Earth / Sky / Space" used to live up
           here, but on iPhones with a notch it landed right over the
           speaker/Dynamic Island. Moved back into the footer banner,
@@ -2299,20 +2275,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-  },
-  // Edge fades — absolutely positioned bands at the top and bottom
-  // of the screen, hosting a LinearGradient that obscures the tree's
-  // top / bottom rows so they don't collide with the part tagline
-  // (top) or the part-name banner (bottom).
-  treeEdgeTop: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-  },
-  treeEdgeBottom: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
   },
   scrollHintUp: {
     alignItems: 'center',
