@@ -32,6 +32,12 @@ export type RoundsConfig = {
   // (otherwise the last round would be asymmetric). When the outro
   // audio ends, the Player closes.
   hasOutro?: boolean;
+  // When true, hide the rounds-count slider on the Player's pre-roll
+  // countdown screen — the format is part of the track's identity
+  // (e.g. the Start screen's "3 × 3 min" pill that the user picked
+  // deliberately) and shouldn't be a runtime knob. Rounds plays
+  // through `max` regardless.
+  fixedRounds?: boolean;
 };
 
 /**
@@ -369,6 +375,9 @@ const qm3RoundsHome: AudioTrack = {
     max: 3,
     roundLengthMinutes: 3,
     breakSeconds: 60,
+    // The user picked "3 × 3 min" specifically — don't surface a
+    // rounds slider on the countdown screen letting them change it.
+    fixedRounds: true,
     // No intro on the Start screen "3min × 3" quick CTA — tapping
     // that pill should drop the user straight into round 1, since
     // they explicitly chose the short-format meditation. The "QM

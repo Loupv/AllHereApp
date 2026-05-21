@@ -1600,7 +1600,12 @@ function PlayerInner() {
             ) : description ? (
               <Text style={styles.description}>{noOrphan(description)}</Text>
             ) : null}
-            {rounds ? (
+            {/* Hide the entire rounds-count slider when the track
+                declares `fixedRounds` (the format is part of the
+                track's identity, not a runtime parameter — e.g. the
+                Start screen's "3 × 3 min" pill). Plays through
+                rounds.max regardless. */}
+            {rounds && !rounds.fixedRounds ? (
               <View style={styles.paramsCard}>
                 <View style={styles.sliderHeader}>
                   {(rounds.introSource || rounds.hasIntro) ? (
