@@ -342,7 +342,11 @@ const oneMinute: AudioTrack = {
   source: BUNDLED_AUDIO.homeOneMin,
   transcript: BUNDLED_TRANSCRIPTS.homeOneMin,
   durationHint: '1:06',
-  description: 'One minute to arrive. A single breath, a moment of attention — your first taste of the practice.',
+  // Empty string (not undefined) signals "no description on the
+  // countdown screen" — the Player skips rendering rather than
+  // falling back to the generic DEFAULT_DESCRIPTION. We may bring
+  // text back once we settle on the right Start-screen UX.
+  description: '',
 };
 
 const threeMinutes: AudioTrack = {
@@ -351,7 +355,7 @@ const threeMinutes: AudioTrack = {
   source: BUNDLED_AUDIO.homeThreeMin,
   transcript: BUNDLED_TRANSCRIPTS.homeThreeMin,
   durationHint: '3:07',
-  description: 'Three minutes of guided attention. Settle a little deeper — a steadier taste of the practice.',
+  description: '',
 };
 
 // Home tier 3 — a first taste of Quantified Meditation: 3 × 3-min rounds
@@ -360,7 +364,7 @@ const qm3RoundsHome: AudioTrack = {
   id: 'home-qm3',
   title: 'QM3 · Three rounds',
   durationHint: '11 min',
-  description: 'A first taste of Quantified Meditation: three rounds of three minutes with one-minute breaks between them.',
+  description: '',
   rounds: {
     max: 3,
     roundLengthMinutes: 3,

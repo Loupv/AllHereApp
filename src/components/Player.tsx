@@ -1576,6 +1576,12 @@ function PlayerInner() {
       <View style={styles.middle}>
         {!hasStarted ? (
           <>{/* preplay content below */}
+            {/* Tracks can opt out of the countdown-screen description by
+                setting `description: ''` (empty string) in catalog.ts.
+                The current home meditations (1 min / 3 min / 3×3) do
+                this — they're so short / self-evident that the
+                generic fallback ("Take a moment to arrive…") added
+                noise. */}
             {Array.isArray(description) ? (
               <View style={styles.descriptionBlock}>
                 {description.map((line, i) => (
@@ -1591,9 +1597,9 @@ function PlayerInner() {
                   </Text>
                 ))}
               </View>
-            ) : (
+            ) : description ? (
               <Text style={styles.description}>{noOrphan(description)}</Text>
-            )}
+            ) : null}
             {rounds ? (
               <View style={styles.paramsCard}>
                 <View style={styles.sliderHeader}>
