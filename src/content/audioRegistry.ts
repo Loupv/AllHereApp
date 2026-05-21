@@ -65,7 +65,7 @@ export const BUNDLED_TRANSCRIPTS = {
   p2_1: require('../../assets/audio/Part2/Words/1 - Follow the Air.wjson'),
   p2_2: require('../../assets/audio/Part2/Words/2 - Follow and witness the Air.wjson'),
   p2_3: require('../../assets/audio/Part2/Words/3 - Unfollow and witness the air.wjson'),
-  p3_1: require('../../assets/audio/Part2/Words/4 - Emptiness.wjson'),
+  p3_1: require('../../assets/audio/Part3/1 - Emptiness.wjson'),
   // QMPart1 — QM3 (overall + per-round)
   qm3: require('../../assets/audio/QMPart1/Words/QM3_7rounds_Breath and Self-Observation.wjson'),
   qm3_round1: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01.wjson'),
@@ -216,8 +216,10 @@ export function getAudioSource(trackId: string, roundIndex?: number): AudioSourc
     'p2-1': 'Part2/1 - Follow the Air.mp3',
     'p2-2': 'Part2/2 - Follow and witness the Air.mp3',
     'p2-3': 'Part2/3 - Unfollow and witness the air.mp3',
-    // Part3
-    'p3-1': 'Part2/4 - Emptiness.mp3',
+    // Part3 — Emptiness was originally Part2 track #4; it moved to
+    // Part3 as track #1 during the Part 3 launch reshuffle (the
+    // catalog's `p3-1` id stayed stable through the move).
+    'p3-1': 'Part3/1 - Emptiness.mp3',
   };
 
   if (trackId in remoteMap) {
