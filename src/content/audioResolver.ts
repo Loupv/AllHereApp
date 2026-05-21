@@ -4,6 +4,7 @@
  */
 
 import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as audioDownloader from '../services/audioDownloader';
 import * as audioCacheManager from '../services/audioCacheManager';
 import { getAudioSource, getInterSource, isBundled } from './audioRegistry';
@@ -95,14 +96,28 @@ export async function resolveAudioSource(
   const cacheKey = actualRoundIndex !== undefined ? `${trackId}-${actualIsInter ? 'inter' : 'round'}-${actualRoundIndex}` : trackId;
 
   // Check cache first — if the file is already on disk, prefer it
-  // (no network, instant start, works offline)
+  // (no network, instant start, works offline). We verify the file
+  // still physically exists before returning the cached URI: the
+  // metadata can outlive the file when the OS reclaims
+  // FileSystem.cacheDirectory under storage pressure. A stale URI
+  // would crash the player; a missing file means "re-download".
   const cachedUri = await audioCacheManager.getCachedUri(cacheKey);
   if (cachedUri) {
-    return {
-      uri: cachedUri,
-      isCached: true,
-      isRemote: true,
-    };
+    try {
+      const info = await FileSystem.getInfoAsync(cachedUri);
+      if (info.exists) {
+        return {
+          uri: cachedUri,
+          isCached: true,
+          isRemote: true,
+        };
+      }
+      // File evicted by the OS — drop the dangling metadata entry so
+      // we don't keep checking a path that's gone.
+      await audioCacheManager.removeCached(cacheKey);
+    } catch {
+      // info lookup failed → treat as not-cached and re-download.
+    }
   }
 
   // Not cached: hand the remote URL to the player for streaming playback

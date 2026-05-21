@@ -3,6 +3,8 @@
  * Built on top of kv.ts (AsyncStorage + localStorage).
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { kv } from '../content/kv';
 
 export type CacheMetadata = {
@@ -18,14 +20,46 @@ const CACHE_KEY = 'ah_audio_cache_v1';
 const DEFAULT_MAX_CACHE_SIZE = 500 * 1024 * 1024; // 500MB
 
 let cacheStore: CacheStore | null = null;
+// Native cold-start hydration. `kv.get` is synchronous and on native it
+// reads from an in-memory cache that's EMPTY when the JS bundle first
+// evaluates — so the very first `loadCacheStore()` call after a cold
+// launch would see `undefined`, fall back to `{}`, and any subsequent
+// `setCached()` would overwrite the on-disk metadata with that empty
+// map. The actual MP3 files survive in FileSystem.cacheDirectory across
+// launches, but without the metadata we wouldn't know which trackId
+// maps to which file — so the user would re-download every track on
+// every cold start.
+// This Promise is awaited inside `loadCacheStore` so the first lookup
+// after boot doesn't race with the AsyncStorage read.
+const hydrationPromise: Promise<CacheStore | null> = (async () => {
+  if (Platform.OS === 'web') return null; // kv covers localStorage sync
+  try {
+    const raw = await AsyncStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as CacheStore;
+  } catch {
+    return null;
+  }
+})();
 
 /**
  * Load cache metadata from persistent storage
  */
 async function loadCacheStore(): Promise<CacheStore> {
   if (cacheStore) return cacheStore;
-  const stored = kv.get<CacheStore>(CACHE_KEY);
-  cacheStore = stored ?? {};
+  // Try the sync kv path first — on web localStorage is sync, and on
+  // native this returns whatever the AsyncStorage memCache currently
+  // holds (populated by the hydration promise below or by a previous
+  // kv.set() in the same session).
+  const synced = kv.get<CacheStore>(CACHE_KEY);
+  if (synced) {
+    cacheStore = synced;
+    return cacheStore;
+  }
+  // Native cold start: await the explicit hydration read before
+  // deciding the store is empty.
+  const hydrated = await hydrationPromise;
+  cacheStore = hydrated ?? {};
   return cacheStore;
 }
 
