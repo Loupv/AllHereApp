@@ -7,7 +7,6 @@ import Animated, {
 import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLayout } from '../../src/hooks/useLayout';
-import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { CircleButton } from '../../src/components/CircleButton';
 import { KindIcon } from '../../src/components/KindIcon';
@@ -211,10 +210,17 @@ export default function StartScreen() {
       </Pressable>
       <SwipeTabs current="index">
         <View style={{ flex: 1 }}>
-          <ScrollView
-            contentContainerStyle={[
+          {/* No ScrollView on Start. The layout is intentionally
+              single-screen — the play CircleButton + the title/meta
+              block above it are absolutely positioned to `playCenterY`
+              (see below), and we don't want the rest of the page
+              (pills, header) to slide past those pinned elements. If
+              the content ever overflows on a future-added section,
+              shrink the section rather than re-adding scroll. */}
+          <View
+            style={[
               styles.scrollContainer,
-              { paddingBottom: Math.max(insets.bottom, 0) },
+              { paddingBottom: Math.max(insets.bottom, 0), flex: 1 },
             ]}
           >
             <View style={[styles.content, { maxWidth: columnMax, alignSelf: 'center' }]}>
@@ -297,7 +303,7 @@ export default function StartScreen() {
 
               <View style={styles.bottomFloor} />
             </View>
-          </ScrollView>
+          </View>
         </View>
       </SwipeTabs>
 
