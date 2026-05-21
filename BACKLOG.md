@@ -61,6 +61,21 @@
 - [ ] Settings screen (theme, notifications, language).
 - [ ] Offline caching of audio files.
 
+## Transcript hygiene — pending review
+These Whisper-style duplicate runs were flagged during the 1.3.0
+transcript audit but left **untouched** because the repetition might
+match a real meditation cue (the guide intentionally repeating a word
+with pauses). Listen to each and decide whether to dedupe:
+- [ ] `Part1/Words/2 - Self-Observation and Breath Following.wjson` —
+  4× "Observe." at segs 53–56 and 2× "Observe." at segs 58–59.
+- [ ] `Part1/Words/1 - Turning Inward (Eyes-open, introductory practice).wjson` —
+  2× "You are just simply present without doing anything." at segs
+  50–51, and 2× "Thank you." at segs 60–61.
+- [ ] Verify the auto-dedupe of 2× and 3× "Attention." in
+  `QMPart1/Words/QM3_7rounds_Breath and Self-Observation.wjson` was
+  correct (might have been a real cue with pauses; restore from git if
+  the audio has actual repetition).
+
 ## Audit
 - [x] Player Close audit — top-corner Close in the audio Player overlay is reachable in every visible state (verified). QM Training "Exit training" link was hidden behind the bottom tab bar — fixed by adding `useTabBarPadding` to the session view + bumping the text from `caption` `textDim` to `overline` `textMuted` so it reads as an actual button.
 - [x] 3 s pre-roll countdown added to Start quick meditations (1 min / 3 min / 3 × 3 min). Tapped pill replaces its label with the count; other pills dim and disable during the countdown; player opens with `autoStart: true` when the count reaches 0.

@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAudioPlayer } from 'expo-audio';
 import { Background } from '../../src/components/Background';
+import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { ProgramHeader } from '../../src/components/ProgramHeader';
 import { CircleButton } from '../../src/components/CircleButton';
@@ -456,8 +457,8 @@ export default function QMScreen() {
     <Background color={colors.bgTabAlt}>
       <Stack.Screen options={{ title: '' }} />
       <SwipeTabs current="qm">
-      <View style={[styles.content, { alignItems: 'center', flex: 1 }]}>
-        <View style={[styles.column, { maxWidth: columnMax, flex: 1 }]}>
+      <ScrollView contentContainerStyle={[styles.content, { alignItems: 'center', paddingBottom: tabPad }]}>
+        <View style={[styles.column, { maxWidth: columnMax }]}>
           <ProgramHeader
             eyebrow={qmProgram.eyebrow}
             title={qmProgram.title}
@@ -474,7 +475,7 @@ export default function QMScreen() {
               that, only the two ModePicker cards are visible above.
               `mode === null` keeps the page intentionally sparse so
               the user makes a deliberate choice. */}
-          <View style={{ flex: 1, alignItems: 'center', width: '100%', marginTop: spacing.xl }}>
+          <View style={{ alignItems: 'center', width: '100%', marginTop: spacing.xl }}>
             {mode === null ? null : mode === 'unguided' ? (
               <View style={styles.presetBlock}>
                 <Text style={styles.pickerLabel}>Choose a format</Text>
@@ -527,7 +528,7 @@ export default function QMScreen() {
             )}
           </View>
         </View>
-      </View>
+      </ScrollView>
 
       <Modal visible={customOpen} transparent animationType="slide" onRequestClose={() => setCustomOpen(false)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setCustomOpen(false)}>
