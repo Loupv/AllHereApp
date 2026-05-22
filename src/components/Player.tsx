@@ -198,11 +198,22 @@ function useSmoothTime(
       sync.current = { t: st, at: now0() };
       lastT.current = st;
     } else if (st >= lastT.current) {
+      // Forward move. While playing, accept unconditionally. While
+      // PAUSED, only accept if the jump is small (≤ 1 s) — anything
+      // larger is spurious: a paused player's currentTime can't
+      // naturally advance, and on Android expo-audio briefly reports
+      // the previous track's `duration` as currentTime in the gap
+      // between setSource() and first frame. Accepting that would set
+      // lastT to the full duration, marking every transcript word as
+      // "past" → the entire transcript reveals at once. A user-driven
+      // seek-while-paused will reconcile when they hit play (status
+      // reports the new position, forward move ≥ lastT, accepted).
+      if (!playing && st - lastT.current > 1.0) return;
       sync.current = { t: st, at: now0() };
       lastT.current = st;
     }
     // else: small backward jitter — keep extrapolating from the last known sync
-  }, [statusTime]);
+  }, [statusTime, playing]);
   useEffect(() => {
     let raf = 0;
     // Cancel the rAF entirely while backgrounded — the previous fix
@@ -1373,7 +1384,15 @@ function PlayerInner() {
   })();
 
   return (
-    <View style={styles.root}>
+    // styles.root carries a hardcoded paddingTop:72 (matches the iOS
+    // notch / dynamic-island area we always reserved). The bottom
+    // inset is platform-dependent: iOS home-indicator ~34 px, Android
+    // gesture-nav 24–34 px, classic Android nav-buttons 48 px+. With
+    // app.json edgeToEdgeEnabled:true on Android the gesture bar
+    // overlaps content unless we pad explicitly — apply insets.bottom
+    // at the root so every bottom-anchored Player control (Skip intro,
+    // play/pause, sliders) clears the system nav.
+    <View style={[styles.root, { paddingBottom: insets.bottom }]}>
       {/* Per-part backdrop — lake / earth-video / sky / space, picked
           from the playing track's id. Sits BEHIND the Player UI, so
           the user sees the matching atmosphere even if the screen
