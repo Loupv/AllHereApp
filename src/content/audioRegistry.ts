@@ -8,24 +8,23 @@ export type AudioSource = {
   remote?: string; // URL string
 };
 
-// Bundled audio sources (included in app build) — exported for use in catalog.ts
+// Bundled audio sources (included in app build) — exported for use in catalog.ts.
+// QM3 — Breathing Body (qm1-2) is NOT bundled here; rounds 1..6 and
+// inters 1..5 all stream from Cloudflare R2 via REMOTE_PATTERN. The
+// Start screen's "3×3" home quick CTA uses its own dedicated audio
+// under Home/ThreeTimesThree/ (kept bundled so the quick start works
+// offline / instantly).
 export const BUNDLED_AUDIO = {
   homeOneMin: require('../../assets/audio/Home/One minute meditation.mp3'),
   homeThreeMin: require('../../assets/audio/Home/Three minutes meditation.mp3'),
   bell: require('../../assets/audio/bell.mp3'),
   bellShort: require('../../assets/audio/bell_short.mp3'),
   tick: require('../../assets/audio/tick.mp3'),
-  // QM3 — Breathing Body (qm1-2) bundled portion: rounds 1-3 + inters
-  // 1-2. Rounds 4-6 + inters 3-5 stream from WP.
-  qm3Br1: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01.mp3'),
-  qm3Br2: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02.mp3'),
-  qm3Br3: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round03.mp3'),
-  qm3Inter1: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round01_inter.mp3'),
-  qm3Inter2: require('../../assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round02_inter.mp3'),
-  // home-qm3 (the Start screen "3x3" quick CTA) gets its own dedicated
-  // audio so it can evolve independently of the QM3 — Breathing Body
-  // (qm1-2) recording. Same 3 rounds + 2 inters shape; files live under
-  // assets/audio/Home/ThreeTimesThree/.
+  // home-qm3 (the Start screen "3×3" quick CTA): dedicated 3-round
+  // audio, kept bundled so a brand-new user can tap the pill and
+  // start meditating with zero network. Same shape as qm1-2 (3
+  // rounds + 2 inters) but separate content so it can evolve
+  // independently.
   home3x3Round1: require('../../assets/audio/Home/ThreeTimesThree/breath7_round01.mp3'),
   home3x3Round2: require('../../assets/audio/Home/ThreeTimesThree/breath7_round02.mp3'),
   home3x3Round3: require('../../assets/audio/Home/ThreeTimesThree/breath7_round03.mp3'),
@@ -172,15 +171,12 @@ export function getAudioSource(trackId: string, roundIndex?: number): AudioSourc
     if (src !== undefined) return { bundled: src };
   }
 
-  // Map bundled track IDs to their audio sources
+  // Map bundled track IDs to their audio sources. The legacy
+  // `qm3-home-round-*` / `qm3-home-inter-*` keys were never consumed
+  // by any caller; removed alongside the qm1-2 bundle drop.
   const bundledMap: Record<string, number> = {
     'home-1min': BUNDLED_AUDIO.homeOneMin,
     'home-3min': BUNDLED_AUDIO.homeThreeMin,
-    'qm3-home-round-01': BUNDLED_AUDIO.qm3Br1,
-    'qm3-home-round-02': BUNDLED_AUDIO.qm3Br2,
-    'qm3-home-round-03': BUNDLED_AUDIO.qm3Br3,
-    'qm3-home-inter-01': BUNDLED_AUDIO.qm3Inter1,
-    'qm3-home-inter-02': BUNDLED_AUDIO.qm3Inter2,
   };
 
   if (trackId in bundledMap) {
@@ -244,13 +240,12 @@ export function getAudioSource(trackId: string, roundIndex?: number): AudioSourc
   };
 
   if (trackId in qmRoundMap && roundIndex !== undefined) {
-    // qm1-2: rounds 1..3 are bundled (qm3Br1..3, the same files as the
-    // Start screen home-qm3 quick CTA). Rounds 4..6 stream from WP.
-    // File naming is direct: player round N → file ${pattern}0N.mp3.
-    if (trackId === 'qm1-2' && roundIndex >= 0 && roundIndex <= 2) {
-      const bundled = [BUNDLED_AUDIO.qm3Br1, BUNDLED_AUDIO.qm3Br2, BUNDLED_AUDIO.qm3Br3][roundIndex];
-      return { bundled };
-    }
+    // All QM rounds stream from R2 via REMOTE_PATTERN. qm1-2 used to
+    // keep rounds 1..3 bundled to make the first session start
+    // instantly even offline, but that was costing ~22 MB of APK
+    // weight for a UX win the local-file cache already gives us
+    // (audioResolver hydrates a downloaded copy on the next play).
+    // File naming is direct: player round N → ${pattern}0N.mp3.
     const { folder, pattern } = qmRoundMap[trackId];
     const roundNum = String(roundIndex + 1).padStart(2, '0');
     const fileName = `${pattern}${roundNum}.mp3`;
@@ -361,14 +356,8 @@ export function isBundled(trackId: string): boolean {
   const bundledMap: Record<string, number> = {
     'home-1min': BUNDLED_AUDIO.homeOneMin,
     'home-3min': BUNDLED_AUDIO.homeThreeMin,
-    'qm3-home-round-01': BUNDLED_AUDIO.qm3Br1,
-    'qm3-home-round-02': BUNDLED_AUDIO.qm3Br2,
-    'qm3-home-round-03': BUNDLED_AUDIO.qm3Br3,
-    'qm3-home-inter-01': BUNDLED_AUDIO.qm3Inter1,
-    'qm3-home-inter-02': BUNDLED_AUDIO.qm3Inter2,
   };
-  if (trackId in bundledMap) return true;
-  return false;
+  return trackId in bundledMap;
 }
 
 /**
@@ -417,13 +406,8 @@ export function getInterSource(trackId: string, interIndex: number): AudioSource
   if (trackId in qmInterMap) {
     const config = qmInterMap[trackId];
     if (interIndex >= config.maxInters) return null;
-    // qm1-2: inters 1..2 are bundled (qm3Inter1..2). Inters 3..5
-    // stream from WP. File naming is direct: player inter N → file
-    // ${pattern}0N_inter.mp3.
-    if (trackId === 'qm1-2' && interIndex >= 0 && interIndex <= 1) {
-      const bundled = [BUNDLED_AUDIO.qm3Inter1, BUNDLED_AUDIO.qm3Inter2][interIndex];
-      return { bundled };
-    }
+    // All inters stream from R2 — see getAudioSource() for the same
+    // bundling drop rationale.
     const interNum = String(interIndex + 1).padStart(2, '0');
     const fileName = `${config.pattern}${interNum}_inter.mp3`;
     const url = REMOTE_PATTERN(`${config.folder}/${fileName}`);

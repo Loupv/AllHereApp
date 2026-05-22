@@ -10,7 +10,20 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import EarthVideoView from '../../modules/earth-video';
+
+// Lazy-load the iOS-only native module so its `requireNativeView`
+// side effect (which fires at module init time) only runs on iOS.
+// On Android the module is a transparent stub — but loading it still
+// went through Expo's native registry, and a registration mismatch
+// there could fail the whole VideoBackground import on Android. By
+// gating the require behind a Platform.OS check we keep Android on
+// pure JS+expo-image, no native bridge for the bg.
+const EarthVideoView: React.ComponentType<{
+  source: string;
+  style?: any;
+}> | null = Platform.OS === 'ios'
+  ? require('../../modules/earth-video').default
+  : null;
 
 // Original earth-hero MP4 (5.4 MB H.264). Played at full quality via
 // the local `earth-video` Expo module, which uses
@@ -82,7 +95,7 @@ export function VideoBackground(_: Props) {
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
       <Animated.View style={[StyleSheet.absoluteFillObject, kbStyle]}>
-        {Platform.OS === 'ios' && videoUri ? (
+        {Platform.OS === 'ios' && videoUri && EarthVideoView ? (
           <EarthVideoView source={videoUri} style={StyleSheet.absoluteFillObject} />
         ) : (
           <Image

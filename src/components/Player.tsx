@@ -198,17 +198,25 @@ function useSmoothTime(
       sync.current = { t: st, at: now0() };
       lastT.current = st;
     } else if (st >= lastT.current) {
-      // Forward move. While playing, accept unconditionally. While
-      // PAUSED, only accept if the jump is small (≤ 1 s) — anything
-      // larger is spurious: a paused player's currentTime can't
-      // naturally advance, and on Android expo-audio briefly reports
-      // the previous track's `duration` as currentTime in the gap
-      // between setSource() and first frame. Accepting that would set
-      // lastT to the full duration, marking every transcript word as
-      // "past" → the entire transcript reveals at once. A user-driven
-      // seek-while-paused will reconcile when they hit play (status
-      // reports the new position, forward move ≥ lastT, accepted).
+      // Forward move. Two phantom-update guards on top of the basic
+      // "must be ≥ lastT" check:
+      //
+      //   1) When PAUSED, reject jumps > 1 s. A paused player's
+      //      currentTime can't naturally advance.
+      //
+      //   2) When JUST RESET (lastT < 1 s after a source swap),
+      //      reject jumps > 5 s. Right after the swap the only
+      //      legitimate currentTime is near 0; expo-audio on Android
+      //      briefly reports the PREVIOUS track's `duration` as
+      //      currentTime in the gap between setSource() and the
+      //      first real frame — accepting that snaps lastT to the
+      //      full duration and reveals the entire transcript at
+      //      once. The 5-s cap is generous enough for the rare case
+      //      of "user paused at 0 and immediately seeks > 5 s before
+      //      first play" (their seek will reconcile naturally on
+      //      the next status tick after play actually starts).
       if (!playing && st - lastT.current > 1.0) return;
+      if (lastT.current < 1.0 && st - lastT.current > 5.0) return;
       sync.current = { t: st, at: now0() };
       lastT.current = st;
     }

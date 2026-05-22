@@ -383,10 +383,16 @@ const qm3RoundsHome: AudioTrack = {
     // they explicitly chose the short-format meditation. The "QM
     // Training" intro audio is still surfaced in the Home intro list
     // (the volet) for users who want the framing.
+    // The 3x3 Start CTA used to alias the QM3 — Breathing Body audio
+    // here (qm3Br1/2/3) — incorrectly: those bundled QM rounds are
+    // gone now, AND the Home/ThreeTimesThree/ directory carries
+    // dedicated content the user re-uploaded so the home preset can
+    // evolve independently. Wire roundSources / roundInters to the
+    // dedicated home3x3* bundle entries.
     roundSources: [
-      BUNDLED_AUDIO.qm3Br1,
-      BUNDLED_AUDIO.qm3Br2,
-      BUNDLED_AUDIO.qm3Br3,
+      BUNDLED_AUDIO.home3x3Round1,
+      BUNDLED_AUDIO.home3x3Round2,
+      BUNDLED_AUDIO.home3x3Round3,
     ],
     roundTranscripts: [
       BUNDLED_TRANSCRIPTS.qm3,
@@ -394,8 +400,8 @@ const qm3RoundsHome: AudioTrack = {
       BUNDLED_TRANSCRIPTS.qm3,
     ],
     roundInters: [
-      BUNDLED_AUDIO.qm3Inter1,
-      BUNDLED_AUDIO.qm3Inter2,
+      BUNDLED_AUDIO.home3x3Inter1,
+      BUNDLED_AUDIO.home3x3Inter2,
     ],
     roundInterTranscripts: [
       BUNDLED_TRANSCRIPTS.qm3,
