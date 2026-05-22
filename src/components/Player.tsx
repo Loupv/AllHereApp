@@ -1891,7 +1891,15 @@ function CueLine({ cue, time, onLayout }: { cue: TranscriptCue; time: number; on
         // remain invisible.
         const opacity =
           revealed * (PAST_OPACITY + (PEAK_OPACITY - PAST_OPACITY) * closeness);
-        return <Text key={i} style={{ opacity }}>{spaced}</Text>;
+        // Use a colour-alpha channel instead of `style.opacity` —
+        // nested <Text> elements inside a parent <Text> don't honour
+        // `style.opacity` reliably on Android (the outer Text wins
+        // and every word ends up at full opacity, blowing the
+        // word-by-word reveal). Encoding the alpha into the colour
+        // works the same way on both iOS and Android.
+        //
+        // colors.text is #E8EAF0 → rgb(232, 234, 240).
+        return <Text key={i} style={{ color: `rgba(232, 234, 240, ${opacity})` }}>{spaced}</Text>;
       })}
     </Text>
   );
