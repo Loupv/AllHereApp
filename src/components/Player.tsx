@@ -165,6 +165,7 @@ function useSmoothTime(
   statusTime: number | undefined,
   playing: boolean | undefined,
   resetKey: string | number,
+  duration?: number,
 ) {
   const [t, setT] = useState(0);
   const sync = useRef({ t: 0, at: 0 });
@@ -198,30 +199,36 @@ function useSmoothTime(
       sync.current = { t: st, at: now0() };
       lastT.current = st;
     } else if (st >= lastT.current) {
-      // Forward move. Two phantom-update guards on top of the basic
-      // "must be ≥ lastT" check:
+      // Forward move. Three phantom-update guards on top of the
+      // basic "must be ≥ lastT" check:
       //
       //   1) When PAUSED, reject jumps > 1 s. A paused player's
       //      currentTime can't naturally advance.
       //
       //   2) When JUST RESET (lastT < 1 s after a source swap),
-      //      reject jumps > 5 s. Right after the swap the only
-      //      legitimate currentTime is near 0; expo-audio on Android
-      //      briefly reports the PREVIOUS track's `duration` as
-      //      currentTime in the gap between setSource() and the
-      //      first real frame — accepting that snaps lastT to the
-      //      full duration and reveals the entire transcript at
-      //      once. The 5-s cap is generous enough for the rare case
-      //      of "user paused at 0 and immediately seeks > 5 s before
-      //      first play" (their seek will reconcile naturally on
-      //      the next status tick after play actually starts).
+      //      reject jumps > 5 s.
+      //
+      //   3) When the candidate currentTime lands inside the last 5 %
+      //      of the track but lastT is still inside the first 50 %,
+      //      reject. This catches Android's "phantom = previous
+      //      track's duration" misreport regardless of where in
+      //      playback the phantom fires (guards #1/#2 only cover the
+      //      very early window). A real user-initiated seek to the
+      //      end of the track is handled by the outer `pendingSeekTo`
+      //      pin in the Player, so liveT lagging behind a far seek
+      //      doesn't actually surface in the UI.
       if (!playing && st - lastT.current > 1.0) return;
       if (lastT.current < 1.0 && st - lastT.current > 5.0) return;
+      if (
+        duration && duration > 0 &&
+        st > duration * 0.95 &&
+        lastT.current < duration * 0.5
+      ) return;
       sync.current = { t: st, at: now0() };
       lastT.current = st;
     }
     // else: small backward jitter — keep extrapolating from the last known sync
-  }, [statusTime, playing]);
+  }, [statusTime, playing, duration]);
   useEffect(() => {
     let raf = 0;
     // Cancel the rAF entirely while backgrounded — the previous fix
@@ -690,7 +697,7 @@ function PlayerInner() {
   // useSmoothTime extrapolates when its `playing` arg is true; without
   // this gate the timeline kept walking forward during buffering.
   const actuallyPlaying = engineState === 'playing';
-  const liveT = useSmoothTime(status.currentTime, actuallyPlaying, sourceKey);
+  const liveT = useSmoothTime(status.currentTime, actuallyPlaying, sourceKey, status.duration);
   // Pin `t` to the user's drag while scrubbing, then to the seek
   // target while expo-audio catches up — *only* fall back to the live
   // current-time once the catch-up has converged. This kills the
