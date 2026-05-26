@@ -1931,6 +1931,15 @@ function CueLine({ cue, time, onLayout }: { cue: TranscriptCue; time: number; on
         // so iOS never had the bug. Scaling the shadow alpha to match
         // the text alpha fixes Android + web without affecting iOS.
         //
+        // Pass `textShadowOffset` and `textShadowRadius` alongside the
+        // colour even though they're already inherited from the parent:
+        // RN-Web's `createTextShadowValue` short-circuits and emits NO
+        // `text-shadow` CSS at all if offset.width / offset.height /
+        // radius are all zero on a given style object. Without the
+        // explicit values, the child <span>'s alpha override gets
+        // swallowed and CSS inheritance falls through to the parent's
+        // black shadow — exactly the bug.
+        //
         // colors.text is #E8EAF0 → rgb(232, 234, 240).
         return (
           <Text
@@ -1938,6 +1947,8 @@ function CueLine({ cue, time, onLayout }: { cue: TranscriptCue; time: number; on
             style={{
               color: `rgba(232, 234, 240, ${opacity})`,
               textShadowColor: `rgba(0, 0, 0, ${opacity * 0.55})`,
+              textShadowOffset: { width: 0, height: 1 },
+              textShadowRadius: 3,
             }}
           >
             {spaced}
