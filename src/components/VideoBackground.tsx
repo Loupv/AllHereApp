@@ -108,6 +108,8 @@ export function VideoBackground(_: Props) {
               contentFit="cover"
             />
           )
+        ) : Platform.OS === 'web' ? (
+          <WebVideoBackground />
         ) : (
           <ExpoVideoBackground />
         )}
@@ -123,11 +125,11 @@ export function VideoBackground(_: Props) {
 }
 
 /**
- * expo-video-backed background loop for Android and web. Lives in its
- * own component so `useVideoPlayer` is only called on platforms that
+ * expo-video-backed background loop for Android. Lives in its own
+ * component so `useVideoPlayer` is only called on platforms that
  * actually mount it — iOS uses the native Swift module instead and
- * never reaches this branch, which means we don't pay the ExoPlayer /
- * HTML5-video setup cost on iOS at all.
+ * never reaches this branch, which means we don't pay the ExoPlayer
+ * setup cost on iOS at all.
  *
  * Sound discipline: the player is always muted (it's a background
  * loop) and uses `audioMixingMode: 'mixWithOthers'`, the expo-video
@@ -154,4 +156,43 @@ function ExpoVideoBackground() {
       allowsPictureInPicture={false}
     />
   );
+}
+
+/**
+ * Web background loop. We render a raw <video> instead of going through
+ * expo-video on web because expo-video's web VideoView doesn't set the
+ * `autoplay` or `playsinline` attributes on the underlying <video>,
+ * and its `.play()` call is a no-op when fired from the useVideoPlayer
+ * setup callback (the <video> hasn't been mounted yet, so the player's
+ * `_mountedVideos` Set is still empty). Browsers also require both
+ * `muted` AND `playsinline` for autoplay to start without user
+ * interaction. Easier to skip the wrapper here.
+ */
+function WebVideoBackground() {
+  // Metro's `require('.mp4')` returns an asset id (number) or an
+  // object with a uri/localUri field, depending on dev vs production
+  // build. Asset.fromModule normalises both to a usable URL.
+  const uri = React.useMemo(() => {
+    if (typeof EARTH_VIDEO === 'string') return EARTH_VIDEO;
+    const asset = Asset.fromModule(EARTH_VIDEO);
+    return asset.uri ?? asset.localUri ?? '';
+  }, []);
+  return React.createElement('video', {
+    src: uri,
+    autoPlay: true,
+    loop: true,
+    muted: true,
+    playsInline: true,
+    // RN-Web doesn't translate StyleSheet.absoluteFillObject for raw
+    // DOM elements, so spell out the absolute-fill rules in plain CSS.
+    style: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      objectFit: 'cover',
+      pointerEvents: 'none',
+    },
+  });
 }
