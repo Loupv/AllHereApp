@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Asset } from 'expo-asset';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -11,13 +12,11 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-// Lazy-load the iOS-only native module so its `requireNativeView`
-// side effect (which fires at module init time) only runs on iOS.
-// On Android the module is a transparent stub — but loading it still
-// went through Expo's native registry, and a registration mismatch
-// there could fail the whole VideoBackground import on Android. By
-// gating the require behind a Platform.OS check we keep Android on
-// pure JS+expo-image, no native bridge for the bg.
+// iOS uses a local AVSampleBufferDisplayLayer-backed module so the
+// background video can't claim the MediaPlayback AVAudioSession (see
+// modules/earth-video/ios/EarthVideoView.swift). Android and web get
+// the same loop via expo-video — ExoPlayer on Android, HTML5 <video>
+// on web — which don't have iOS's session-election problem.
 const EarthVideoView: React.ComponentType<{
   source: string;
   style?: any;
@@ -34,9 +33,11 @@ const EarthVideoView: React.ComponentType<{
 // player from being elected as the lock-screen Now Playing source.
 // See modules/earth-video/ios/EarthVideoView.swift for details.
 const EARTH_VIDEO = require('../../assets/video/earth-hero.mp4');
-// Static still as a fallback when the asset hasn't finished resolving
-// yet (the require() metro-resolved URI needs an async hop on first
-// mount) and as the Android background until we wire ExoPlayer there.
+// Static still as a fallback when the iOS asset hasn't finished
+// resolving yet (the require() metro-resolved URI needs an async hop
+// on first mount). Android and web now have their own live video via
+// expo-video, so this still only paints for the first ~1 frame of an
+// iOS cold start.
 const EARTH_STILL = require('../../assets/video/earth-hero.jpg');
 
 /**
@@ -95,21 +96,62 @@ export function VideoBackground(_: Props) {
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
       <Animated.View style={[StyleSheet.absoluteFillObject, kbStyle]}>
-        {Platform.OS === 'ios' && videoUri && EarthVideoView ? (
-          <EarthVideoView source={videoUri} style={StyleSheet.absoluteFillObject} />
+        {Platform.OS === 'ios' ? (
+          videoUri && EarthVideoView ? (
+            <EarthVideoView source={videoUri} style={StyleSheet.absoluteFillObject} />
+          ) : (
+            // Asset URI not yet resolved — show the JPG so the screen
+            // isn't blank during the very first mount frame.
+            <Image
+              source={EARTH_STILL}
+              style={StyleSheet.absoluteFillObject}
+              contentFit="cover"
+            />
+          )
         ) : (
-          <Image
-            source={EARTH_STILL}
-            style={StyleSheet.absoluteFillObject}
-            contentFit="cover"
-          />
+          <ExpoVideoBackground />
         )}
       </Animated.View>
+      {/* see ExpoVideoBackground below for the non-iOS implementation */}
       {/* Darken + boost contrast: a black overlay drops the midtones,
           and a radial-ish vignette via a second darker layer at the
           edges. Two flat overlays are cheap and stack well. */}
       <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.40)' }]} />
       <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,12,0.20)' }]} />
     </View>
+  );
+}
+
+/**
+ * expo-video-backed background loop for Android and web. Lives in its
+ * own component so `useVideoPlayer` is only called on platforms that
+ * actually mount it — iOS uses the native Swift module instead and
+ * never reaches this branch, which means we don't pay the ExoPlayer /
+ * HTML5-video setup cost on iOS at all.
+ *
+ * Sound discipline: the player is always muted (it's a background
+ * loop) and uses `audioMixingMode: 'mixWithOthers'`, the expo-video
+ * knob that explicitly lets it share audio output with other apps and
+ * — critically — with our own expo-audio meditation player. Without
+ * that, expo-video could elbow expo-audio out of the Android
+ * MediaSession and break the lock-screen Now Playing card.
+ * `showNowPlayingNotification` is left at its default `false` so the
+ * background video doesn't publish itself as a media item.
+ */
+function ExpoVideoBackground() {
+  const player = useVideoPlayer(EARTH_VIDEO, (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.audioMixingMode = 'mixWithOthers';
+    p.play();
+  });
+  return (
+    <VideoView
+      player={player}
+      style={StyleSheet.absoluteFillObject}
+      contentFit="cover"
+      nativeControls={false}
+      allowsPictureInPicture={false}
+    />
   );
 }
