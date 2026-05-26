@@ -61,20 +61,20 @@
 - [ ] Settings screen (theme, notifications, language).
 - [ ] Offline caching of audio files.
 
-## Transcript hygiene — pending review
-These Whisper-style duplicate runs were flagged during the 1.3.0
-transcript audit but left **untouched** because the repetition might
-match a real meditation cue (the guide intentionally repeating a word
-with pauses). Listen to each and decide whether to dedupe:
-- [ ] `Part1/Words/2 - Self-Observation and Breath Following.wjson` —
-  4× "Observe." at segs 53–56 and 2× "Observe." at segs 58–59.
-- [ ] `Part1/Words/1 - Turning Inward (Eyes-open, introductory practice).wjson` —
-  2× "You are just simply present without doing anything." at segs
-  50–51, and 2× "Thank you." at segs 60–61.
-- [ ] Verify the auto-dedupe of 2× and 3× "Attention." in
-  `QMPart1/Words/QM3_7rounds_Breath and Self-Observation.wjson` was
-  correct (might have been a real cue with pauses; restore from git if
-  the audio has actual repetition).
+## Transcript hygiene — resolved 2026-05-26
+- [x] `Part1/Words/2 - Self-Observation and Breath Following.wjson` —
+  the 4× "Observe." tight cluster (segs 48–51 in the original file,
+  <1 s span) was Whisper stutter; kept seg 48, dropped 49–51. The
+  remaining 7 "Observe." occurrences in the file are well-spaced
+  (30–90 s apart, 1.4 s durations) and read as real rhythmic cues
+  from the teacher — left as-is.
+- [x] `Part1/Words/1 - Turning Inward.wjson` — kept one of the
+  "You are just simply present…" pair (segs 50–51 collapsed to 1×).
+  Both terminal "Thank you." silence-fills dropped.
+- [x] `QMPart1/Words/QM3_7rounds_Breath and Self-Observation.wjson` —
+  verified the historical "Attention." dedupe: 5 remaining occurrences
+  are all single, 70–240 s apart, no suspicious clusters. Earlier
+  dedupe was correct, no restore needed.
 
 ## Audit
 - [x] Player Close audit — top-corner Close in the audio Player overlay is reachable in every visible state (verified). QM Training "Exit training" link was hidden behind the bottom tab bar — fixed by adding `useTabBarPadding` to the session view + bumping the text from `caption` `textDim` to `overline` `textMuted` so it reads as an actual button.
