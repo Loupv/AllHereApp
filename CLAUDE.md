@@ -165,6 +165,75 @@ Regenerate after adding / renaming audio:
 npm run gen:waveforms
 ```
 
+## Transcript pipeline (remote-updatable .wjson)
+
+The Whisper-generated `.wjson` files used to render the progressive
+word transcript under each audio are bundled into the app **and**
+mirrored on Cloudflare R2 so we can patch hallucinations / typos
+without re-shipping a build.
+
+**File shape** — every bundled `.wjson` has two metadata fields
+injected at the top by `scripts/stamp-transcripts.mjs`:
+
+```jsonc
+{ "key": "p3_1", "rev": 2, "segments": [ ... ] }
+```
+
+- `key` mirrors the entry name in `BUNDLED_TRANSCRIPTS` in
+  `src/content/audioRegistry.ts` (e.g. `"p3_1"`, `"qm3_round4"`).
+  Single source of truth for the remote path.
+- `rev` starts at 1 and is **bumped by hand** every time you edit the
+  content. Bumping is what triggers a remote refresh on user devices.
+
+**Runtime resolution** (`src/content/loadTranscript.ts`) — for each
+keyed transcript:
+
+1. in-memory cache (session-scoped)
+2. on-disk cache at `${FileSystem.documentDirectory}transcripts/<key>.wjson`
+   if its `rev` ≥ the latest remote `rev`
+3. R2 fetch if `index[key].rev > max(bundled.rev, disk.rev)` — then
+   written to disk and used
+4. bundled `.wjson` (require'd)
+
+The R2 index (`https://pub-6a724d9bbeda4ced9917d2f1e7611501.r2.dev/transcripts/index.json`)
+is fetched lazily once per session. If the index fetch fails (offline)
+we silently use the best local copy. Per-key fetch failures fall back
+the same way. Untyped / inline WhisperJson objects (no `key`) bypass
+the remote pipeline entirely.
+
+**Editing workflow:**
+
+1. Edit the `.wjson` file (segments / text / words).
+2. Bump its `rev` (`+1` from whatever it is).
+3. `node scripts/upload-transcripts-to-r2.mjs` — pushes the file +
+   rewrites `transcripts/index.json` on R2. Idempotent; only re-uploads
+   files whose remote rev differs from local. `--dry-run` and `--force`
+   flags available.
+
+**Adding a new bundled transcript:**
+
+1. Add the `require()` line to `BUNDLED_TRANSCRIPTS` in
+   `audioRegistry.ts`.
+2. `node scripts/stamp-transcripts.mjs` — injects `{ key, rev: 1 }` if
+   missing. Re-runnable; idempotent.
+3. `node scripts/upload-transcripts-to-r2.mjs` to publish the baseline.
+
+**Whisper hallucination patterns to watch for** (see the May 2026 audit
+that cleaned ~16.7 K lines across 25 files):
+
+- Mid-meditation `"Thank you."` / bare `"You"` / `"."` / `"..."` segments
+  on silence — almost always silence-fill hallucinations.
+- YouTube-outro phrases (`"Thank you for watching"`, URLs like
+  `"www.mesmerism.info"`, `"This video was made possible by..."`).
+- Duplicate consecutive segments with same text.
+- In-segment word loops with zero-duration words.
+- Tense / preposition mishears (`"And of round"` vs `"End of round"`,
+  `"Remain for witness"` vs `"Remain a witness"`).
+
+When auditing, classify findings RED (clear hallucination, no listen
+needed) / ORANGE (likely mishear, listen first) / YELLOW (ambiguous
+duplicate, judgment call) and confirm with the user before bulk-fixing.
+
 ## State
 
 - `src/player/store.ts` — current track, playlist, autoStart flag. The

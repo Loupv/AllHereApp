@@ -141,7 +141,16 @@ export type WhisperJsonSegment = {
   text: string;
   words?: { word: string; start: number; end: number }[];
 };
-export type WhisperJson = { segments: WhisperJsonSegment[] };
+// `key` + `rev` are added by scripts/stamp-transcripts.mjs for files
+// listed in BUNDLED_TRANSCRIPTS. `key` mirrors the registry key (e.g.
+// "p3_1", "qm3_round4"); `rev` starts at 1 and is bumped on every
+// content edit so the runtime in loadTranscript.ts can pull a fresher
+// version from R2 without an app re-ship.
+export type WhisperJson = {
+  key?: string;
+  rev?: number;
+  segments: WhisperJsonSegment[];
+};
 
 export const parseWhisperData = (data: WhisperJson): TranscriptCue[] => {
   const allWords: TranscriptWord[] = [];
