@@ -230,6 +230,16 @@ function useSmoothTime(
     // else: small backward jitter — keep extrapolating from the last known sync
   }, [statusTime, playing, duration]);
   useEffect(() => {
+    // Re-anchor the extrapolation base on every play / pause transition.
+    // Without this, hitting pause snapped the displayed time back to the
+    // most-recent `status.currentTime` sync (which lags actual playback
+    // by 100–300 ms because expo-audio's status ticks trail the audio
+    // clock). Visually that read as a 200 ms backwards jump at the moment
+    // of pause. Re-basing `sync` on the current `lastT` snapshot keeps
+    // the displayed time continuous across the transition; the same
+    // re-base on resume avoids the symmetric forward overshoot before
+    // the next status tick arrives.
+    sync.current = { t: lastT.current, at: now0() };
     let raf = 0;
     // Cancel the rAF entirely while backgrounded — the previous fix
     // skipped setT() but kept rescheduling requestAnimationFrame
@@ -241,8 +251,15 @@ function useSmoothTime(
       const now = now0();
       const dt = (now - sync.current.at) / 1000;
       const next = sync.current.t + (playing ? dt : 0);
-      // Never emit a value that goes backwards (unless it's a big jump, handled above)
-      const monotonic = playing ? Math.max(next, lastT.current) : next;
+      // Never emit a value that goes backwards. The monotonic guard
+      // now runs unconditionally — when paused, `next` == sync.t (no
+      // dt added) which equals the last-extrapolated `lastT` thanks
+      // to the re-anchor above, so the displayed time freezes in
+      // place. A real backward seek arrives through the status
+      // useEffect's `st + 1.5 < lastT` branch which resets both
+      // `sync` and `lastT` to the lower value, so the Math.max
+      // doesn't pin us at the stale value.
+      const monotonic = Math.max(next, lastT.current);
       lastT.current = monotonic;
       setT(monotonic);
       raf = requestAnimationFrame(tick);
@@ -547,7 +564,14 @@ function PlayerInner() {
     // Confirmed in Console.app: qmu-5 worked because its registration
     // happened to land during playback; qm1-2 (bundled file, starts
     // instantly) was registering before status.playing flipped to true.
-    if (!status.playing) return;
+    //
+    // Android-only: do NOT gate on status.playing. Android's MediaSession
+    // has no equivalent "elect during playback" requirement; gating made
+    // setActiveForLockScreen often fire too late (or never, if the user
+    // locked the screen during the brief buffering window) and the
+    // foreground-service notification that backs the lock-screen card
+    // never got started.
+    if (Platform.OS === 'ios' && !status.playing) return;
     try {
       player.setActiveForLockScreen(true, lockScreenInfo);
       lockScreenActive.current = true;
@@ -1898,8 +1922,27 @@ function CueLine({ cue, time, onLayout }: { cue: TranscriptCue; time: number; on
         // word-by-word reveal). Encoding the alpha into the colour
         // works the same way on both iOS and Android.
         //
+        // We also have to bleed the alpha into the textShadow:
+        // `type.body` (inherited via styles.cue on the parent <Text>)
+        // sets `textShadowColor: rgba(0, 0, 0, 0.55)`. On Android and
+        // web, the shadow keeps rendering on transparent glyphs — so
+        // unrevealed words showed as solid black outlines. iOS short-
+        // circuits shadow drawing when the glyph is fully transparent
+        // so iOS never had the bug. Scaling the shadow alpha to match
+        // the text alpha fixes Android + web without affecting iOS.
+        //
         // colors.text is #E8EAF0 → rgb(232, 234, 240).
-        return <Text key={i} style={{ color: `rgba(232, 234, 240, ${opacity})` }}>{spaced}</Text>;
+        return (
+          <Text
+            key={i}
+            style={{
+              color: `rgba(232, 234, 240, ${opacity})`,
+              textShadowColor: `rgba(0, 0, 0, ${opacity * 0.55})`,
+            }}
+          >
+            {spaced}
+          </Text>
+        );
       })}
     </Text>
   );
