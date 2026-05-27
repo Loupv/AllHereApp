@@ -49,7 +49,21 @@ export function AtmosphereBackground({ theme, paused = false }: Props) {
     return h;
   }, [fragSrc]);
 
+  // Holds the live GL context so we can stop its render loop. Without
+  // this, every shader/theme re-key (which remounts the GLView) and
+  // every unmount left the previous context's `draw()` rescheduling
+  // itself via requestAnimationFrame forever — on web a lost WebGL
+  // context doesn't throw, so the orphaned 60 fps loop kept the gl,
+  // program and buffers alive for the rest of the session.
+  const glRef = React.useRef<any>(null);
+
   const onContextCreate = React.useCallback((gl: any) => {
+    // Stop the render loop of the *previous* context before starting a
+    // new one (theme / hot-reload re-key spins up a fresh GLView +
+    // context while the old one's rAF is still chained).
+    try { glRef.current?.__shaderStop?.(); } catch {}
+    glRef.current = gl;
+
     const w = gl.drawingBufferWidth;
     const h = gl.drawingBufferHeight;
     gl.viewport(0, 0, w, h);
@@ -132,6 +146,17 @@ export function AtmosphereBackground({ theme, paused = false }: Props) {
       sub.remove();
     };
   }, [fragSrc]);
+
+  // Stop the render loop when the whole component unmounts (navigating
+  // away from a screen that mounts an AtmosphereBackground). The
+  // re-key case is handled at the top of onContextCreate; this covers
+  // the final teardown.
+  React.useEffect(() => {
+    return () => {
+      try { glRef.current?.__shaderStop?.(); } catch {}
+      glRef.current = null;
+    };
+  }, []);
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>

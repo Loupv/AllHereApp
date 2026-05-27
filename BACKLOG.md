@@ -37,6 +37,49 @@
 - [ ] Persist progress & auth state (zustand + AsyncStorage / MMKV). Today `kv.ts` falls back to in-memory on native, so progress is lost on every app relaunch — same problem on native as on web.
 - [ ] Fine-tune transcript sync for audios that drift (Whisper word-level + manual pass for mispronunciations / brand terms like "All Here").
 
+## Performance & memory
+- [ ] **VideoBackground: honour the `paused` prop (currently a no-op).**
+  The Earth loop is mounted in up to 3 places (`_layout.tsx` root,
+  `Player.tsx` overlay, `silent-mind-tree.tsx`). When the Player
+  overlay opens over an "earth" root screen, two full-screen video
+  decoders run at once (2× `<video>` on web, 2× ExoPlayer on Android,
+  2× AVSampleBufferDisplayLayer on iOS), and `paused` doesn't stop any
+  of them. Either honour `paused` (pause native/exo/html5 decode +
+  short-circuit the iOS CADisplayLink) or share a single instance.
+  Cost: CPU + memory + battery, worst on Android mid-range.
+
+## Testing (automated)
+Prioritised by ROI. Nothing wired yet — `npx tsc --noEmit` is the only
+current check.
+- [ ] **Tier 1 — content validation (vitest, Node, no RN runtime).**
+  Highest ROI. Catches the recurring Whisper/registry bug class
+  automatically:
+  - Every `.wjson`: valid JSON, `key`+`rev` present, monotone
+    timestamps, no zero-duration word loops, no known hallucination
+    patterns (`"Thank you."` on silence, bare `"You"`, `"And of
+    round"`, single-word segments with prob < 0.1).
+  - `catalog.ts` ↔ `audioRegistry.ts` consistency: every track id
+    resolves to audio + transcript; every `BUNDLED_TRANSCRIPTS` key
+    has a file on disk; every R2 `index.json` key exists.
+  - `waveforms.generated.ts` covers all bundled mp3s.
+- [ ] **Tier 2 — pure-logic unit tests.** The subtle bugs live here:
+  - `useSmoothTime`: extract the status→time reducer into a pure
+    function and test phantom guards / monotonic / pause-rebase with
+    synthetic status sequences (this is where the pause-jumpback and
+    Android phantom-end bugs lived).
+  - `parseWhisperData` / `applyCorrections` / `rebuildBySentence`.
+  - `getAudioSource` / `getTranscriptSource` / round-index mapping.
+  - `loadTranscript` precedence (mem → disk → remote → bundled), mock
+    fetch + FS.
+- [ ] **Tier 3 — web UI via Playwright** against `npm run web`. Assert
+  the bg `<video>` is present + playing, transcript reveals over time,
+  and un-revealed text is transparent (computed-style check — would
+  have caught the black-shadow regression directly).
+- [ ] **Tier 4 — native E2E (Maestro).** Lower priority; background
+  audio / lock-screen is hard to automate and changes rarely.
+- [ ] **CI**: GitHub Actions → `tsc --noEmit` + vitest (Tier 1+2) on
+  push, Playwright web smoke on PRs.
+
 ## Native — to address before store submission
 - [ ] **Background playback**: declare `UIBackgroundModes: ["audio"]` in `app.json > expo > ios > infoPlist`, plus `FOREGROUND_SERVICE` permission + service notification on Android. Without this, audio cuts as soon as the screen locks — unacceptable for a meditation app.
 - [ ] **Lock-screen Now Playing controls**: hook `MPNowPlayingInfoCenter` (iOS) and `MediaSession` (Android) so the user gets play/pause + track title on the lock screen, AirPods double-tap, CarPlay. `expo-audio` doesn't wire this automatically.
