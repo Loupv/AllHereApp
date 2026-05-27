@@ -578,6 +578,13 @@ export default function SilentMindTreeScreen() {
   // when they fire (goToPage, web wheel handler, settle timeout).
   const settledPageSV = useSharedValue(initialPageIdx);
   const isSnappingSV = useSharedValue(0);
+  // One snap per finger-down. The worklet disarms after it fires a
+  // snap; only a fresh touchStart (native) or wheel gesture (web)
+  // re-arms it. Without this, holding the finger down and dragging
+  // kept re-triggering a snap on every 480 ms lock-release while the
+  // touch was still active — paging through the whole tree in one
+  // continuous press (reported on Android).
+  const armedSV = useSharedValue(1);
   const setScrollLocked = (locked: boolean) => {
     try {
       // setNativeProps is the cheapest way to toggle scrollEnabled on
@@ -650,6 +657,10 @@ export default function SilentMindTreeScreen() {
       const y = e.contentOffset.y;
       scrollY.value = y;
       if (isSnappingSV.value) return;
+      // Disarmed = a snap already fired during this finger-down; wait
+      // for the next touchStart before snapping again so a held drag
+      // can't page through the tree.
+      if (!armedSV.value) return;
       const settledY = settledPageSV.value * pageH;
       const delta = y - settledY;
       if (Math.abs(delta) <= 6) return; // ignore micro-jitter
@@ -658,6 +669,7 @@ export default function SilentMindTreeScreen() {
       if (target < 0) target = 0;
       if (target > pageOrderLength - 1) target = pageOrderLength - 1;
       isSnappingSV.value = 1;
+      armedSV.value = 0; // consume this gesture's single snap
       settledPageSV.value = target;
       // Animated scroll on the UI thread.
       scrollTo(scrollRef, 0, target * pageH, true);
@@ -727,6 +739,10 @@ export default function SilentMindTreeScreen() {
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       if (Math.abs(e.deltaY) < 4) return;
+      // Keep the worklet-side gate armed on web — web snaps via this
+      // wheel path (not the worklet), so the worklet must never stay
+      // disarmed and silently block a future native-style scroll.
+      armedSV.value = 1;
       // Reset the idle timer on every wheel event — the lock stays
       // engaged as long as events keep arriving.
       if (momentumTimer) clearTimeout(momentumTimer);
@@ -834,6 +850,11 @@ export default function SilentMindTreeScreen() {
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         decelerationRate="fast"
+        // Re-arm the one-snap-per-gesture gate on every fresh finger-
+        // down. Fires regardless of scrollEnabled (it's a View-level
+        // responder event), so it works even while a previous snap's
+        // 480 ms scroll-lock is still settling.
+        onTouchStart={() => { armedSV.value = 1; }}
         // Lock the scroll past intro (the last page). Without these,
         // pulling beyond the bottom revealed empty space below the
         // tree content where the bg shaders had nothing to paint.
