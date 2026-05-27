@@ -24,6 +24,8 @@ import { IntroSplash } from '../src/components/IntroSplash';
 import { setAudioModeAsync, setIsAudioActiveAsync } from 'expo-audio';
 import { Player } from '../src/components/Player';
 import { VideoPlayerModal } from '../src/components/VideoPlayerModal';
+import { UpdateBanner } from '../src/components/UpdateBanner';
+import { useUpdateCheck } from '../src/hooks/useUpdateCheck';
 import { AtmosphereBackground as ShaderBackground } from '../src/components/AtmosphereBackground';
 import { VideoBackground } from '../src/components/VideoBackground';
 import { useShaderThemeStore } from '../src/shaders/themeStore';
@@ -77,6 +79,9 @@ export default function RootLayout() {
   // `playerOpen` is also used below to fade the navigator tree —
   // hoisting the read here so we can pass it into `shaderPaused`.
   const playerOpen = usePlayerStore(s => s.isOpen);
+  // Soft "update available" check (fetches version.json off R2 once on
+  // launch; null until a newer release is found and not yet dismissed).
+  const { update, dismiss: dismissUpdate } = useUpdateCheck();
   // Pause the root shader when:
   //  - app is backgrounded (battery)
   //  - the Player overlay is open (it has its OWN backdrop, so the
@@ -261,6 +266,11 @@ export default function RootLayout() {
       </Animated.View>
       <Player />
       <VideoPlayerModal />
+      {/* Soft update nudge — only after the intro splash is gone so it
+          doesn't stack on top of the launch animation. */}
+      {introDone && update && (
+        <UpdateBanner version={update.version} url={update.url} onDismiss={dismissUpdate} />
+      )}
       {!introDone && <IntroSplash onDone={() => setIntroDone(true)} />}
     </View>
     </GestureHandlerRootView>

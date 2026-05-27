@@ -38,6 +38,21 @@
 - [ ] Fine-tune transcript sync for audios that drift (Whisper word-level + manual pass for mispronunciations / brand terms like "All Here").
 
 ## Performance & memory
+- [ ] **Shader baseline GPU cost on high-end Android (immediate lag).**
+  Distinct from the rAF-orphan leak (fixed 2026-05-27, which only cured
+  lag that *accumulated* over a session). `FRAG_SKY` does ~9 `fbm`
+  calls × 5 octaves ≈ 45 noise evals per pixel at native res
+  (1440p+ = 3.7M+ px), heavy even at the `frameIdx % 3` ~20 fps
+  throttle. Levers: render the GLView at reduced resolution (0.5×) and
+  upscale → 4× fewer fragment invocations (biggest win, bg is blurred
+  anyway); drop fbm octaves 5→3 on sky; consider a static gradient
+  fallback on low-RAM Android.
+- [ ] **Sky horizontal-bars — verify the dither fix on the affected
+  device.** Output dithering shipped 2026-05-27 (sub-perceptual
+  triangular dither on every shader). If bars persist it's a deeper
+  coordinate-precision issue (`gl_FragCoord/uRes` quantising the noise
+  sampling under mediump) needing a runtime `GL_FRAGMENT_PRECISION_HIGH`
+  guard, not output dithering.
 - [ ] **VideoBackground: honour the `paused` prop (currently a no-op).**
   The Earth loop is mounted in up to 3 places (`_layout.tsx` root,
   `Player.tsx` overlay, `silent-mind-tree.tsx`). When the Player
