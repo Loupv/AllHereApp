@@ -56,6 +56,20 @@ float fbm(vec2 p) {
   }
   return v;
 }
+
+// Triangular-PDF dither, ~1 LSB of an 8-bit channel. Added to the
+// final colour to break up gradient banding. On Android GPUs that
+// don't honour \`highp\` in the fragment stage (it's optional in
+// GLES2) the smooth vertical sky gradient quantises into visible
+// horizontal bars; a sub-perceptual dither dissolves them without
+// touching devices that render the gradient correctly. Two hash
+// samples give a triangular distribution (less structured than a
+// single uniform sample).
+vec3 dither(vec2 fragCoord) {
+  float r = hash(fragCoord);
+  float g = hash(fragCoord + 17.13);
+  return vec3((r + g - 1.0) / 255.0);
+}
 `;
 
 export const FRAG_EARTH_MINIMAL = `
@@ -66,6 +80,7 @@ void main() {
   float blades = pow(1.0 - abs(2.0 * n - 1.0), 4.0);
   // FULL bright green to verify the shader covers the whole screen
   vec3 col = mix(vec3(0.0, 0.5, 0.0), vec3(1.0, 1.0, 0.0), blades);
+  col += dither(gl_FragCoord.xy);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -171,6 +186,7 @@ void main() {
   float vig = 1.0 - smoothstep(0.55, 1.20, fromCentre * 1.6);
   col *= 0.7 + 0.3 * vig;
 
+  col += dither(gl_FragCoord.xy);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -380,6 +396,7 @@ void main() {
   float vig = 1.0 - smoothstep(0.55, 1.25, length(uv - 0.5) * 1.6);
   col *= 0.80 + 0.20 * vig;
 
+  col += dither(gl_FragCoord.xy);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -584,6 +601,7 @@ void main() {
   vec3 rimCol = vec3(0.95, 0.65, 0.40);
   col += rimCol * rim * 0.55 * twilight;
 
+  col += dither(gl_FragCoord.xy);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -760,6 +778,7 @@ void main() {
   float bs = starLayer(q * 70.0 + 5.1, 0.080, 1.0);
   col += vec3(1.0, 0.97, 0.92) * (s + bs * bandMask * shapeMask * 1.4);
 
+  col += dither(gl_FragCoord.xy);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -779,6 +798,7 @@ void main() {
   vec3 accent = vec3(0.04,  0.10,  0.18);
   vec3 col = mix(base, accent, glow);
 
+  col += dither(gl_FragCoord.xy);
   gl_FragColor = vec4(col, 1.0);
 }
 `;
