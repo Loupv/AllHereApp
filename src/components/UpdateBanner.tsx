@@ -26,7 +26,7 @@ export function UpdateBanner({ version, url, onDismiss }: Props) {
           <Text style={styles.eyebrow}>SILENT MIND</Text>
           <Text style={styles.title}>Update available</Text>
           <Text style={styles.body}>
-            Version {version} is available with the latest improvements.
+            Version {version}
           </Text>
           <Pressable style={styles.cta} onPress={openStore}>
             <Text style={styles.ctaText}>Update</Text>
