@@ -67,3 +67,4 @@ assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_roun
 assets/audio/QMPart1/Rounds/QM3_7rounds_Breath and Self-Observation/breath7_round06_inter.mp3
 TOREMOVE/
 /build/
+modules/*/android/build/

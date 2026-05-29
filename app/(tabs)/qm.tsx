@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Modal, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Modal, useWindowDimensions, Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAudioPlayer } from 'expo-audio';
+import BackgroundTimer from 'react-native-background-timer';
+import QmForeground from '../../modules/qm-foreground';
 import { Background } from '../../src/components/Background';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
@@ -229,6 +231,37 @@ export default function QMScreen() {
       }
     } catch {}
   }, [phase, paused, silencePlayer]);
+
+  // Android lock-screen keep-alive. iOS stays awake via the silent loop +
+  // UIBackgroundModes:["audio"], so this is Android-only. On Android,
+  // sustained background execution (audio + the background-timer interval)
+  // needs a FOREGROUND SERVICE. We use our own plain-notification service
+  // (modules/qm-foreground) rather than expo-audio's setActiveForLockScreen,
+  // because the latter shows a media now-playing card whose progress bar
+  // looped the silent clip's 2 s position — read as a glitch. The plain
+  // "QM Training — séance en cours" notification has no misleading time.
+  const qmLockActive = useRef(false);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sessionActive =
+      phase === 'countdown' || phase === 'round' || phase === 'break';
+    try {
+      if (sessionActive && !qmLockActive.current) {
+        QmForeground.start('QM Training', 'Séance en cours');
+        qmLockActive.current = true;
+      } else if (!sessionActive && qmLockActive.current) {
+        QmForeground.stop();
+        qmLockActive.current = false;
+      }
+    } catch {}
+  }, [phase]);
+  useEffect(() => {
+    // Final teardown — stop the service if the screen unmounts mid-session.
+    return () => {
+      if (Platform.OS !== 'android') return;
+      try { if (qmLockActive.current) QmForeground.stop(); } catch {}
+    };
+  }, []);
   const roundSeconds = roundLengthMin * 60;
   const phaseDuration =
     phase === 'break' ? breakSeconds
@@ -242,12 +275,27 @@ export default function QMScreen() {
     if (phase !== 'round' && phase !== 'break' && phase !== 'countdown') return;
     if (paused) return;
     lastTickRef.current = Date.now();
-    const id = setInterval(() => {
+    const tick = () => {
       const now = Date.now();
       const delta = (now - lastTickRef.current) / 1000;
       lastTickRef.current = now;
       setElapsed(prev => prev + delta);
-    }, 250);
+    };
+    // Android: react-native-background-timer's interval is backed by a
+    // native handler thread, so it keeps firing while the screen is
+    // OFF — unlike RN's built-in setInterval, which is dispatched on
+    // the Choreographer (vsync) and freezes the moment the screen
+    // locks (the bug: countdown stalled + tick/bell cues went silent
+    // even though the foreground service kept the silent loop playing).
+    // The FG service (silencePlayer.setActiveForLockScreen) keeps the
+    // process alive; this keeps the JS timer alive within it.
+    // iOS keeps the built-in timer: its app stays awake via the silent
+    // loop + UIBackgroundModes:["audio"], where setInterval fires fine.
+    if (Platform.OS === 'android') {
+      const id = BackgroundTimer.setInterval(tick, 250);
+      return () => BackgroundTimer.clearInterval(id);
+    }
+    const id = setInterval(tick, 250);
     return () => clearInterval(id);
   }, [phase, paused]);
 

@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["QmForegroundModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.qmforeground.QmForegroundModule"]
+  }
+}
