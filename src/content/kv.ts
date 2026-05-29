@@ -53,6 +53,31 @@ export const kv = {
   },
 };
 
+/**
+ * Native cold-start hydration. `kv.get` is synchronous and reads `memCache`,
+ * which is EMPTY when the JS bundle first evaluates on native — so any store
+ * seeded from `kv.get` at module-init silently starts blank on every fresh
+ * launch, and the next write then overwrites the on-disk value. Read
+ * AsyncStorage directly on boot and hand the parsed value to `apply` so the
+ * store can merge it back in. No-op on web, where the init read was already
+ * synchronous via localStorage. (progressStore / authStore inline this same
+ * pattern with bespoke merges.)
+ */
+export function hydrateFromDisk<T>(key: string, apply: (stored: T) => void): void {
+  if (isWeb) return;
+  AsyncStorage.getItem(key)
+    .then((raw) => {
+      if (raw == null) return;
+      memCache[key] = raw;
+      try {
+        apply(JSON.parse(raw) as T);
+      } catch {
+        /* corrupted JSON — leave the store on its in-memory defaults */
+      }
+    })
+    .catch(() => { /* AsyncStorage unavailable — nothing to hydrate */ });
+}
+
 export const persistStorage: StateStorage = {
   getItem: async (name) => {
     try {

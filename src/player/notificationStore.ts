@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { kv } from '../content/kv';
+import { kv, hydrateFromDisk } from '../content/kv';
 
 /**
  * Per-item read/unread tracking persisted in kv so badges survive refresh.
@@ -50,6 +50,14 @@ export const useNotifications = create<State>((set, get) => ({
   markNewsRead: () => { /* no-op: we now track per-item. Left here for old call sites. */ },
   markVideoRead: () => { /* idem */ },
 }));
+
+// Native cold-start: `loadSet` above reads an empty `memCache`, so the seen
+// sets start blank on every fresh launch. Pull them off disk and merge,
+// keeping any `markSeen` that landed before the async read resolved.
+hydrateFromDisk<Record<string, true>>(KEY.news, (stored) =>
+  useNotifications.setState((s) => ({ seenNews: { ...stored, ...s.seenNews } })));
+hydrateFromDisk<Record<string, true>>(KEY.media, (stored) =>
+  useNotifications.setState((s) => ({ seenMedia: { ...stored, ...s.seenMedia } })));
 
 /** Compute unread count for a given list. */
 export function countUnread(kind: Kind, ids: string[]) {

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { kv } from '../content/kv';
+import { kv, hydrateFromDisk } from '../content/kv';
 
 /**
  * User preferences for session sound cues. Used by the QM Training
@@ -37,3 +37,8 @@ export const useSessionPrefs = create<Store>((set, get) => ({
     persist({ bellSoundId: get().bellSoundId });
   },
 }));
+
+// Native cold-start: `kv.get` in `initial` read an empty `memCache`, so the
+// store starts on DEFAULTS. Pull the saved prefs off disk and apply them.
+hydrateFromDisk<Partial<SessionPrefs>>(STORAGE_KEY, (stored) =>
+  useSessionPrefs.setState(stored));
