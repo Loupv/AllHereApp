@@ -205,18 +205,15 @@ export default function SilentMindTreeScreen() {
   // — bright peaks therefore travel UP the tree, like sap rising
   // through the trunk. Linear easing because the wave needs constant
   // speed; sin shaping happens per-segment from the phase offset.
+  // Driven by the unified 30 fps ticker below (no longer a standalone
+  // withTiming) so it can be frozen during a page glide alongside the
+  // particle clocks.
   const flowTime = useSharedValue(0);
-  useEffect(() => {
-    // Same monotonic-clock pattern as the particle clocks: avoid the
-    // withRepeat boundary that snapped the value 1 → 0 and produced
-    // a visible jump in the trunk's brightness wave. EnergyPath uses
-    // `% 1` to wrap.
-    const CYCLES_AHEAD = 10000;
-    flowTime.value = withTiming(CYCLES_AHEAD, {
-      duration: 4000 * CYCLES_AHEAD,
-      easing: Easing.linear,
-    });
-  }, [flowTime]);
+  // True while a page glide owns the scroll — the ticker holds all
+  // ambient clocks steady so their worklets stop committing and free
+  // the UI thread for the scroll animation. Set by glideToPage,
+  // cleared when the glide finishes.
+  const animPausedRef = useRef(false);
 
   // Shared clocks for the rising particle field — one clock per kind
   // (trunk = long slow drift, branch = shorter cycle on the QM
@@ -239,31 +236,47 @@ export default function SilentMindTreeScreen() {
     );
   }, [scrollHintBob]);
   useEffect(() => {
-    // Particle "frame rate": each clock tick advances the particles
-    // by 1 / PARTICLE_FPS of a second. Each AnimatedEllipse worklet
-    // still evaluates at the native 60 Hz, but it reads the same
-    // clock value for 3 frames in a row → reanimated emits only one
-    // native style commit per 3 frames per ellipse, cutting SVG
-    // GPU work by ~3× on the ~240 trunk+halo ellipses without any
-    // visible difference (particles drift < 1 px per tick).
+    // Unified 30 fps ticker driving every ambient clock — the trunk +
+    // branch particle drift AND the trunk's brightness wave (flowTime,
+    // the segment animation). One JS-side setInterval writing a few
+    // shared values; the worklets read them on the UI thread.
     //
-    // Previously we drove these with two long withTiming() chains on
-    // the UI thread (200000 × 10000 ms for the trunk, 50000 × 10000
-    // for the branch). The new path uses a JS-side setInterval which
-    // costs one shared-value write per 50 ms — negligible — and lets
-    // us throttle the visible cadence with a single constant.
-    const PARTICLE_FPS = 20;
-    const STEP_MS = 1000 / PARTICLE_FPS;
-    // Original cycle durations (kept identical so motion speed is
-    // unchanged): trunk = 200 s / cycle, branch = 50 s / cycle.
+    // 30 fps (was: particles 20 fps + segments 60 fps via withTiming).
+    // Capping the segment wave at 30 halves its per-frame SVG opacity
+    // commits — imperceptible on a slow sap-rising wave, real headroom
+    // on the A53.
+    //
+    // Two freeze paths, both via a pausable accumulator (so the clocks
+    // resume continuously, no forward jump):
+    //   • App backgrounded → stop the interval entirely (CPU; iOS 48 s
+    //     watchdog) and bank the gap.
+    //   • Page glide in progress (animPausedRef) → hold the clocks
+    //     steady so particle + segment worklets stop committing and the
+    //     UI thread is free for the scroll animation.
+    const FPS = 30;
+    const STEP_MS = 1000 / FPS;
+    // Cycle durations unchanged so motion speed is identical:
+    // trunk 200 s, branch 50 s, flow 4 s.
     const TRUNK_CYCLE_MS = 200_000;
     const BRANCH_CYCLE_MS = 50_000;
+    const FLOW_CYCLE_MS = 4_000;
     const start = Date.now();
+    let pausedAccum = 0;
+    let frozenSince: number | null = null;
     let id: ReturnType<typeof setInterval> | undefined;
     const tick = () => {
-      const elapsed = Date.now() - start;
+      if (animPausedRef.current) {
+        if (frozenSince === null) frozenSince = Date.now();
+        return; // hold clocks steady during the glide
+      }
+      if (frozenSince !== null) {
+        pausedAccum += Date.now() - frozenSince;
+        frozenSince = null;
+      }
+      const elapsed = Date.now() - start - pausedAccum;
       trunkClock.value = elapsed / TRUNK_CYCLE_MS;
       branchClock.value = elapsed / BRANCH_CYCLE_MS;
+      flowTime.value = elapsed / FLOW_CYCLE_MS;
     };
     const startTicker = () => {
       if (id) return;
@@ -273,24 +286,23 @@ export default function SilentMindTreeScreen() {
     const stopTicker = () => {
       if (id) { clearInterval(id); id = undefined; }
     };
-    // Pause the 20 Hz particle ticker while the app is backgrounded.
-    // The SM tree screen stays mounted in the navigation stack while
-    // the user plays an audio (Player overlay), so this setInterval
-    // would otherwise keep firing — and writing shared values that
-    // reanimated tries to commit on the UI thread — even with the
-    // screen locked. Burning CPU in background past iOS's 48 s /
-    // 60 s watchdog triggers `memorystatus: killing due to cpulimit
-    // violation` and kills our audio playback at ~45 s.
     if (AppState.currentState === 'active') startTicker();
     const sub = AppState.addEventListener('change', (s) => {
-      if (s === 'active') startTicker();
-      else stopTicker();
+      if (s === 'active') {
+        // The first tick after resume accumulates the banked gap
+        // (frozenSince was set on background) → no forward jump.
+        startTicker();
+      } else {
+        // Bank the backgrounded gap so the clocks don't jump on resume.
+        if (frozenSince === null) frozenSince = Date.now();
+        stopTicker();
+      }
     });
     return () => {
       stopTicker();
       sub.remove();
     };
-  }, [trunkClock, branchClock]);
+  }, [trunkClock, branchClock, flowTime]);
 
   // Responsive layout sizing.
   const totalW = Math.min(MAX_TOTAL_W, Math.max(220, winW - 16));
@@ -645,7 +657,12 @@ export default function SilentMindTreeScreen() {
   // Cleared on the JS thread from the withTiming completion callback so
   // the snap-in-progress guard releases exactly when the animation
   // ends (no setTimeout race that could leave a hitch at the tail).
-  const finishSnap = () => { isSnapping.current = false; };
+  const finishSnap = () => {
+    isSnapping.current = false;
+    // Resume the ambient particle + segment animations (frozen during
+    // the glide to free the UI thread).
+    animPausedRef.current = false;
+  };
 
   // UI-thread driver: while snapping, push the interpolated offset to
   // the ScrollView every frame. Returns -1 when idle so the reaction
@@ -678,6 +695,9 @@ export default function SilentMindTreeScreen() {
     settledPage.current = clamped;
     settledPageSV.value = clamped;
     isSnapping.current = true;
+    // Freeze ambient particle + segment animations for the glide so the
+    // UI thread is free for the scroll (resumed in finishSnap).
+    animPausedRef.current = true;
     snapNeedsFrom.value = 1;
     isSnappingSV.value = 1;
     setCurrentPageIdx(clamped);
@@ -853,7 +873,7 @@ export default function SilentMindTreeScreen() {
       style={StyleSheet.absoluteFill}
       pointerEvents="none"
     >
-      {buildPathSegments(layers, rowYs, SM_X, QM_X, CENTER_X, NODE_R, listened, flowTime, totalH, partColor, journeyBounds.lastListenedSmY, pageOrder, pageH)}
+      {buildPathSegments(layers, rowYs, SM_X, QM_X, CENTER_X, NODE_R, listened, flowTime, totalH, partColor, journeyBounds.lastListenedSmY, pageOrder, pageH, scrollY, pageH)}
       {(() => {
         // Trunk + branch particle field. Always renders as long
         // as there's a next-up to flow toward; when the user has
@@ -947,6 +967,8 @@ export default function SilentMindTreeScreen() {
               opacityScale={opacityScale}
               sizeScale={sizeScale}
               lengthScale={lengthScale}
+              scrollY={scrollY}
+              viewH={pageH}
             />
           );
         });
@@ -994,6 +1016,8 @@ export default function SilentMindTreeScreen() {
                 opacityScale={0.6 + sScale * 0.4}
                 sizeScale={0.7 + sScale * 0.3}
                 lengthScale={0.5 + sLength * 1.4}
+                scrollY={scrollY}
+                viewH={pageH}
               />,
             );
           }
@@ -1761,6 +1785,8 @@ function TrunkParticle({
    *  so the field has mixed long/short streaks instead of every
    *  particle reading at the same aspect ratio. */
   lengthScale,
+  scrollY,
+  viewH,
 }: {
   cx: number;
   yTop: number;
@@ -1778,6 +1804,11 @@ function TrunkParticle({
   opacityScale: number;
   sizeScale: number;
   lengthScale: number;
+  /** Scroll offset + viewport height — used to cull off-screen
+   *  particles (the trunk spans several pages; only the on-screen
+   *  band needs to animate). */
+  scrollY: SharedValue<number>;
+  viewH: number;
 }) {
   // Single ambient sizing for every state — the user prefers the
   // small "tree empty" look kept everywhere, instead of bumping size
@@ -1792,6 +1823,13 @@ function TrunkParticle({
   const animatedCoreProps = useAnimatedProps(() => {
     const t = (clock.value * speedMul + phase) % 1;
     const cy = yBottom - (yBottom - yTop) * t;
+    // Cull: if this particle's current Y is outside the visible band,
+    // park it at a CONSTANT position with opacity 0. Constant props
+    // frame-to-frame → reanimated skips the native SVG commit, so
+    // off-screen particles cost nothing (the trunk can span 3-4 pages).
+    if (cy < scrollY.value - 80 || cy > scrollY.value + viewH + 80) {
+      return { cy: yBottom, opacity: 0 };
+    }
     let alpha = 1;
     if (t < 0.18) alpha = t / 0.18;
     else if (t > 0.82) alpha = (1 - t) / 0.18;
@@ -1831,6 +1869,8 @@ function BranchParticle({
   opacityScale,
   sizeScale,
   lengthScale,
+  scrollY,
+  viewH,
 }: {
   trunkX: number;
   cornerX: number;
@@ -1844,6 +1884,8 @@ function BranchParticle({
   opacityScale: number;
   sizeScale: number;
   lengthScale: number;
+  scrollY: SharedValue<number>;
+  viewH: number;
 }) {
   const x1 = trunkX + nodeR;
   const x2 = cornerX - BRANCH_CORNER_R;
@@ -1865,6 +1907,12 @@ function BranchParticle({
   // visually — the particles read as soft dots flowing along the
   // branch.
   const animatedCoreProps = useAnimatedProps(() => {
+    // Cull: a branch sits entirely around smY..qmY (≤ ~1 page). If that
+    // band is off-screen, park at a constant point + opacity 0 so the
+    // props stay stable (no SVG commit) — see TrunkParticle.
+    if (smY < scrollY.value - 80 || qmY > scrollY.value + viewH + 80) {
+      return { cx: cornerX, cy: smY, opacity: 0 };
+    }
     const t = (clock.value * speedMul + phase) % 1;
     const dist = t * total;
     let cx: number, cy: number;
@@ -1919,6 +1967,9 @@ function EnergyPath({
   accent,
   yPhase,
   flowTime,
+  segY,
+  scrollY,
+  viewH,
 }: {
   d: string;
   stroke: string;
@@ -1933,15 +1984,27 @@ function EnergyPath({
    *  through them later than peaks at the base. */
   yPhase: number;
   flowTime: SharedValue<number>;
+  /** Segment centre Y (content coords) + scroll/viewport — used to
+   *  freeze the wave when the segment is off-screen (cull). */
+  segY: number;
+  scrollY: SharedValue<number>;
+  viewH: number;
 }) {
   // A SINGLE bright peak is visible at a time (cycles = 1.0): one wave
   // crest travels up, fades off the top, restarts at the bottom. With
   // more cycles the effect read as a uniform shimmer rather than an
   // ascending current.
   const CYCLES = 1.0;
+  // Off-screen cull helper: a segment more than one viewport away from
+  // the visible band returns its baseline opacity (constant → no SVG
+  // commit). One-viewport margin avoids popping a tall segment that's
+  // partly on-screen.
   // Core (white) — opacity 0.35 baseline so the path stays visible
   // between peaks; lifts to 1.0 at the wave crest.
   const coreProps = useAnimatedProps(() => {
+    if (segY < scrollY.value - viewH || segY > scrollY.value + viewH * 2) {
+      return { strokeOpacity: 0.35 };
+    }
     const phase = (flowTime.value + yPhase * CYCLES + 1) % 1;
     const wave = Math.sin(phase * Math.PI);
     const sq = wave * wave; // sharper falloff than sin alone
@@ -1952,6 +2015,9 @@ function EnergyPath({
   // with the wave crest punching it brighter (~0.80). Going to 0
   // between peaks made the glow look like it disappeared entirely.
   const glowProps = useAnimatedProps(() => {
+    if (segY < scrollY.value - viewH || segY > scrollY.value + viewH * 2) {
+      return { strokeOpacity: 0.30 };
+    }
     const phase = (flowTime.value + yPhase * CYCLES + 1) % 1;
     const wave = Math.sin(phase * Math.PI);
     const sq = wave * wave;
@@ -2009,6 +2075,10 @@ function buildPathSegments(
   lastListenedY: number | null,
   pageOrder: StageId[],
   pageH: number,
+  /** Live scroll offset + viewport height — passed through to each
+   *  EnergyPath so off-screen segments freeze their wave (cull). */
+  scrollY: SharedValue<number>,
+  viewH: number,
 ) {
   const elements: React.ReactNode[] = [];
   const dimStroke = 'rgba(255,255,255,0.18)';
@@ -2071,6 +2141,9 @@ function buildPathSegments(
             accent={s.accent}
             yPhase={yPhaseSeg}
             flowTime={flowTime}
+            segY={yMidSeg}
+            scrollY={scrollY}
+            viewH={viewH}
           />,
         );
       }
@@ -2089,6 +2162,9 @@ function buildPathSegments(
           accent={accent}
           yPhase={yPhase}
           flowTime={flowTime}
+          segY={yMid}
+          scrollY={scrollY}
+          viewH={viewH}
         />,
       );
     }
@@ -2152,6 +2228,9 @@ function buildPathSegments(
         accent={accent}
         yPhase={yPhase}
         flowTime={flowTime}
+        segY={yMid}
+        scrollY={scrollY}
+        viewH={viewH}
       />,
     );
   });
