@@ -3,7 +3,6 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Asset } from 'expo-asset';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useEarthPlayer } from './EarthVideoContext';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -140,44 +139,46 @@ export function VideoBackground(_: Props) {
 }
 
 /**
- * expo-video-backed background loop for Android. The player is owned
- * by EarthVideoProvider at the app root so a single ExoPlayer instance
- * is shared across every consumer (root layout's journey-theme bg + the
- * SM tree's Part 1 layer) — eliminates the mount-glitch / frame-0
- * reset that happened when two players ran in parallel.
+ * expo-video-backed background loop for Android (and the non-iOS path).
+ * Each instance owns its OWN player. We deliberately do NOT share one
+ * player across the root tab bg + SM tree + Player overlay: on Android
+ * an ExoPlayer drives a SINGLE Surface, so a shared player let whichever
+ * VideoView mounted last (SM tree / Player) steal the output and froze
+ * the others on their last frame ("earth image figée" on the tabs after
+ * visiting SM tree / the Player). A player per view = no surface
+ * contention = every earth background keeps running.
  *
- * Fallback: if for some reason the provider isn't mounted above us
- * (tests, dev hot-reload edge cases), we spin up a local player so the
- * component still renders.
- *
- * Sound discipline (configured at the provider): the player is muted
- * with `audioMixingMode: 'mixWithOthers'` so expo-video shares audio
- * output with our expo-audio meditation player and doesn't elbow it
- * out of the Android MediaSession / lock-screen Now Playing card.
+ * `audioMixingMode: 'mixWithOthers'` + muted so expo-video shares audio
+ * output with our expo-audio meditation player and doesn't elbow it out
+ * of the Android MediaSession / lock-screen Now Playing card.
  */
 function ExpoVideoBackground() {
-  const sharedPlayer = useEarthPlayer();
-  if (sharedPlayer) {
-    return (
-      <VideoView
-        player={sharedPlayer}
-        style={StyleSheet.absoluteFillObject}
-        contentFit="cover"
-        nativeControls={false}
-        allowsPictureInPicture={false}
-      />
-    );
-  }
-  return <ExpoVideoBackgroundLocal />;
-}
-
-function ExpoVideoBackgroundLocal() {
   const player = useVideoPlayer(EARTH_VIDEO, (p) => {
     p.loop = true;
     p.muted = true;
     p.audioMixingMode = 'mixWithOthers';
     p.play();
   });
+  // Re-assert loop AFTER the source loads. expo-video drops the
+  // setup-callback's `loop` during the source-load → first-play cycle,
+  // so the video would play once and stop. `sourceLoad` / `readyToPlay`
+  // fire at the right moment; `playToEnd` force-replays as a hard
+  // fallback if loop somehow still didn't take.
+  React.useEffect(() => {
+    if (!player) return;
+    const reassert = () => {
+      try { player.loop = true; player.muted = true; } catch { /* released */ }
+    };
+    reassert();
+    const onLoad = player.addListener('sourceLoad', reassert);
+    const onStatus = player.addListener('statusChange', ({ status }) => {
+      if (status === 'readyToPlay') reassert();
+    });
+    const onEnd = player.addListener('playToEnd', () => {
+      try { player.loop = true; player.replay(); } catch { /* released */ }
+    });
+    return () => { onLoad.remove(); onStatus.remove(); onEnd.remove(); };
+  }, [player]);
   return (
     <VideoView
       player={player}
