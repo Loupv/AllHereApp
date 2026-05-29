@@ -28,6 +28,7 @@ import { UpdateBanner } from '../src/components/UpdateBanner';
 import { useUpdateCheck } from '../src/hooks/useUpdateCheck';
 import { AtmosphereBackground as ShaderBackground } from '../src/components/AtmosphereBackground';
 import { VideoBackground } from '../src/components/VideoBackground';
+import { EarthVideoProvider } from '../src/components/EarthVideoContext';
 import { useShaderThemeStore } from '../src/shaders/themeStore';
 import { themeForJourneyPosition } from '../src/shaders';
 import { useProgress } from '../src/player/progressStore';
@@ -171,6 +172,13 @@ export default function RootLayout() {
     // throw "GestureDetector must be used as a descendant of
     // GestureHandlerRootView" at render time.
     <GestureHandlerRootView style={styles.root}>
+    {/* EarthVideoProvider owns a single useVideoPlayer instance for
+        Android. Every <VideoBackground> below shares this same player
+        via context, so the SM tab's bg and the SM tree's Part 1 layer
+        stay on the same frame during navigation — no second player
+        instantiation mid-push, no frame-0 reset. iOS / web bypass the
+        context (Swift module / raw <video> respectively). */}
+    <EarthVideoProvider>
     <View style={styles.root}>
       <StatusBar style="light" />
       {/* Atmospheric shader behind everything — rendered at root
@@ -273,6 +281,7 @@ export default function RootLayout() {
       )}
       {!introDone && <IntroSplash onDone={() => setIntroDone(true)} />}
     </View>
+    </EarthVideoProvider>
     </GestureHandlerRootView>
   );
 }

@@ -106,17 +106,36 @@ export default function StartScreen() {
   const user = useAuth(s => s.user);
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { isTablet, columnMax, playSize, playCenterY: sharedPlayCenterY } = useLayout();
-  // Nudge Start's circle UP from the shared `playCenterY`. The
-  // shared value targets ~45 % of usable height — the Player's flex
-  // layout actually lands the circle a touch higher (~38-40 %),
-  // because of the transcript + waveform + bottom controls stacked
-  // beneath it. Without this offset the circle visibly drops down
-  // when going Start → Player. QM Training keeps the unmodified
-  // shared value so its session screen layout doesn't shift.
-  const playCenterY = sharedPlayCenterY - 56;
+  const { isTablet, columnMax, playSize, effectivePlayCenterY } = useLayout();
+  // Single shared button Y across Start and the Player — see
+  // useLayout. Keeps the cross-fade morph from jumping.
+  const playCenterY = effectivePlayCenterY;
   const usableH = Math.max(360, height - insets.top - insets.bottom);
   const isTall = !isTablet && usableH >= 820;
+
+  // Measured height of the flow-laid-out header (title). Used to clamp
+  // the absolutely-positioned journey meta block ("Welcome" + duration)
+  // so it can never rise into the title on short viewports — the bug
+  // that showed up testing web-on-phone (~620 px) and on small native
+  // phones (iPhone SE etc.). Both the header and the meta block share
+  // the root View's coordinate space, so the header's measured height
+  // (it sits flush at the root top) is the title's bottom Y.
+  const [headerH, setHeaderH] = useState(0);
+  // The title sits flush at the root top, so its measured height is the
+  // title's bottom Y; the meta block must clear it.
+  const metaTopGuard = headerH + spacing.sm;
+  // Position of the button's top edge — derived from the shared
+  // useLayout.effectivePlayCenterY (already clamped for short screens),
+  // re-exported here for the meta block layout below.
+  const playButtonTop = effectivePlayCenterY - playSize / 2;
+  // Ideal: a fixed JOURNEY_TEXT_RESERVED_HEIGHT gap above the button
+  // (tall screens). Floor: just below the title.
+  const metaIdealTop = playButtonTop - JOURNEY_TEXT_RESERVED_HEIGHT;
+  const metaTop = Math.max(metaTopGuard, metaIdealTop);
+  const metaHeight = Math.max(0, playButtonTop - 12 - metaTop);
+  // metaHeight is now guaranteed >= META_BLOCK_H by the button clamp, so
+  // this only suppresses the block before the header has been measured.
+  const showMeta = metaHeight >= 20;
 
   const [reveal] = useState(() => {
     if (didRevealOnce) return false;
@@ -226,6 +245,7 @@ export default function StartScreen() {
             <View style={[styles.content, { maxWidth: columnMax, alignSelf: 'center' }]}>
               <Animated.View
                 style={styles.header}
+                onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}
                 entering={reveal ? FadeInDown.duration(600) : undefined}
               >
                 <Text
@@ -318,6 +338,7 @@ export default function StartScreen() {
           circle with a 12 px breathing margin; vertical room below
           (`top: ...`) is left unbounded so a 2-line title still
           drops naturally upward instead of clipping. */}
+      {showMeta && (
       <View
         pointerEvents="box-none"
         style={{
@@ -325,11 +346,16 @@ export default function StartScreen() {
           left: 0,
           right: 0,
           bottom: undefined,
-          top: playCenterY - playSize / 2 - JOURNEY_TEXT_RESERVED_HEIGHT,
-          height: JOURNEY_TEXT_RESERVED_HEIGHT - 12,
+          // Clamped so the block never overlaps the title above nor the
+          // play button below (see metaTop / metaHeight computation).
+          top: metaTop,
+          height: metaHeight,
           alignItems: 'center',
           justifyContent: 'flex-end',
           paddingBottom: 12,
+          // Clip rather than bleed into the title if the screen is so
+          // short the 2-line track name can't fully fit.
+          overflow: 'hidden',
         }}
       >
         {nextTrack ? (
@@ -346,12 +372,15 @@ export default function StartScreen() {
           </View>
         ) : null}
       </View>
+      )}
 
       {/* Play button pinned at the shared playCenterY so it lands at
-          the same screen Y as QM Training and the Player overlay. */}
+          the same screen Y as QM Training and the Player overlay — except
+          on short viewports where it's pushed down (effectivePlayCenterY)
+          to keep room for the title + meta above it. */}
       <View
         pointerEvents="box-none"
-        style={{ position: 'absolute', left: 0, right: 0, top: playCenterY - playSize / 2, alignItems: 'center' }}
+        style={{ position: 'absolute', left: 0, right: 0, top: effectivePlayCenterY - playSize / 2, alignItems: 'center' }}
       >
         <CircleButton
           mode="pre"

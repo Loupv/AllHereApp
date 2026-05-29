@@ -32,5 +32,15 @@ export function noOrphan<T extends string | null | undefined>(s: T): T {
 function glueLastSpace(line: string): string {
   const idx = line.lastIndexOf(' ');
   if (idx < 0) return line;
+  // Skip the glue when there's only ONE space in the line. A 2-word
+  // string has no widow to protect against (both words already sit on
+  // the same "line") and gluing them creates a single non-breakable
+  // sequence \u2014 if the container is narrower than that sequence,
+  // RN-Android falls back to character wrapping ("Turning Inwar" +
+  // "D"), which the user explicitly does not want anywhere in the app.
+  // For 3+ words we still glue the last pair: there's a real widow
+  // risk and the remaining spaces give the renderer somewhere else to
+  // break.
+  if (line.indexOf(' ') === idx) return line;
   return line.slice(0, idx) + '\u00A0' + line.slice(idx + 1);
 }

@@ -110,6 +110,17 @@ export function AtmosphereBackground({ theme, paused = false }: Props) {
     let stopped = false;
     let frameIdx = 0;
     let rafId = 0;
+    // Pausable clock. The shader's uTime is wall-clock based
+    // (Date.now() - start). While the layer is paused (offscreen page)
+    // we stop submitting frames, but Date.now() keeps advancing — so
+    // the first frame after un-pausing would jump uTime forward by the
+    // entire pause duration, which read as a visible shader "jump"
+    // right after the crossfade brought the layer back in. We instead
+    // accumulate the paused (and backgrounded) time and subtract it, so
+    // uTime resumes CONTINUOUSLY from where it froze — the fade-in shows
+    // live motion that picks up exactly where it left off.
+    let pausedAccum = 0;
+    let frozenSince: number | null = null;
     // Background guard: when iOS locks the screen or the app goes to
     // background, we MUST stop calling rAF entirely (not just skip GL
     // submit) — even a do-nothing rAF callback still wakes the JS
@@ -119,8 +130,18 @@ export function AtmosphereBackground({ theme, paused = false }: Props) {
     const draw = () => {
       if (stopped) return;
       frameIdx++;
+      // Track the paused→running edge to keep the clock continuous.
+      // (Runs every frame while the app is active, regardless of the
+      // paused prop, so it catches both the enter- and exit-pause
+      // transitions for the offscreen-page case.)
+      if (pausedRef.current) {
+        if (frozenSince === null) frozenSince = Date.now();
+      } else if (frozenSince !== null) {
+        pausedAccum += Date.now() - frozenSince;
+        frozenSince = null;
+      }
       if (!pausedRef.current && appStateActive && frameIdx % 3 === 0) {
-        gl.uniform1f(uTime, (Date.now() - start) / 1000);
+        gl.uniform1f(uTime, (Date.now() - start - pausedAccum) / 1000);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         // expo-gl native needs `endFrameEXP`; web has it as a no-op.
         if (typeof gl.endFrameEXP === 'function') gl.endFrameEXP();
@@ -132,6 +153,14 @@ export function AtmosphereBackground({ theme, paused = false }: Props) {
     const sub = AppState.addEventListener('change', (s) => {
       const wasActive = appStateActive;
       appStateActive = s === 'active';
+      if (!appStateActive && wasActive) {
+        // Going to background: the draw loop stops scheduling, so it
+        // can't observe the freeze itself — start the freeze window
+        // here (unless the paused prop already opened one). draw()
+        // closes it on resume and folds the gap into pausedAccum, so
+        // uTime doesn't jump forward by the backgrounded duration.
+        if (frozenSince === null) frozenSince = Date.now();
+      }
       if (appStateActive && !wasActive && !stopped) {
         // Resume: kick the loop again. Skip ahead one tick boundary
         // so the very first resumed frame submits GL again.

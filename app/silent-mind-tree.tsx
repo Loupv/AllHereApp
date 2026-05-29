@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, useWindowDimensions, Platform, AppState } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   useAnimatedProps,
   useAnimatedScrollHandler,
+  useAnimatedReaction,
   useAnimatedRef,
   scrollTo,
   runOnJS,
@@ -172,10 +173,10 @@ export default function SilentMindTreeScreen() {
   const { width: winW, height: winH } = useWindowDimensions();
   const listened = useProgress(s => s.listened);
   const openPlayer = usePlayerStore(s => s.open);
-  // useAnimatedRef so the worklet-side scroll handler can drive the
-  // ScrollView directly via reanimated's scrollTo() helper (UI thread,
-  // zero bridge crossing). JS-side code can still call
-  // `scrollRef.current?.scrollTo(...)` exactly like before.
+  // useAnimatedRef so the reanimated scroll handler can pair with this
+  // ScrollView. JS-side code calls `scrollRef.current?.scrollTo(...)`
+  // for the chevron-driven page jumps; the worklet itself no longer
+  // calls scrollTo (snapping is handled natively on every platform now).
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
 
   const layers = useMemo(() => buildLayers(), []);
@@ -312,18 +313,28 @@ export default function SilentMindTreeScreen() {
   // height, the user snaps from one part to the next while scrolling.
   // Padding inside each page leaves room for the safe-area top, the
   // floating BackButton, and the dashed section header at the bottom.
-  const pageH = winH;
+  //
+  // pageH MUST equal the ScrollView's real visible height, not
+  // useWindowDimensions().height. On Android with edge-to-edge the
+  // window height excludes the system bar areas the ScrollView
+  // actually draws behind, so winH came out SHORTER than the real
+  // viewport — every page was laid out too short, squishing the tree
+  // and leaving empty space below the fixed footer. We measure the
+  // ScrollView via onLayout and fall back to winH for the very first
+  // frame before layout has run.
+  const [measuredH, setMeasuredH] = useState(0);
+  const pageH = measuredH || winH;
   // Extra breathing room at the top of each page so the topmost row
   // doesn't sit right against the tagline / scroll hint. Same value
   // applied to every part page so the vertical rhythm stays even.
   const TOP_PAD = Math.max(120, insets.top + 96);
-  // Bottom pad has to clear the fixed footer (≈ 100 px tag area +
-  // dashed line + paddingBottom of insets.bottom + 12) AND leave
-  // breathing room above it so the last track's label (which extends
-  // ~45 px below the dot's centre Y) doesn't graze the dashed line.
-  // Same `BOTTOM_PAD` is used for every part page (intro / earth /
-  // sky / space) so they all get the same lift.
-  const BOTTOM_PAD = Math.max(180, insets.bottom + 160);
+  // Bottom pad has to clear the fixed footer (now ≈ 112 px label area +
+  // dashed top-border + paddingBottom insets.bottom+8 ≈ 120 px) AND
+  // leave room so the last track's label (extends ~45 px below the
+  // dot's centre Y) doesn't graze it. Trimmed from 180 → 150 now that
+  // the footer band is shorter, which gives the rows more vertical
+  // room and keeps the per-row pitch comfortable on short screens.
+  const BOTTOM_PAD = Math.max(150, insets.bottom + 132);
   const DIVIDER_OFFSET = 28; // distance from page bottom to the dashed line
 
   // Order in which parts appear top-down in display (one page each).
@@ -349,15 +360,34 @@ export default function SilentMindTreeScreen() {
       if (l.kind !== 'sm-row' && l.kind !== 'qm-branch') continue;
       (partRows[l.partId] ??= []).push(i);
     }
+    // Minimum vertical pitch between rows so a row's title + meta never
+    // overlaps the next one's, even when a part packs several rows
+    // (Part 1 has 5: 3 SM + 2 QM branches) onto a short viewport.
+    const MIN_PITCH = 78;
+    // Space to keep clear BELOW the lowest dot: the footer band
+    // (≈120 px) + the down-chevron's gap (≈28 px) + the row label that
+    // hangs ≈60 px under the dot (title sits at the dot, duration +
+    // "LOCKED" stack beneath). Anchoring the cluster's BOTTOM to this
+    // line (rather than centring it) guarantees the lowest row — and
+    // its "LOCKED" / duration text — never slides under the footer band
+    // on a short screen, which is what centring did.
+    const FOOTER_RESERVE = 210;
+    const TOP_MIN = 56; // never tuck the top row under the up-chevron
     pageOrder.forEach((partId, pageIdx) => {
       const indices = partRows[partId] ?? [];
       const n = indices.length;
       if (n === 0) return;
       const pageStartY = pageIdx * pageH;
       const trackArea = pageH - TOP_PAD - BOTTOM_PAD;
-      const trackPitch = trackArea / n;
+      const pitch = Math.max(MIN_PITCH, trackArea / n);
+      // Lowest dot: the original TOP_PAD-anchored position on tall
+      // screens, but pulled up to clear the footer reserve when the
+      // rows would otherwise overflow into it (short screens).
+      const naturalLastY = TOP_PAD + (n - 0.5) * pitch;
+      const lastY = Math.min(naturalLastY, pageH - FOOTER_RESERVE);
+      const firstY = Math.max(TOP_MIN, lastY - (n - 1) * pitch);
       indices.forEach((layerIdx, trackIdxInPage) => {
-        ys[layerIdx] = pageStartY + TOP_PAD + (trackIdxInPage + 0.5) * trackPitch;
+        ys[layerIdx] = pageStartY + firstY + trackIdxInPage * pitch;
       });
     });
     for (let i = 0; i < layers.length; i++) {
@@ -485,14 +515,17 @@ export default function SilentMindTreeScreen() {
   // that. Each part now has its own warm-balanced hue that carries
   // through the dot border, the play triangle, the done-fill, and the
   // glow halo on the trunk segments belonging to that part.
-  const partColor = (partId: StageId): string => {
+  // useCallback so this keeps a stable identity across renders — it's
+  // a dependency of the memoised SVG content + rows below, and a fresh
+  // function each render would bust those memos on every snap.
+  const partColor = useCallback((partId: StageId): string => {
     switch (partId) {
       case 'intro': return '#C9A66B'; // warm dawn gold — first connection
       case 'part1': return '#3D8E5E'; // vivid forest green — Earth
       case 'part2': return '#3D6BBA'; // dark blue — Sky
       case 'part3': return '#9B6FDD'; // purple — Space
     }
-  };
+  }, []);
   // Lookup: trackId → its part's accent. SM tracks live in their part's
   // `tracks`; QM tracks live in `qmTracks`. Intro tracks come from
   // `introAudios`.
@@ -505,10 +538,12 @@ export default function SilentMindTreeScreen() {
     }
     return map;
   }, []);
-  const trackColor = (id: string): string => {
+  // Stable identity (see partColor) — dependency of the memoised SVG
+  // content + rows.
+  const trackColor = useCallback((id: string): string => {
     const partId = trackPartIndex[id];
     return partId ? partColor(partId) : '#E55050';
-  };
+  }, [trackPartIndex, partColor]);
 
   // Initial page = the HIGHEST-in-display part that has at least one
   // unlocked track (= the most advanced part the user can currently
@@ -563,117 +598,143 @@ export default function SilentMindTreeScreen() {
   // launches the Player directly (two distinct affordances).
   const [sheetTrack, setSheetTrack] = useState<AudioTrack | null>(null);
 
-  // Hard snap-per-page: as soon as the scroll position drifts more
-  // than a few px from the current settled page, we IMMEDIATELY commit
-  // to the next page in the drag direction — no debounce, no waiting
-  // for the gesture to settle. The scroll is also locked
-  // (scrollEnabled=false) for the duration of the smooth scrollTo so
-  // continued user input doesn't drag the position past the target.
-  // Result: one continuous motion that lands on the next page centre.
+  // Paged scroll — one-page-per-gesture snap with a slow, eased glide.
+  //
+  // Native: while the finger is down the ScrollView scrolls freely
+  // (the background crossfade follows live). On release
+  // (`onScrollEndDrag`) we pick the target page from how far the drag
+  // travelled (with a flick shortcut on high release velocity) and
+  // animate to it with `withTiming` over ~560 ms, Easing.inOut(cubic).
+  // The animation is driven on the UI thread by a useAnimatedReaction
+  // that scrollTo()s each frame.
+  //
+  // Why glide on RELEASE, not mid-drag: a per-frame programmatic
+  // scrollTo fights an in-progress Android touch (ACTION_MOVE
+  // overrides it every frame → jitter / position jumps). Once the
+  // finger is up there's nothing to fight, so the eased glide stays
+  // perfectly smooth. The native `scrollTo(animated:true)` we used
+  // before had a fixed ~250 ms decelerate curve (fast start) that read
+  // as abrupt and couldn't be slowed; withTiming gives full control of
+  // duration + easing.
+  //
+  // Web: CSS scroll-snap (scroll-snap-type + per-page scrollSnapStop)
+  // handles snap natively — onScrollEndDrag early-returns on web.
   const settledPage = useRef(initialPageIdx);
   const isSnapping = useRef(false);
-  // UI-thread mirrors of the two JS refs above. The scroll worklet
-  // (useAnimatedScrollHandler) reads these on the UI thread — it can't
-  // touch the refs — and JS-side snap entry points keep them in sync
-  // when they fire (goToPage, web wheel handler, settle timeout).
   const settledPageSV = useSharedValue(initialPageIdx);
+  // 1 while the withTiming glide owns the scroll position. The reaction
+  // below scrollTo()s every frame only while this is set.
   const isSnappingSV = useSharedValue(0);
-  // One snap per finger-down. The worklet disarms after it fires a
-  // snap; only a fresh touchStart (native) or wheel gesture (web)
-  // re-arms it. Without this, holding the finger down and dragging
-  // kept re-triggering a snap on every 480 ms lock-release while the
-  // touch was still active — paging through the whole tree in one
-  // continuous press (reported on Android).
-  const armedSV = useSharedValue(1);
-  const setScrollLocked = (locked: boolean) => {
-    try {
-      // setNativeProps is the cheapest way to toggle scrollEnabled on
-      // a live ScrollView ref without re-rendering the whole subtree.
-      (scrollRef.current as any)?.setNativeProps?.({ scrollEnabled: !locked });
-    } catch {
-      /* native may not expose the prop — animation still runs */
-    }
+  // Glide animation state: progress 0→1 (eased), and the from/to scroll
+  // offsets it interpolates between.
+  const snapProgress = useSharedValue(0);
+  const snapFromY = useSharedValue(0);
+  const snapToY = useSharedValue(0);
+  // Set to 1 when a glide starts; the reaction captures the LIVE scroll
+  // position into snapFromY on its first frame, then clears it. This
+  // avoids the snapback that a JS-captured start point caused: the
+  // native fling keeps moving the scroll for a frame or two after
+  // onScrollEndDrag fires, so starting the glide from the finger-up
+  // offset yanked the position backward to that (now stale) point
+  // before gliding forward. Reading scrollY live on the first glide
+  // frame starts exactly where the scroll actually is → no yank.
+  const snapNeedsFrom = useSharedValue(0);
+  const SNAP_DURATION = 450;
+  const isWeb = Platform.OS === 'web';
+  const pageOrderLength = pageOrder.length;
+  // Cleared on the JS thread from the withTiming completion callback so
+  // the snap-in-progress guard releases exactly when the animation
+  // ends (no setTimeout race that could leave a hitch at the tail).
+  const finishSnap = () => { isSnapping.current = false; };
+
+  // UI-thread driver: while snapping, push the interpolated offset to
+  // the ScrollView every frame. Returns -1 when idle so the reaction
+  // doesn't re-fire on a stable value.
+  useAnimatedReaction(
+    () => (isSnappingSV.value ? snapProgress.value : -1),
+    (p) => {
+      'worklet';
+      if (p < 0) return;
+      // First frame of a new glide: capture the live scroll position as
+      // the start point (the fling has already carried it past the
+      // finger-up offset by now), so the glide moves forward from where
+      // the scroll actually is instead of yanking back.
+      if (snapNeedsFrom.value) {
+        snapFromY.value = scrollY.value;
+        snapNeedsFrom.value = 0;
+      }
+      scrollTo(scrollRef, 0, snapFromY.value + (snapToY.value - snapFromY.value) * p, false);
+    },
+  );
+
+  // Start an eased glide to `target` page. Shared by the drag-release
+  // handler and the chevron buttons so both land the same way. The
+  // start point is captured live on the first glide frame (see the
+  // reaction). setCurrentPageIdx fires up-front so the incoming
+  // background shader un-pauses and warms during the glide (no
+  // late-appearing bg).
+  const glideToPage = (target: number) => {
+    const clamped = Math.max(0, Math.min(pageOrderLength - 1, target));
+    settledPage.current = clamped;
+    settledPageSV.value = clamped;
+    isSnapping.current = true;
+    snapNeedsFrom.value = 1;
+    isSnappingSV.value = 1;
+    setCurrentPageIdx(clamped);
+    snapToY.value = clamped * pageH;
+    snapProgress.value = 0;
+    snapProgress.value = withTiming(
+      1,
+      { duration: SNAP_DURATION, easing: Easing.inOut(Easing.cubic) },
+      (finished) => {
+        'worklet';
+        // Only the run that actually completes finalises (a new glide
+        // starting mid-flight fires this with finished=false and owns
+        // the state itself).
+        if (!finished) return;
+        scrollTo(scrollRef, 0, snapToY.value, false);
+        isSnappingSV.value = 0;
+        runOnJS(finishSnap)();
+      },
+    );
   };
-  // Programmatic page jump — used by the scroll-hint chevrons when
-  // they're tapped as buttons. Reuses the same snap-then-clamp dance
-  // as the scroll-driven path so chevron taps and gestures land in
-  // the same end state (one stable target Y, no double-advance).
+
+  // Programmatic page jump — scroll-hint chevrons. Glides from the
+  // current settled position.
   const goToPage = (targetPage: number) => {
     if (targetPage < 0 || targetPage >= pageOrder.length) return;
     if (targetPage === settledPage.current) return;
-    isSnapping.current = true;
-    isSnappingSV.value = 1;
-    settledPage.current = targetPage;
-    settledPageSV.value = targetPage;
-    setScrollLocked(true);
-    const targetY = targetPage * pageH;
-    scrollRef.current?.scrollTo({ y: targetY, animated: true });
-    // Defer the React state update one frame so the native scroll
-    // animation gets to start before we reconcile this ~2200-line
-    // component (dozens of useAnimatedStyle hooks). Without the
-    // defer, Android visibly stutters at the start of each snap.
-    requestAnimationFrame(() => setCurrentPageIdx(targetPage));
-    setTimeout(() => {
-      scrollRef.current?.scrollTo({ y: targetY, animated: false });
-      isSnapping.current = false;
-      isSnappingSV.value = 0;
-      setScrollLocked(false);
-    }, 480);
+    glideToPage(targetPage);
   };
 
-  // JS-side bookkeeping after the worklet has already detected a snap
-  // and dispatched the native scrollTo. We only get here once per page
-  // change (vs the old JS-thread onScroll which fired 60×/sec just to
-  // update scrollY.value), so the heavy React reconciliation is paid
-  // exactly once per page transition instead of every animation frame.
-  const onSnapStarted = (targetPage: number) => {
-    isSnapping.current = true;
-    settledPage.current = targetPage;
-    setScrollLocked(true);
-    const targetY = targetPage * pageH;
-    requestAnimationFrame(() => setCurrentPageIdx(targetPage));
-    setTimeout(() => {
-      // Hard-clamp to the target page on lock release — see comment
-      // history; some scroll sources (web wheel) emit events even with
-      // scrollEnabled=false and a stale tick can land mid-page.
-      scrollRef.current?.scrollTo({ y: targetY, animated: false });
-      isSnapping.current = false;
-      isSnappingSV.value = 0;
-      setScrollLocked(false);
-    }, 480);
+  // Drag release — decide the target page and glide to it. Direction
+  // comes from the drag DISTANCE sign (position-based, so no platform
+  // velocity-sign ambiguity); a fast flick lowers the distance bar so
+  // a quick short swipe still advances.
+  const handleScrollEndDrag = (e: { nativeEvent: { contentOffset: { y: number }; velocity?: { y: number } } }) => {
+    if (isWeb) return;
+    if (isSnapping.current) return;
+    const y = e.nativeEvent.contentOffset.y;
+    const settledY = settledPage.current * pageH;
+    const delta = y - settledY;
+    const speed = Math.abs(e.nativeEvent.velocity?.y ?? 0);
+    // Accept the page change generously so a normal swipe advances
+    // without the yoyo snap-back the 20 % bar caused. A deliberate
+    // drag past ~10 % of the page commits; any real flick (velocity)
+    // commits from just ~3.5 % so a quick short swipe still pages.
+    const threshold = speed > 0.25 ? pageH * 0.035 : pageH * 0.1;
+    let target = settledPage.current;
+    if (Math.abs(delta) > threshold) target += delta > 0 ? 1 : -1;
+    glideToPage(target);
   };
 
-  // Worklet-side scroll handler — runs on the UI thread directly, no
-  // bridge crossing per scroll event. Writes scrollY.value (drives the
-  // background-crossfade + footer-label worklets), detects snap
-  // conditions, and dispatches the native scroll + a one-shot
-  // runOnJS to the JS-side bookkeeping above. On Android this is the
-  // difference between smooth and stutter when the JS thread is busy
-  // reconciling.
-  const pageOrderLength = pageOrder.length;
+  // Worklet-side scroll handler — just mirrors the offset into scrollY
+  // (drives the bg crossfade + footer-label worklets). All snapping is
+  // release-based now (see handleScrollEndDrag).
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (e) => {
       'worklet';
-      const y = e.contentOffset.y;
-      scrollY.value = y;
-      if (isSnappingSV.value) return;
-      // Disarmed = a snap already fired during this finger-down; wait
-      // for the next touchStart before snapping again so a held drag
-      // can't page through the tree.
-      if (!armedSV.value) return;
-      const settledY = settledPageSV.value * pageH;
-      const delta = y - settledY;
-      if (Math.abs(delta) <= 6) return; // ignore micro-jitter
-      const direction = delta > 0 ? 1 : -1;
-      let target = settledPageSV.value + direction;
-      if (target < 0) target = 0;
-      if (target > pageOrderLength - 1) target = pageOrderLength - 1;
-      isSnappingSV.value = 1;
-      armedSV.value = 0; // consume this gesture's single snap
-      settledPageSV.value = target;
-      // Animated scroll on the UI thread.
-      scrollTo(scrollRef, 0, target * pageH, true);
-      runOnJS(onSnapStarted)(target);
+      scrollY.value = e.contentOffset.y;
     },
   });
 
@@ -699,7 +760,20 @@ export default function SilentMindTreeScreen() {
     };
   }, [pageOrder, pageH]);
 
-  const FADE_PX = 220;
+  // Background crossfade band half-width. The fade is driven directly
+  // by scroll POSITION (raw scrollY) so it's always concurrent with the
+  // tree sliding between pages — no time-based lag (an earlier
+  // withTiming smoothing made the fade finish ~270 ms AFTER the snap
+  // landed, so the atmosphere appeared only once you'd arrived).
+  //
+  // To make a position-linked fade read as gradual rather than abrupt,
+  // we widen the band so it spans most of the page slide instead of a
+  // fixed 220 px window: at FADE_PX = 0.38·pageH the fade ramps across
+  // ~76 % of a full-page snap, in sync with the motion. Capped under
+  // pageH/2 so that when parked on a page the viewport centre is past
+  // the band on both sides (t fully saturates to 0/1, no two
+  // atmospheres blended at rest).
+  const FADE_PX = Math.round(pageH * 0.38);
   const skyAnimStyle = useAnimatedStyle(() => {
     const y = scrollY.value + winH / 2;
     const t = Math.max(0, Math.min(1, (yP1P2 + FADE_PX - y) / (2 * FADE_PX)));
@@ -722,59 +796,11 @@ export default function SilentMindTreeScreen() {
     return { opacity: Math.min(fadeIn, fadeOut) };
   });
 
-  // Web only: intercept wheel/trackpad events directly so we can
-  // call preventDefault() and stop the browser's native scroll-with-
-  // momentum from running multiple pages of distance during one
-  // gesture. A fixed cooldown (700 ms) wasn't enough — macOS
-  // trackpad sends inertia wheel events for 1–2 s after a flick,
-  // and any event landing after the cooldown expired would trigger
-  // another snap → one gesture = 2-3 page jumps. Instead we use a
-  // "quiet-time" lock: each wheel event extends a 150 ms idle
-  // timer; the lock only releases once the user has stopped
-  // generating wheel events for that long. One gesture = one snap.
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    let locked = false;
-    let momentumTimer: ReturnType<typeof setTimeout> | null = null;
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      if (Math.abs(e.deltaY) < 4) return;
-      // Keep the worklet-side gate armed on web — web snaps via this
-      // wheel path (not the worklet), so the worklet must never stay
-      // disarmed and silently block a future native-style scroll.
-      armedSV.value = 1;
-      // Reset the idle timer on every wheel event — the lock stays
-      // engaged as long as events keep arriving.
-      if (momentumTimer) clearTimeout(momentumTimer);
-      momentumTimer = setTimeout(() => {
-        locked = false;
-        momentumTimer = null;
-      }, 150);
-      if (locked) return;
-      const direction = Math.sign(e.deltaY);
-      const targetPage = Math.max(
-        0,
-        Math.min(pageOrder.length - 1, settledPage.current + direction),
-      );
-      if (targetPage === settledPage.current) return;
-      locked = true;
-      isSnapping.current = true;
-      isSnappingSV.value = 1;
-      settledPage.current = targetPage;
-      settledPageSV.value = targetPage;
-      setCurrentPageIdx(targetPage);
-      scrollRef.current?.scrollTo({ y: targetPage * pageH, animated: true });
-      setTimeout(() => {
-        isSnapping.current = false;
-        isSnappingSV.value = 0;
-      }, 700);
-    };
-    window.addEventListener('wheel', handleWheel, { passive: false });
-    return () => {
-      window.removeEventListener('wheel', handleWheel);
-      if (momentumTimer) clearTimeout(momentumTimer);
-    };
-  }, [pageH, pageOrder.length]);
+  // Web: native CSS scroll-snap (scroll-snap-type: y mandatory + per-page
+  // scroll-snap-stop: always targets, see below) handles wheel + touch
+  // snapping. The browser enforces "one snap point per gesture", which
+  // is exactly what we want and beats anything we can do from JS — no
+  // wheel listener, no preventDefault, no fighting momentum.
 
   // Land the user on the page that contains the next track they have
   // to listen to — bottom (Welcome's page) for a first connection,
@@ -791,7 +817,10 @@ export default function SilentMindTreeScreen() {
     return () => clearTimeout(id);
   }, [initialPageIdx, pageH]);
 
-  const playTrack = (lane: Lane, partId: StageId, t: AudioTrack) => {
+  // Stable identity (dependency of the memoised rows). Re-created only
+  // when `listened` changes (which should re-evaluate lock state) or
+  // openPlayer / trackColor change identity.
+  const playTrack = useCallback((lane: Lane, partId: StageId, t: AudioTrack) => {
     if (t.comingSoon || !isTrackUnlocked(t.id, listened)) return;
     let playlist: AudioTrack[] = [];
     if (partId === 'intro') {
@@ -806,7 +835,223 @@ export default function SilentMindTreeScreen() {
     // Pass the dot's rainbow colour to the Player so its play button
     // and accent UI inherit the journey-stage hue.
     openPlayer(t, playlist, { autoStart: true, accent: trackColor(t.id) });
-  };
+  }, [listened, openPlayer, trackColor]);
+
+  // Memoised tree SVG — path segments + ascending particle field.
+  // NONE of this depends on the currently-parked page
+  // (`currentPageIdx`), so without memoisation the once-per-snap
+  // setCurrentPageIdx re-render rebuilt the whole SVG element tree
+  // (≈10-20 EnergyPaths + 30 particles) and forced react-native-svg to
+  // reconcile every node — the dominant cost of the scroll-transition
+  // jank on Android. Each child animates on the UI thread via its own
+  // useAnimatedProps, so freezing the element identities here is purely
+  // a reconciliation win; the worklets keep driving the motion.
+  const treeSvg = useMemo(() => (
+    <Svg
+      width={totalW}
+      height={totalH}
+      style={StyleSheet.absoluteFill}
+      pointerEvents="none"
+    >
+      {buildPathSegments(layers, rowYs, SM_X, QM_X, CENTER_X, NODE_R, listened, flowTime, totalH, partColor, journeyBounds.lastListenedSmY, pageOrder, pageH)}
+      {(() => {
+        // Trunk + branch particle field. Always renders as long
+        // as there's a next-up to flow toward; when the user has
+        // no progress, yBottom falls back to the Welcome row
+        // (bottommost layer) and the flow heads to the topmost
+        // unlocked SM (intro destinations are unlocked from the
+        // first launch, so something is always reachable).
+        const nextUpY = journeyBounds.nextUpY;
+        if (nextUpY === null) return null;
+        // Bottom anchor = Welcome (bottom-most accessible row).
+        // Particles ascend through the entire accessible journey
+        // — the lit section AND the unlit "next up" gap —
+        // instead of starting at lastListenedY. Keeps the tree
+        // feeling alive everywhere, not just in the small band
+        // between the most recent track and the up-next one.
+        let yBottom: number | null = null;
+        for (let i = layers.length - 1; i >= 0; i--) {
+          const l = layers[i];
+          if (l.kind === 'sm-row' || l.kind === 'qm-branch') {
+            yBottom = rowYs[i];
+            break;
+          }
+        }
+        if (yBottom === null) return null;
+        // When the fallback collapses (yBottom === nextUpY, which
+        // happens on a fresh user since nextId IS Welcome), aim
+        // the flow at the topmost unlocked layer so there's
+        // always a visible ascending stream from day 1.
+        let topY = nextUpY;
+        if (topY >= yBottom) {
+          // Fresh-user case: nextUp IS Welcome (the bottom-most
+          // layer), so the range collapses. Aim instead at the
+          // layer with the LARGEST Y strictly above Welcome —
+          // gives particles somewhere to flow from day 1, and
+          // matches "next SM in journey after Welcome" for the
+          // standard catalog (= intro-2).
+          let nearest: number | null = null;
+          for (let i = 0; i < layers.length; i++) {
+            const l = layers[i];
+            if (l.kind !== 'sm-row' && l.kind !== 'qm-branch') continue;
+            if (rowYs[i] >= yBottom) continue; // skip Welcome itself
+            if (nearest === null || rowYs[i] > nearest) nearest = rowYs[i];
+          }
+          if (nearest === null) return null;
+          topY = nearest;
+        }
+        // Pull the upper end DOWN so the particle's full ellipse
+        // stays below the next-up node — without this, the
+        // streak's top edge (cy − ry ≈ cy − 11 px) punches
+        // through the node when cy reaches nextUpY. NODE_R + a
+        // small buffer is enough to keep the visual contained.
+        const PARTICLE_TOP_PAD = NODE_R + 6;
+        const topYClamped = Math.min(topY + PARTICLE_TOP_PAD, yBottom - 8);
+        const yRange = yBottom - topYClamped;
+        if (yRange <= 0) return null;
+        // 1 particle / 28 px — particles render as a single
+        // core ellipse (halo dropped — see TrunkParticle), cap
+        // at 30. Was 1/12 px + halo = 120 ellipses, which
+        // saturated the UI thread on A53 Android (every chevron
+        // bob and dot halo visibly lagged). At 30 ellipses the
+        // trunk still reads as a continuous stream of mist but
+        // the UI thread has headroom for the rest of the scene.
+        const PARTICLE_COUNT = Math.max(12, Math.min(30, Math.round(yRange / 28)));
+        const trunkParticles = Array.from({ length: PARTICLE_COUNT }, (_, k) => {
+          const phase = k / PARTICLE_COUNT;
+          // Three independent deterministic seeds — opacity/size,
+          // speed, and an INDEPENDENT vertical-stretch ratio so
+          // some particles read as short dots and others as
+          // elongated streaks (no shared aspect ratio across the
+          // field).
+          const sScale = ((k * 1664525 + 1013904223) % 233280) / 233280;
+          const sSpeed = ((k * 2654435761 + 374761393) % 233280) / 233280;
+          const sLength = ((k * 1103515245 + 12345) % 233280) / 233280;
+          const opacityScale = 0.6 + sScale * 0.4;
+          const sizeScale = 0.7 + sScale * 0.3;
+          // 0.5..1.9 → 3.8× spread in vertical length. Short
+          // particles stay near a dot shape, long ones look like
+          // brief comet trails.
+          const lengthScale = 0.5 + sLength * 1.4;
+          const speedMul = 0.55 + sSpeed * 0.9;
+          return (
+            <TrunkParticle
+              key={`particle-${k}`}
+              cx={CENTER_X}
+              yTop={topYClamped}
+              yBottom={yBottom!}
+              clock={trunkClock}
+              phase={phase}
+              speedMul={speedMul}
+              color="rgba(255, 255, 255, 1)"
+              opacityScale={opacityScale}
+              sizeScale={sizeScale}
+              lengthScale={lengthScale}
+            />
+          );
+        });
+        // QM branch particles — on each QM whose paired SM is
+        // EITHER the last-listened SM (just-unlocked alternative)
+        // OR the next-up SM (upcoming preview).
+        const smYById = new Map<string, number>();
+        for (let i = 0; i < layers.length; i++) {
+          const l = layers[i];
+          if (l.kind === 'sm-row') smYById.set(l.track.id, rowYs[i]);
+        }
+        const branchParticles: React.ReactNode[] = [];
+        const BRANCH_PER_BRANCH = 6;
+        layers.forEach((l, i) => {
+          if (l.kind !== 'qm-branch') return;
+          // Branch particles render only on QMs the user has
+          // ACTUALLY UNLOCKED — paired SM must be listened
+          // AND the QM itself not done yet. Anything farther
+          // ahead in the journey (paired SM still locked) stays
+          // particle-free; without this gate, every QM branch
+          // would glow from day 1 even when the user is several
+          // SMs away from being able to play them.
+          if (!listened[l.pairedSmId]) return;
+          if (listened[l.track.id]) return;
+          const smY = smYById.get(l.pairedSmId);
+          if (smY === undefined) return;
+          const qmY = rowYs[i];
+          for (let k = 0; k < BRANCH_PER_BRANCH; k++) {
+            const phase = k / BRANCH_PER_BRANCH;
+            const sScale = ((k * 1664525 + i * 1013904223) % 233280) / 233280;
+            const sSpeed = ((k * 2654435761 + i * 374761393) % 233280) / 233280;
+            const sLength = ((k * 1103515245 + i * 12345 + 7) % 233280) / 233280;
+            branchParticles.push(
+              <BranchParticle
+                key={`branch-${i}-${k}`}
+                trunkX={CENTER_X}
+                cornerX={QM_X}
+                smY={smY}
+                qmY={qmY}
+                nodeR={NODE_R}
+                clock={branchClock}
+                phase={phase}
+                speedMul={0.55 + sSpeed * 0.9}
+                color="rgba(255, 255, 255, 1)"
+                opacityScale={0.6 + sScale * 0.4}
+                sizeScale={0.7 + sScale * 0.3}
+                lengthScale={0.5 + sLength * 1.4}
+              />,
+            );
+          }
+        });
+        return [...trunkParticles, ...branchParticles];
+      })()}
+    </Svg>
+  ), [totalW, totalH, layers, rowYs, SM_X, QM_X, CENTER_X, NODE_R, listened, flowTime, journeyBounds, partColor, pageOrder, pageH, trunkClock, branchClock]);
+
+  // Memoised node rows (dots + labels). Same rationale as treeSvg —
+  // independent of currentPageIdx, so it's rebuilt only when the
+  // journey data / layout actually changes, not on every page snap.
+  const rowNodes = useMemo(() => layers.map((l, i) => {
+    if (l.kind === 'divider') return null;
+    const y = rowYs[i];
+    const state = nodeState(l.track, listened);
+    const isSm = l.kind === 'sm-row';
+    const cx = isSm ? CENTER_X : QM_X;
+    // SM titles (the longer ones in the catalog) sit on the
+    // LEFT of the trunk dot — wider left gutter on a centred
+    // tree, so 36-char titles like "Self-Observation and
+    // Breath Following" wrap to 2 lines without truncation.
+    // QM titles (shorter — "QM3 — Breathing Body") sit on
+    // the RIGHT of their branch dot.
+    const labelOnLeft = isSm;
+    const labelLeft = labelOnLeft
+      ? LABEL_PAD
+      : cx + NODE_R + LABEL_PAD;
+    const labelWidth = labelOnLeft
+      ? cx - NODE_R - LABEL_PAD - LABEL_PAD
+      : totalW - labelLeft - LABEL_PAD;
+    const duration = trackDuration(l.track) ?? undefined;
+    return (
+      <View key={`row-${i}`} pointerEvents="box-none">
+        <CircleNode
+          cx={cx}
+          cy={y}
+          radius={NODE_R}
+          accent={trackColor(l.track.id)}
+          state={state}
+          isNext={l.track.id === nextId}
+          energyPulse={energyPulse}
+          onPress={() => playTrack(isSm ? 'sm' : 'qm', l.partId, l.track)}
+        />
+        <Label
+          key={`label-${i}`}
+          text={l.track.title}
+          duration={duration}
+          state={state}
+          align={labelOnLeft ? 'right' : 'left'}
+          onPress={() => setSheetTrack(l.track)}
+          cy={y}
+          left={labelLeft}
+          width={labelWidth}
+        />
+      </View>
+    );
+  }), [layers, rowYs, listened, CENTER_X, QM_X, NODE_R, totalW, nextId, energyPulse, trackColor, playTrack]);
 
   return (
     <View style={styles.root}>
@@ -817,21 +1062,18 @@ export default function SilentMindTreeScreen() {
           P1↔P2 boundary, space on top of sky fading in across the
           P2↔P3 boundary. The result: smooth crossfade between three
           atmospheres as the user scrolls through the journey. */}
-      {/* Background stack — `paused` is gated by `currentPageIdx`
-          so the GL/video for layers that aren't visible on the
-          settled page stop computing frames. Lake stays running as
-          a cheap baseline (it's also the intro page bg). With
-          snap-per-page, transitions are short enough that we only
-          run the layer the user is parked on, no adjacent-warm-up. */}
+      {/* Background stack — only the layer for the currently-settled
+          page renders. Anticipatory un-pause comes from
+          `onScrollEndDrag` calling `setCurrentPageIdx(target)` BEFORE
+          dispatching the animated scrollTo, so by the time the snap
+          animation is mid-way and the next layer's opacity rises, its
+          shader/video has already been producing frames since the
+          finger lifted. Lake stays on as a cheap baseline (it's also
+          the intro page bg). Max 2 layers active at any time. */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <View style={StyleSheet.absoluteFill}>
           <AtmosphereBackground theme="lake" />
         </View>
-        {/* Earth (Part 1) gets the "shadow wall" video on top of the
-            lake — the video matches the Earth atmosphere on the Start
-            tab. Fades in/out at both edges of the part1 page. Intro
-            stays on the calmer lake shader alone (no video) for a
-            quieter "first connection" atmosphere. */}
         <Animated.View style={[StyleSheet.absoluteFill, earthVideoStyle]}>
           <VideoBackground paused={currentPageIdx !== idxPart1Page} />
         </Animated.View>
@@ -850,11 +1092,17 @@ export default function SilentMindTreeScreen() {
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         decelerationRate="fast"
-        // Re-arm the one-snap-per-gesture gate on every fresh finger-
-        // down. Fires regardless of scrollEnabled (it's a View-level
-        // responder event), so it works even while a previous snap's
-        // 480 ms scroll-lock is still settling.
-        onTouchStart={() => { armedSV.value = 1; }}
+        // On release, pick the target page from the drag distance and
+        // glide to it with an eased withTiming animation (see
+        // handleScrollEndDrag / glideToPage).
+        onScrollEndDrag={handleScrollEndDrag}
+        // Measure the real viewport height for pageH (see the pageH
+        // comment). Only commit changes >1px so sub-pixel layout
+        // jitter doesn't thrash the page-height-dependent memos.
+        onLayout={(e) => {
+          const h = e.nativeEvent.layout.height;
+          setMeasuredH((prev) => (Math.abs(prev - h) > 1 ? h : prev));
+        }}
         // Lock the scroll past intro (the last page). Without these,
         // pulling beyond the bottom revealed empty space below the
         // tree content where the bg shaders had nothing to paint.
@@ -863,161 +1111,42 @@ export default function SilentMindTreeScreen() {
         // same thing: hard-clamp at the content edge, no rubber-band.
         bounces={false}
         overScrollMode="never"
-        style={{ overscrollBehavior: 'contain' } as any}
+        style={{
+          overscrollBehavior: 'contain',
+          // CSS scroll-snap on web (no-op on native — RN's StyleSheet
+          // ignores the property). Combined with the per-page snap
+          // targets rendered inside the tree (scrollSnapAlign: 'start'
+          // + scrollSnapStop: 'always'), this gives us native
+          // one-page-per-gesture enforcement on touch AND wheel,
+          // including post-momentum overshoot prevention.
+          scrollSnapType: 'y mandatory',
+        } as any}
       >
         <View style={[styles.tree, { width: totalW, height: totalH }]}>
-          <Svg
-            width={totalW}
-            height={totalH}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          >
-            {buildPathSegments(layers, rowYs, SM_X, QM_X, CENTER_X, NODE_R, listened, flowTime, totalH, partColor, journeyBounds.lastListenedSmY, pageOrder, pageH)}
-            {(() => {
-              // Trunk + branch particle field. Always renders as long
-              // as there's a next-up to flow toward; when the user has
-              // no progress, yBottom falls back to the Welcome row
-              // (bottommost layer) and the flow heads to the topmost
-              // unlocked SM (intro destinations are unlocked from the
-              // first launch, so something is always reachable).
-              const nextUpY = journeyBounds.nextUpY;
-              if (nextUpY === null) return null;
-              // Bottom anchor = Welcome (bottom-most accessible row).
-              // Particles ascend through the entire accessible journey
-              // — the lit section AND the unlit "next up" gap —
-              // instead of starting at lastListenedY. Keeps the tree
-              // feeling alive everywhere, not just in the small band
-              // between the most recent track and the up-next one.
-              let yBottom: number | null = null;
-              for (let i = layers.length - 1; i >= 0; i--) {
-                const l = layers[i];
-                if (l.kind === 'sm-row' || l.kind === 'qm-branch') {
-                  yBottom = rowYs[i];
-                  break;
-                }
-              }
-              if (yBottom === null) return null;
-              // When the fallback collapses (yBottom === nextUpY, which
-              // happens on a fresh user since nextId IS Welcome), aim
-              // the flow at the topmost unlocked layer so there's
-              // always a visible ascending stream from day 1.
-              let topY = nextUpY;
-              if (topY >= yBottom) {
-                // Fresh-user case: nextUp IS Welcome (the bottom-most
-                // layer), so the range collapses. Aim instead at the
-                // layer with the LARGEST Y strictly above Welcome —
-                // gives particles somewhere to flow from day 1, and
-                // matches "next SM in journey after Welcome" for the
-                // standard catalog (= intro-2).
-                let nearest: number | null = null;
-                for (let i = 0; i < layers.length; i++) {
-                  const l = layers[i];
-                  if (l.kind !== 'sm-row' && l.kind !== 'qm-branch') continue;
-                  if (rowYs[i] >= yBottom) continue; // skip Welcome itself
-                  if (nearest === null || rowYs[i] > nearest) nearest = rowYs[i];
-                }
-                if (nearest === null) return null;
-                topY = nearest;
-              }
-              // Pull the upper end DOWN so the particle's full ellipse
-              // stays below the next-up node — without this, the
-              // streak's top edge (cy − ry ≈ cy − 11 px) punches
-              // through the node when cy reaches nextUpY. NODE_R + a
-              // small buffer is enough to keep the visual contained.
-              const PARTICLE_TOP_PAD = NODE_R + 6;
-              const topYClamped = Math.min(topY + PARTICLE_TOP_PAD, yBottom - 8);
-              const yRange = yBottom - topYClamped;
-              if (yRange <= 0) return null;
-              // 1 particle / 12 px — each particle renders as core
-              // + halo (2 ellipses), so we cap at 60 (= 120 ellipses
-              // on the trunk). Was 120 / 6 px / 240 ellipses, which
-              // ran the phone warm; at the density we use the trunk
-              // still reads as a continuous stream of mist.
-              const PARTICLE_COUNT = Math.max(20, Math.min(60, Math.round(yRange / 12)));
-              const trunkParticles = Array.from({ length: PARTICLE_COUNT }, (_, k) => {
-                const phase = k / PARTICLE_COUNT;
-                // Three independent deterministic seeds — opacity/size,
-                // speed, and an INDEPENDENT vertical-stretch ratio so
-                // some particles read as short dots and others as
-                // elongated streaks (no shared aspect ratio across the
-                // field).
-                const sScale = ((k * 1664525 + 1013904223) % 233280) / 233280;
-                const sSpeed = ((k * 2654435761 + 374761393) % 233280) / 233280;
-                const sLength = ((k * 1103515245 + 12345) % 233280) / 233280;
-                const opacityScale = 0.6 + sScale * 0.4;
-                const sizeScale = 0.7 + sScale * 0.3;
-                // 0.5..1.9 → 3.8× spread in vertical length. Short
-                // particles stay near a dot shape, long ones look like
-                // brief comet trails.
-                const lengthScale = 0.5 + sLength * 1.4;
-                const speedMul = 0.55 + sSpeed * 0.9;
-                return (
-                  <TrunkParticle
-                    key={`particle-${k}`}
-                    cx={CENTER_X}
-                    yTop={topYClamped}
-                    yBottom={yBottom!}
-                    clock={trunkClock}
-                    phase={phase}
-                    speedMul={speedMul}
-                    color="rgba(255, 255, 255, 1)"
-                    opacityScale={opacityScale}
-                    sizeScale={sizeScale}
-                    lengthScale={lengthScale}
-                  />
-                );
-              });
-              // QM branch particles — on each QM whose paired SM is
-              // EITHER the last-listened SM (just-unlocked alternative)
-              // OR the next-up SM (upcoming preview).
-              const smYById = new Map<string, number>();
-              for (let i = 0; i < layers.length; i++) {
-                const l = layers[i];
-                if (l.kind === 'sm-row') smYById.set(l.track.id, rowYs[i]);
-              }
-              const branchParticles: React.ReactNode[] = [];
-              const BRANCH_PER_BRANCH = 6;
-              layers.forEach((l, i) => {
-                if (l.kind !== 'qm-branch') return;
-                // Branch particles render only on QMs the user has
-                // ACTUALLY UNLOCKED — paired SM must be listened
-                // AND the QM itself not done yet. Anything farther
-                // ahead in the journey (paired SM still locked) stays
-                // particle-free; without this gate, every QM branch
-                // would glow from day 1 even when the user is several
-                // SMs away from being able to play them.
-                if (!listened[l.pairedSmId]) return;
-                if (listened[l.track.id]) return;
-                const smY = smYById.get(l.pairedSmId);
-                if (smY === undefined) return;
-                const qmY = rowYs[i];
-                for (let k = 0; k < BRANCH_PER_BRANCH; k++) {
-                  const phase = k / BRANCH_PER_BRANCH;
-                  const sScale = ((k * 1664525 + i * 1013904223) % 233280) / 233280;
-                  const sSpeed = ((k * 2654435761 + i * 374761393) % 233280) / 233280;
-                  const sLength = ((k * 1103515245 + i * 12345 + 7) % 233280) / 233280;
-                  branchParticles.push(
-                    <BranchParticle
-                      key={`branch-${i}-${k}`}
-                      trunkX={CENTER_X}
-                      cornerX={QM_X}
-                      smY={smY}
-                      qmY={qmY}
-                      nodeR={NODE_R}
-                      clock={branchClock}
-                      phase={phase}
-                      speedMul={0.55 + sSpeed * 0.9}
-                      color="rgba(255, 255, 255, 1)"
-                      opacityScale={0.6 + sScale * 0.4}
-                      sizeScale={0.7 + sScale * 0.3}
-                      lengthScale={0.5 + sLength * 1.4}
-                    />,
-                  );
-                }
-              });
-              return [...trunkParticles, ...branchParticles];
-            })()}
-          </Svg>
+          {/* Web-only: invisible snap-target boxes, one per page,
+              positioned at multiples of pageH. scroll-snap-align:start
+              tells the browser to align this box's top with the scroll
+              container's top; scroll-snap-stop:always forces the scroll
+              to stop here regardless of momentum, so one gesture
+              traverses at most one page. */}
+          {isWeb
+            ? pageOrder.map((_, idx) => (
+                <View
+                  key={`snap-${idx}`}
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    top: idx * pageH,
+                    left: 0,
+                    width: 1,
+                    height: pageH,
+                    scrollSnapAlign: 'start',
+                    scrollSnapStop: 'always',
+                  } as any}
+                />
+              ))
+            : null}
+          {treeSvg}
 
           {/* Section headers used to live inside the scroll content;
               they're now rendered as a FIXED footer below (outside
@@ -1025,52 +1154,7 @@ export default function SilentMindTreeScreen() {
               user scrolls — instead the part name crossfades from one
               to the next. */}
 
-          {layers.map((l, i) => {
-            if (l.kind === 'divider') return null;
-            const y = rowYs[i];
-            const state = nodeState(l.track, listened);
-            const isSm = l.kind === 'sm-row';
-            const cx = isSm ? CENTER_X : QM_X;
-            // SM titles (the longer ones in the catalog) sit on the
-            // LEFT of the trunk dot — wider left gutter on a centred
-            // tree, so 36-char titles like "Self-Observation and
-            // Breath Following" wrap to 2 lines without truncation.
-            // QM titles (shorter — "QM3 — Breathing Body") sit on
-            // the RIGHT of their branch dot.
-            const labelOnLeft = isSm;
-            const labelLeft = labelOnLeft
-              ? LABEL_PAD
-              : cx + NODE_R + LABEL_PAD;
-            const labelWidth = labelOnLeft
-              ? cx - NODE_R - LABEL_PAD - LABEL_PAD
-              : totalW - labelLeft - LABEL_PAD;
-            const duration = trackDuration(l.track) ?? undefined;
-            return (
-              <View key={`row-${i}`} pointerEvents="box-none">
-                <CircleNode
-                  cx={cx}
-                  cy={y}
-                  radius={NODE_R}
-                  accent={trackColor(l.track.id)}
-                  state={state}
-                  isNext={l.track.id === nextId}
-                  energyPulse={energyPulse}
-                  onPress={() => playTrack(isSm ? 'sm' : 'qm', l.partId, l.track)}
-                />
-                <Label
-                  key={`label-${i}`}
-                  text={l.track.title}
-                  duration={duration}
-                  state={state}
-                  align={labelOnLeft ? 'right' : 'left'}
-                  onPress={() => setSheetTrack(l.track)}
-                  cy={y}
-                  left={labelLeft}
-                  width={labelWidth}
-                />
-              </View>
-            );
-          })}
+          {rowNodes}
         </View>
       </Animated.ScrollView>
 
@@ -1119,12 +1203,12 @@ export default function SilentMindTreeScreen() {
       pageOrder[currentPageIdx] !== 'intro' ? (
         <View
           pointerEvents="box-none"
-          // bottom offset reduced by 3 px (vs original 168) — same
-          // compensation as the top wrap, but mirrored: anchored by
-          // `bottom`, the larger glyph's centre sits 3 px farther
-          // from the bottom edge, so we drop the wrap to bring it
-          // back to the original screen Y.
-          style={[styles.scrollHintBottomWrap, { bottom: insets.bottom + 165 }]}
+          // Sits in the gap between the lowest row's label and the
+          // footer band (≈120 px tall now). 165 put it ~165 px from the
+          // bottom, which landed right on the lowest node's label
+          // (Turning Inward on the Part 1 page); dropping it to ~130
+          // tucks it just above the footer, clear of the node.
+          style={[styles.scrollHintBottomWrap, { bottom: insets.bottom + 130 }]}
         >
           <ScrollHint
             direction="down"
@@ -1140,9 +1224,8 @@ export default function SilentMindTreeScreen() {
           put; only the label inside it changes. */}
       <View
         pointerEvents="none"
-        style={[styles.fixedFooter, { paddingBottom: insets.bottom + 12 }]}
+        style={[styles.fixedFooter, { paddingBottom: insets.bottom + 8 }]}
       >
-        <View style={[styles.fixedFooterDashedLine, { width: '100%' }]} />
         <View style={styles.fixedFooterLabelArea}>
           {pageOrder.map((partId, idx) => (
             <FooterPartLabel
@@ -1700,58 +1783,31 @@ function TrunkParticle({
   // small "tree empty" look kept everywhere, instead of bumping size
   // / brightness once the user starts listening. Subtle, always.
   const baseR = 2.4;
-  // Animated props for the two stacked ellipses. The halo ellipse
-  // reads the same cy + alpha curve as the core, so they move
-  // together; only the rx/ry and an opacity multiplier differ. Using
-  // two ellipses to fake a Gaussian blur — react-native-svg's filter
-  // primitives are inconsistent across platforms, and stacking is
-  // cheap.
+  // Single ellipse per particle. We used to stack a wider halo
+  // ellipse for a Gaussian-blur look, but on A53 Android that doubled
+  // the UI-thread useAnimatedProps work (one worklet per ellipse,
+  // 120+ ellipses × 60 Hz) and made the dot halos + chevron bobs
+  // visibly stutter. Slightly wider rx + a 0.28 baseline opacity
+  // keeps the trunk feeling soft without the second pass.
   const animatedCoreProps = useAnimatedProps(() => {
     const t = (clock.value * speedMul + phase) % 1;
     const cy = yBottom - (yBottom - yTop) * t;
     let alpha = 1;
     if (t < 0.18) alpha = t / 0.18;
     else if (t > 0.82) alpha = (1 - t) / 0.18;
-    // Constant low opacity — no "ramp up when listening starts"
-    // behaviour. The field reads as ambient, not as a progress
-    // indicator.
-    const baseOpacity = 0.22;
+    const baseOpacity = 0.28;
     return { cy, opacity: baseOpacity * alpha * opacityScale };
   });
-  const animatedHaloProps = useAnimatedProps(() => {
-    const t = (clock.value * speedMul + phase) % 1;
-    const cy = yBottom - (yBottom - yTop) * t;
-    let alpha = 1;
-    if (t < 0.18) alpha = t / 0.18;
-    else if (t > 0.82) alpha = (1 - t) / 0.18;
-    // Halo is dimmer + much wider → soft cloud surrounding the core.
-    const baseOpacity = 0.10;
-    return { cy, opacity: baseOpacity * alpha * opacityScale };
-  });
-  // Thinner streaks (0.6 → 0.32 rx multiplier) so particles read as
-  // strands of mist rather than pellets. Vertical size driven by an
-  // independent lengthScale → some are short, some are elongated.
-  const coreRx = baseR * sizeScale * 0.32;
+  const coreRx = baseR * sizeScale * 0.55;
   const coreRy = baseR * sizeScale * lengthScale * 1.4;
-  const haloRx = coreRx * 3.2;   // wider halo for a softer cloud
-  const haloRy = coreRy * 1.7;
   return (
-    <>
-      <AnimatedEllipse
-        cx={cx}
-        rx={haloRx}
-        ry={haloRy}
-        fill={color}
-        animatedProps={animatedHaloProps}
-      />
-      <AnimatedEllipse
-        cx={cx}
-        rx={coreRx}
-        ry={coreRy}
-        fill={color}
-        animatedProps={animatedCoreProps}
-      />
-    </>
+    <AnimatedEllipse
+      cx={cx}
+      rx={coreRx}
+      ry={coreRy}
+      fill={color}
+      animatedProps={animatedCoreProps}
+    />
   );
 }
 
@@ -1829,59 +1885,25 @@ function BranchParticle({
     else if (t > 0.82) alpha = (1 - t) / 0.18;
     // Constant ambient opacity — matches the trunk's idle level so
     // the field reads as one continuous mist field across trunk and
-    // branches.
-    const baseOpacity = 0.22;
+    // branches. Single ellipse per particle now (no halo), so opacity
+    // is bumped vs the historical 0.22 to keep the visual weight.
+    const baseOpacity = 0.28;
     return { cx, cy, opacity: baseOpacity * alpha * opacityScale };
   });
-  const animatedHaloProps = useAnimatedProps(() => {
-    const t = (clock.value * speedMul + phase) % 1;
-    const dist = t * total;
-    let cx: number, cy: number;
-    if (dist <= hLen) {
-      cx = x1 + dist;
-      cy = smY;
-    } else if (dist <= hLen + cLen) {
-      const arcProgress = (dist - hLen) / cLen;
-      const a = arcProgress * (Math.PI / 2);
-      cx = x2 + BRANCH_CORNER_R * Math.sin(a);
-      cy = smY - BRANCH_CORNER_R * (1 - Math.cos(a));
-    } else {
-      cx = cornerX;
-      cy = yArcEnd - (dist - hLen - cLen);
-    }
-    let alpha = 1;
-    if (t < 0.18) alpha = t / 0.18;
-    else if (t > 0.82) alpha = (1 - t) / 0.18;
-    const baseOpacity = 0.10;
-    return { cx, cy, opacity: baseOpacity * alpha * opacityScale };
-  });
-  // Single ambient sizing for every state — the user prefers the
-  // small "tree empty" look kept everywhere, instead of bumping size
-  // / brightness once the user starts listening. Subtle, always.
+  // Single ambient sizing for every state. Halo ellipse dropped (see
+  // TrunkParticle comment) — slightly larger rx + higher baseline
+  // opacity gives a similar soft-glow read without the second
+  // useAnimatedProps worklet per particle.
   const baseR = 2.4;
-  // Rounder geometry than the trunk streaks — without the rotation
-  // alignment, vertical streaks would read "sideways" on the
-  // horizontal leg of the branch. Keep rx and ry close so the
-  // particle looks the same regardless of direction.
-  const coreRx = baseR * sizeScale * 0.75;
-  const coreRy = baseR * sizeScale * lengthScale * 0.95;
-  const haloRx = coreRx * 2.6;
-  const haloRy = coreRy * 2.6;
+  const coreRx = baseR * sizeScale * 1.05;
+  const coreRy = baseR * sizeScale * lengthScale * 1.05;
   return (
-    <>
-      <AnimatedEllipse
-        rx={haloRx}
-        ry={haloRy}
-        fill={color}
-        animatedProps={animatedHaloProps}
-      />
-      <AnimatedEllipse
-        rx={coreRx}
-        ry={coreRy}
-        fill={color}
-        animatedProps={animatedCoreProps}
-      />
-    </>
+    <AnimatedEllipse
+      rx={coreRx}
+      ry={coreRy}
+      fill={color}
+      animatedProps={animatedCoreProps}
+    />
   );
 }
 
@@ -2214,6 +2236,13 @@ const styles = StyleSheet.create({
   partTag: {
     width: '100%',
     backgroundColor: 'rgba(0,0,0,0.65)',
+    // Dashed divider now rides the band's own top edge (was a separate
+    // full-width line the top-anchored band overlapped). Keeping it on
+    // the band means it stays glued to the band's top no matter the
+    // band's height, now that bands are bottom-anchored.
+    borderTopWidth: 1.5,
+    borderTopColor: 'rgba(255,255,255,0.32)',
+    borderStyle: 'dashed',
     paddingHorizontal: spacing.lg,
     paddingVertical: 10,
     alignItems: 'center',
@@ -2234,23 +2263,24 @@ const styles = StyleSheet.create({
   },
   fixedFooterLabelArea: {
     width: '100%',
-    // Holds title (≈17 px line) + italic tagline (≈16 px line) +
-    // description block (3 lines × 16 lineHeight + 6 marginTop ≈ 54 px)
-    // + paddingVertical inside `.partTag` (10 × 2). Half-overlap onto
-    // the dashed line so the tag's background cuts it cleanly.
-    height: 128,
-    marginTop: -19,
-    justifyContent: 'flex-start',
+    // Reserves room for the tallest band (Mind-Body's 3-line
+    // description ≈ 110 px). Bands are BOTTOM-anchored inside it (see
+    // footerLabelLayer), so every band — short or tall — hugs the
+    // bottom edge with no dead space beneath it; the dashed line now
+    // rides each band's own top border instead of being a separate
+    // strip the band had to reach up to.
+    height: 112,
   },
   footerLabelLayer: {
-    // Full-width so the inner partTag banner stretches edge-to-edge
-    // (each crossfading part name is its own absolutely-positioned
-    // layer occupying the same horizontal band).
+    // Full-width band, anchored to the BOTTOM of the label area so all
+    // crossfading part names share the same bottom edge regardless of
+    // their height (was top-anchored, which left a growing gap below
+    // the shorter bands).
     position: 'absolute',
     left: 0,
     right: 0,
+    bottom: 0,
     alignItems: 'stretch',
-    justifyContent: 'center',
   },
   // Top-of-screen tagline header. Mirrors `fixedFooter` (absolute,
   // full-width, pointer-events:none) but anchored to the top edge.

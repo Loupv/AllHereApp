@@ -35,6 +35,21 @@
 ## Infrastructure
 - [ ] Host audio assets on a CDN (S3 / Cloudflare R2) rather than shipping in bundle — the app is ~900 MB because mp3s ship with the web build. Critical before native store submission too: iOS hard-caps the IPA at 4 GB but App Store warns from 200 MB; Android AAB needs dynamic delivery configured to avoid a 500 MB+ initial APK.
 - [ ] Persist progress & auth state (zustand + AsyncStorage / MMKV). Today `kv.ts` falls back to in-memory on native, so progress is lost on every app relaunch — same problem on native as on web.
+- [ ] **Per-user progress tracking in a backend DB.** Persist each
+  user's journey server-side, keyed to their account (depends on the
+  real-auth item above). Track at minimum:
+  - SM journey: which audios are unlocked and which have been played /
+    completed (mirror the local `progressStore.listened` map).
+  - QM: which QM Training / QM Unguided sessions were played, how many
+    rounds, completion.
+  - Quick meditations (1 min / 3 min / 3×3) played.
+  - Timestamps + counts so we can show streaks / history and resume
+    cross-device.
+  Enables cross-device sync (replaces the in-memory/AsyncStorage-only
+  progress), and feeds future analytics / research dashboards. Needs:
+  a backend (Cloudflare D1 or Workers KV fit the existing CF/R2 stack),
+  an API to read/write progress, and a sync layer that reconciles the
+  local store with the server on login + on each play event.
 - [ ] Fine-tune transcript sync for audios that drift (Whisper word-level + manual pass for mispronunciations / brand terms like "All Here").
 
 ## Performance & memory
@@ -53,6 +68,19 @@
   coordinate-precision issue (`gl_FragCoord/uRes` quantising the noise
   sampling under mediump) needing a runtime `GL_FRAGMENT_PRECISION_HIGH`
   guard, not output dithering.
+- [ ] **Player.tsx full responsive refactor.** The current Player
+  uses absolute pixel values (`paddingTop:72`, `flexSpacer:0.78`,
+  multiple `minHeight` constants) tuned for an iPhone-13-ish height.
+  The 2026-05-29 quick win made `paddingTop` proportional to the safe
+  area and added breakpoint-based `flexSpacer` values (0.35/0.55/0.78)
+  so the play button lands roughly at the Start screen's
+  `effectivePlayCenterY` on short / mid / tall screens — but it's
+  approximate, not pixel-perfect.
+  Proper fix: pull the circleRow out of the flex flow and anchor it
+  absolutely to `useLayout.effectivePlayCenterY` (the same value Start
+  pins to), then re-flow the transcript / waveform / controls around
+  it as proportional bands. ~30 % of the file gets touched; do it in a
+  dedicated session.
 - [ ] **VideoBackground: honour the `paused` prop (currently a no-op).**
   The Earth loop is mounted in up to 3 places (`_layout.tsx` root,
   `Player.tsx` overlay, `silent-mind-tree.tsx`). When the Player

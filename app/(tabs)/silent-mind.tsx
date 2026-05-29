@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import Svg, { Line, Circle, Path } from 'react-native-svg';
 import Animated, {
@@ -9,13 +9,14 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BouncyScrollView as ScrollView } from '../../src/components/BouncyScrollView';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { Background } from '../../src/components/Background';
 import { ProgramHeader } from '../../src/components/ProgramHeader';
 import { silentMindProgram } from '../../src/content/catalog';
-import { useTabBarPadding } from '../../src/hooks/useTabBarPadding';
 import { useLayout } from '../../src/hooks/useLayout';
+import { TAB_BAR_BASE } from './_layout';
 import { colors, radius, spacing, type } from '../../src/theme';
 
 /**
@@ -36,10 +37,8 @@ const DIAGRAM_STEPS: { id: string; label: string; tagline?: string; color: strin
   { id: 'intro', label: 'Introduction', color: '#C9A66B' },
 ];
 
-const STEP_Y = 56;
 const DOT_R = 10;
 const DIAGRAM_PAD_Y = 14;
-const DIAGRAM_HEIGHT = (DIAGRAM_STEPS.length - 1) * STEP_Y + DIAGRAM_PAD_Y * 2;
 const TRUNK_X = DOT_R + 2;
 const TRUNK_SVG_WIDTH = TRUNK_X + DOT_R + 2;
 const LABELS_WIDTH = 220;
@@ -52,9 +51,19 @@ const ARROW_X = ARROW_WIDTH / 2;
 const ARROW_GAP = 12;
 const ARROW_HEAD_Y = DIAGRAM_PAD_Y - 2;
 
-function TreeDiagram() {
+function TreeDiagram({ stepY }: { stepY: number }) {
+  // The vertical step between dots is sized by the parent to fill the
+  // space available between the header and the Enter button, so the
+  // tree expands into that space instead of leaving a gap under the
+  // title. padY stays fixed so the top/bottom labels (which extend
+  // ~16 px past the outer dots) never get clipped by RN-Web's default
+  // overflow:hidden on the row.
+  const STEP_Y = stepY;
+  const padY = DIAGRAM_PAD_Y;
+  const arrowHeadY = padY - 2;
+  const DIAGRAM_HEIGHT = (DIAGRAM_STEPS.length - 1) * STEP_Y + padY * 2;
   return (
-    <View style={styles.diagramRow}>
+    <View style={[styles.diagramRow, { height: DIAGRAM_HEIGHT }]}>
       {/* Direction-of-travel hint — dashed vertical line + chevron
           pointing UP to signal "walk this from bottom to top". Sits
           to the LEFT of the trunk so it reads as a margin annotation
@@ -62,16 +71,16 @@ function TreeDiagram() {
       <Svg width={ARROW_WIDTH} height={DIAGRAM_HEIGHT}>
         <Line
           x1={ARROW_X}
-          y1={DIAGRAM_PAD_Y + 10}
+          y1={padY + 10}
           x2={ARROW_X}
-          y2={DIAGRAM_HEIGHT - DIAGRAM_PAD_Y}
+          y2={DIAGRAM_HEIGHT - padY}
           stroke="rgba(255,255,255,0.32)"
           strokeWidth={1.5}
           strokeDasharray="3,5"
           strokeLinecap="round"
         />
         <Path
-          d={`M ${ARROW_X - 5} ${ARROW_HEAD_Y + 8} L ${ARROW_X} ${ARROW_HEAD_Y} L ${ARROW_X + 5} ${ARROW_HEAD_Y + 8}`}
+          d={`M ${ARROW_X - 5} ${arrowHeadY + 8} L ${ARROW_X} ${arrowHeadY} L ${ARROW_X + 5} ${arrowHeadY + 8}`}
           stroke="rgba(255,255,255,0.32)"
           strokeWidth={1.5}
           fill="none"
@@ -83,14 +92,14 @@ function TreeDiagram() {
       <Svg width={TRUNK_SVG_WIDTH} height={DIAGRAM_HEIGHT}>
         <Line
           x1={TRUNK_X}
-          y1={DIAGRAM_PAD_Y}
+          y1={padY}
           x2={TRUNK_X}
-          y2={DIAGRAM_HEIGHT - DIAGRAM_PAD_Y}
+          y2={DIAGRAM_HEIGHT - padY}
           stroke="rgba(255,255,255,0.35)"
           strokeWidth={2}
         />
         {DIAGRAM_STEPS.map((s, i) => {
-          const cy = DIAGRAM_PAD_Y + i * STEP_Y;
+          const cy = padY + i * STEP_Y;
           return (
             <Circle
               key={s.id}
@@ -112,7 +121,7 @@ function TreeDiagram() {
           // on the dot. Single-line labels (Introduction) get a
           // smaller offset so the title sits flush with the dot's
           // centre instead of floating above it.
-          const cy = DIAGRAM_PAD_Y + i * STEP_Y;
+          const cy = padY + i * STEP_Y;
           const yOffset = s.tagline ? 16 : 7;
           return (
             <View
@@ -137,8 +146,38 @@ function TreeDiagram() {
 
 export default function SilentMindScreen() {
   const router = useRouter();
-  const tabPad = useTabBarPadding();
+  const insets = useSafeAreaInsets();
   const { columnMax } = useLayout();
+  // The material-top-tabs bar is laid out BELOW the pager, so the scene
+  // already excludes the tab-bar height — the screen only needs a small
+  // air gap above the bar, not the full TAB_BAR_BASE. The old
+  // useTabBarPadding() (= bar height + 16 ≈ 96 px) was dead space that
+  // squeezed this single-screen layout and pushed the Enter button
+  // under the bar on short viewports.
+  const bottomPad = Math.max(insets.bottom, spacing.lg);
+
+  // Size the tree to fill the space between the header and the Enter
+  // button, rather than using a fixed step that either overflows (tall
+  // tree on a short screen → button hidden) or leaves a dead gap under
+  // the title (short tree on a roomy screen → what the A53 showed).
+  //
+  // Scene height ≈ window minus the bottom tab bar (material-top-tabs
+  // lays the bar below the pager, so it's already excluded from the
+  // scene — we approximate it with TAB_BAR_BASE). We then carve out
+  // the header (measured), the caption + button (estimated), the
+  // bottom pad, and a little inter-group breathing room; whatever
+  // remains is the diagram's vertical budget. STEP_Y is clamped so the
+  // dots never crowd their two-line labels (min) or sprawl on a very
+  // tall screen (max = the original 56).
+  const { height } = useWindowDimensions();
+  const [headerH, setHeaderH] = useState(0);
+  const CAPTION_EST = 64; // 2-line caption + its top margin
+  const BUTTON_EST = 58; // pill + vertical padding
+  const BREATHING = 56; // gaps space-between leaves around the groups
+  const sceneH = height - TAB_BAR_BASE;
+  const diagramBudget = sceneH - bottomPad - headerH - CAPTION_EST - BUTTON_EST - BREATHING;
+  const rawStep = (diagramBudget - DIAGRAM_PAD_Y * 2) / (DIAGRAM_STEPS.length - 1);
+  const stepY = Math.max(36, Math.min(56, Math.round(rawStep || 56)));
 
   // Slow continuous glow on the Enter CTA — accent-tinted box-shadow
   // pulses from a small soft halo to a wider, brighter one on a
@@ -165,22 +204,26 @@ export default function SilentMindScreen() {
   return (
     <Background color={colors.bgTab}>
       <SwipeTabs current="silent-mind">
-        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabPad }]}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottomPad }]}>
           <View style={[styles.column, { maxWidth: columnMax }]}>
-            <ProgramHeader
-              eyebrow={silentMindProgram.eyebrow}
-              title={silentMindProgram.title}
-              description={silentMindProgram.intro}
-              accent={colors.accent}
-            />
+            {/* Measure the header height so the diagram can be sized to
+                fill exactly the space left below it. */}
+            <View onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}>
+              <ProgramHeader
+                eyebrow={silentMindProgram.eyebrow}
+                title={silentMindProgram.title}
+                description={silentMindProgram.intro}
+                accent={colors.accent}
+              />
+            </View>
 
-            {/* Diagram lives in its own vertically-centred wrapper —
-                the `flex: 1 / justifyContent: 'center'` sandwich
-                between the header above and the Enter button below
-                pushes the diagram to roughly the middle of the page
-                without locking its exact Y. */}
+            {/* Diagram + caption block. The column's space-between puts
+                even gaps above (to header) and below (to the button);
+                the diagram's step size (stepY) is computed to fill the
+                available height so it expands into the gap rather than
+                sitting small and cropped. */}
             <View style={styles.diagramCenter}>
-              <TreeDiagram />
+              <TreeDiagram stepY={stepY} />
               <Text style={styles.diagramCaption}>
                 Walk the tree from the bottom up — each audio you
                 complete unlocks the next step.
@@ -225,17 +268,24 @@ const styles = StyleSheet.create({
   // ScrollView collapses to content height and the diagram just sits
   // flush against the header.
   content: { alignItems: 'center', minHeight: '100%' },
-  column: { width: '100%', alignSelf: 'center', flex: 1 },
-  // Vertical-centering wrapper for the diagram. flex:1 + center
-  // pushes the diagram to the middle of the remaining space between
-  // header and Enter button.
-  diagramCenter: {
+  // space-between distributes the three groups — header, the
+  // diagram+caption block, and the Enter button — with EQUAL gaps,
+  // top to bottom. Previously two flex:1 sandwiches each centred their
+  // own content, which crammed the diagram up against the header
+  // (small gap) while the button floated with lots of space below.
+  // Even gaps keep nothing squished on short screens (Galaxy A53 etc.).
+  column: {
+    width: '100%',
+    alignSelf: 'center',
     flex: 1,
-    justifyContent: 'center',
-    // Android phones have less iPhone-style notch padding to absorb, so
-    // we trim the diagram's vertical breathing room to keep the Enter
-    // button visible above the fold without scrolling.
-    paddingVertical: Platform.OS === 'android' ? spacing.xs : spacing.lg,
+    justifyContent: 'space-between',
+  },
+  // Wrapper for the diagram + its caption — a natural-height block; the
+  // column's space-between handles the gaps above (to header) and below
+  // (to the button).
+  diagramCenter: {
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
   },
   // Diagram block — trunk SVG + labels in a single row, centred as
   // a unit so the WHOLE block (trunk + labels) lands at the column
@@ -245,7 +295,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     alignSelf: 'center',
-    height: DIAGRAM_HEIGHT,
+    // height is set inline (depends on the compact step size).
     // Nudge the whole diagram (arrow + trunk + labels) to the right
     // of dead-centre so it sits closer to the visual centre line of
     // the iPhone after subtracting the bottom tab bar's perceived
@@ -283,7 +333,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     textAlign: 'center',
-    marginTop: spacing.xxl,
+    // Caption belongs to the diagram (one block); keep it close. The
+    // inter-group gaps are handled by the column's space-between.
+    marginTop: spacing.lg,
     paddingHorizontal: spacing.lg,
     // Match the diagram's right-shift so the caption sits visually
     // under the diagram column rather than under the page's
@@ -298,7 +350,6 @@ const styles = StyleSheet.create({
   // The result: Enter sits equidistant between the "Walk the tree…"
   // caption above and the tab bar below, regardless of screen size.
   enterBtnSlot: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',

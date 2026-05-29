@@ -172,7 +172,14 @@ export default function TabsLayout() {
     // draw under it by default). The gesture-nav strip itself stays
     // transparent so the shader behind shows through — the bar just
     // doesn't get clipped anymore.
-    <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    // paddingBottom: insets.bottom is the Android gesture-nav / iOS
+    // home-indicator clearance (native edge-to-edge). On web that inset
+    // is the browser's own safe-area (e.g. Firefox Android reports a
+    // non-zero env(safe-area-inset-bottom) for the nav strip), and
+    // applying it here left a dead gap between the tab bar and the
+    // bottom of the page. The browser manages its own chrome, so on web
+    // the bar should sit flush at the viewport bottom — zero it there.
+    <View style={[styles.root, { paddingTop: insets.top, paddingBottom: Platform.OS === 'web' ? 0 : insets.bottom }]}>
     <Tabs
       // Bar lives at the bottom; the navigator itself still uses
       // PagerView for content + swipe gestures.

@@ -1431,7 +1431,7 @@ function PlayerInner() {
     // overlaps content unless we pad explicitly — apply insets.bottom
     // at the root so every bottom-anchored Player control (Skip intro,
     // play/pause, sliders) clears the system nav.
-    <View style={[styles.root, { paddingBottom: insets.bottom }]}>
+    <View style={[styles.root, { paddingTop: Math.max(insets.top + spacing.md, 56), paddingBottom: insets.bottom }]}>
       {/* Per-part backdrop — lake / earth-video / sky / space, picked
           from the playing track's id. Sits BEHIND the Player UI, so
           the user sees the matching atmosphere even if the screen
@@ -1464,10 +1464,11 @@ function PlayerInner() {
       {/* Flex spacer pushing the circle down so it lands at roughly
           the same Y as the Start screen's round CTA — the morph
           illusion only works if both buttons share the same screen
-          position. Below the circle, the transcript (also flex 1)
-          fills the remaining mid-section, with the timer + waveform
-          docked at the bottom. */}
-      <View style={styles.flexSpacer} />
+          position. Scaled to the viewport: a flat 0.78 was tuned for
+          an iPhone-13-ish height and pushed the button way down on
+          small phones, so we shrink it on short screens so the circle
+          stays closer to Start's effectivePlayCenterY. */}
+      <View style={{ flex: winH < 700 ? 0.35 : winH < 780 ? 0.55 : 0.78 }} />
 
       {/* Pre-circle stack — mirrors the Start screen's text block
           ("INTRODUCTION · 1 / 3" eyebrow + track title + chevrons)
@@ -1893,7 +1894,28 @@ function CueLine({ cue, time, onLayout }: { cue: TranscriptCue; time: number; on
   return (
     <Text
       onLayout={(e) => onLayout(e.nativeEvent.layout.y)}
-      style={[styles.cue, { color: colors.text }]}
+      // textShadow inherited from styles.cue → type.body is nulled out
+      // at the parent level on purpose. On Android, the parent <Text>'s
+      // shadow is rendered uniformly across every glyph in the run
+      // (including the transparent ones we'd otherwise produce for
+      // unrevealed words via child <Text style={{ color: rgba(_,_,_,0) }}>),
+      // because text-shadow on Android is a TextView property, not a
+      // per-character span. Child <Text> overrides for textShadowColor
+      // don't propagate. Killing the parent shadow keeps unrevealed
+      // words truly invisible. Revealed words still get their own
+      // per-word shadow via each child <Text>'s explicit textShadow
+      // props — honoured on iOS and web. On Android per-child shadow
+      // is ignored, so revealed words read as plain white text on the
+      // Player's dark backdrop (still legible).
+      style={[
+        styles.cue,
+        {
+          color: colors.text,
+          textShadowColor: 'transparent',
+          textShadowOffset: { width: 0, height: 0 },
+          textShadowRadius: 0,
+        },
+      ]}
     >
       {cue.words.map((w, i) => {
         const spaced = i === 0 ? w.text : ' ' + w.text;

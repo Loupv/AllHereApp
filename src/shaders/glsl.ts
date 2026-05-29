@@ -31,10 +31,19 @@ precision highp float;
 uniform float uTime;
 uniform vec2  uRes;
 
+// Hash bounded for mediump-safe execution. Some Android GPUs
+// (notably Mali / Tensor — reported on Pixel 10 Pro) silently treat
+// fragment-shader \`highp\` as \`mediump\` despite the precision
+// declaration above; the previous hash (\`fract(p.x * p.y)\` after
+// adding the dot product) sent intermediates past ~1024, blew out the
+// 10-bit mantissa and quantised into the horizontal bars users saw on
+// the sky shader. This Hoskins-style hash keeps every intermediate
+// under ~36, so it stays numerically stable even when the GPU silently
+// downgrades to mediump.
 float hash(vec2 p) {
-  p = fract(p * vec2(443.897, 441.423));
-  p += dot(p, p + 19.19);
-  return fract(p.x * p.y);
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
 }
 float vnoise(vec2 p) {
   vec2 i = floor(p);

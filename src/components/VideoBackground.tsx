@@ -3,6 +3,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Asset } from 'expo-asset';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { useEarthPlayer } from './EarthVideoContext';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -74,24 +75,38 @@ export function VideoBackground(_: Props) {
   // Ken Burns: a slow zoom (1.0 → 1.08) + tiny pan that the user only
   // notices subconsciously. Cycle is ~90 s so it doesn't feel
   // mechanical when looped. Cosmetic; pure UI thread via reanimated.
+  //
+  // Skipped on Android: expo-video's VideoView is backed by a
+  // SurfaceView (out-of-band drawing), and reanimated transforms on a
+  // wrapper View don't propagate cleanly to the underlying surface —
+  // the rendering ends up quantised against the transform on every
+  // frame, which the user perceives as the video "trembling" / its
+  // size shifting. iOS (Swift module + AVSampleBufferDisplayLayer) and
+  // web (plain <video>) both composite normally, so they keep the
+  // subtle motion.
+  const kbEnabled = Platform.OS !== 'android';
   const kbProgress = useSharedValue(0);
   React.useEffect(() => {
+    if (!kbEnabled) return;
     kbProgress.value = withRepeat(
       withTiming(1, { duration: 90_000, easing: Easing.inOut(Easing.quad) }),
       -1,
       true, // reverse on each cycle — avoids the snap at loop boundary
     );
     return () => { cancelAnimation(kbProgress); };
-  }, [kbProgress]);
-  const kbStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: 1 + kbProgress.value * 0.08 },
-      // Tiny lateral drift (in dp). ±8 px is invisible by itself but
-      // breaks the static feel that pure zoom has.
-      { translateX: (kbProgress.value - 0.5) * 16 },
-      { translateY: (kbProgress.value - 0.5) * 8 },
-    ],
-  }));
+  }, [kbEnabled, kbProgress]);
+  const kbStyle = useAnimatedStyle(() => {
+    if (!kbEnabled) return {};
+    return {
+      transform: [
+        { scale: 1 + kbProgress.value * 0.08 },
+        // Tiny lateral drift (in dp). ±8 px is invisible by itself but
+        // breaks the static feel that pure zoom has.
+        { translateX: (kbProgress.value - 0.5) * 16 },
+        { translateY: (kbProgress.value - 0.5) * 8 },
+      ],
+    };
+  });
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
@@ -125,22 +140,38 @@ export function VideoBackground(_: Props) {
 }
 
 /**
- * expo-video-backed background loop for Android. Lives in its own
- * component so `useVideoPlayer` is only called on platforms that
- * actually mount it — iOS uses the native Swift module instead and
- * never reaches this branch, which means we don't pay the ExoPlayer
- * setup cost on iOS at all.
+ * expo-video-backed background loop for Android. The player is owned
+ * by EarthVideoProvider at the app root so a single ExoPlayer instance
+ * is shared across every consumer (root layout's journey-theme bg + the
+ * SM tree's Part 1 layer) — eliminates the mount-glitch / frame-0
+ * reset that happened when two players ran in parallel.
  *
- * Sound discipline: the player is always muted (it's a background
- * loop) and uses `audioMixingMode: 'mixWithOthers'`, the expo-video
- * knob that explicitly lets it share audio output with other apps and
- * — critically — with our own expo-audio meditation player. Without
- * that, expo-video could elbow expo-audio out of the Android
- * MediaSession and break the lock-screen Now Playing card.
- * `showNowPlayingNotification` is left at its default `false` so the
- * background video doesn't publish itself as a media item.
+ * Fallback: if for some reason the provider isn't mounted above us
+ * (tests, dev hot-reload edge cases), we spin up a local player so the
+ * component still renders.
+ *
+ * Sound discipline (configured at the provider): the player is muted
+ * with `audioMixingMode: 'mixWithOthers'` so expo-video shares audio
+ * output with our expo-audio meditation player and doesn't elbow it
+ * out of the Android MediaSession / lock-screen Now Playing card.
  */
 function ExpoVideoBackground() {
+  const sharedPlayer = useEarthPlayer();
+  if (sharedPlayer) {
+    return (
+      <VideoView
+        player={sharedPlayer}
+        style={StyleSheet.absoluteFillObject}
+        contentFit="cover"
+        nativeControls={false}
+        allowsPictureInPicture={false}
+      />
+    );
+  }
+  return <ExpoVideoBackgroundLocal />;
+}
+
+function ExpoVideoBackgroundLocal() {
   const player = useVideoPlayer(EARTH_VIDEO, (p) => {
     p.loop = true;
     p.muted = true;
