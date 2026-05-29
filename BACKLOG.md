@@ -122,6 +122,19 @@ current check.
   audio / lock-screen is hard to automate and changes rarely.
 - [ ] **CI**: GitHub Actions → `tsc --noEmit` + vitest (Tier 1+2) on
   push, Playwright web smoke on PRs.
+- [ ] **Clear the 3 pre-existing `tsc --noEmit` errors** (so the CI tsc
+  gate can be strict). None is a runtime bug:
+  - `app/news/[id].tsx:54` — `delaysContentTouches={false}` flagged
+    "does not exist on ScrollViewProps". It's a valid iOS RN ScrollView
+    prop, used intentionally (momentum-scroll touch handling, see the
+    inline comment); the bundled type defs just don't declare it. Fix:
+    verify the `ScrollView` import / narrow cast.
+  - `app/silent-mind/[id].tsx:58` & `app/qm/[id].tsx:58` —
+    `title={volet.subtitle}` passes the optional `Volet.subtitle`
+    (`string | undefined`) into `ProgramHeader`'s required
+    `title: string`. Works today (all Part volets have a subtitle). Fix:
+    `title={volet.subtitle ?? ''}`, or make `title` optional / `subtitle`
+    required for Part volets.
 
 ## Native — to address before store submission
 - [x] **Background playback** — done: `app.json` declares `UIBackgroundModes:["audio"]` (iOS) + `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_MEDIA_PLAYBACK` (Android), and the local Expo module `modules/qm-foreground` runs a media-playback foreground service for the QM custom timer. (See the iOS-background-audio + Android-background-timer memory notes for the CPU-watchdog and JS-timer-freeze gotchas behind this.)
