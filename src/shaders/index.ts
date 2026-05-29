@@ -1,26 +1,12 @@
 /**
- * Theme registry — maps the four "where am I in the journey" buckets
- * to their SkSL source. Adding a new variant means importing it
- * here and pointing the matching theme at it; nothing in
- * `ShaderBackground` needs to change.
+ * Journey → theme mapping. `ShaderTheme` is the set of atmosphere
+ * variants; the live GL renderer (`AtmosphereBackground`) resolves the
+ * actual fragment shader from `glsl.ts`. The functions below pick the
+ * theme from the user's SM-journey position.
  */
-import { SHADER_DEFAULT, SHADER_EARTH, SHADER_SKY, SHADER_SPACE } from './sources';
 import { silentMindVolets } from '../content/catalog';
 
 export type ShaderTheme = 'default' | 'earth' | 'grass' | 'sky' | 'space' | 'lake';
-
-export const SHADER_FOR_THEME: Record<ShaderTheme, string> = {
-  default: SHADER_DEFAULT,
-  // `earth` is rendered as a looping video at the layout level, not
-  // as a shader. Map it here for completeness so any code that
-  // resolves a SkSL source for an arbitrary theme still has a
-  // sensible fallback (the original grass shader).
-  earth: SHADER_EARTH,
-  grass: SHADER_EARTH,
-  sky: SHADER_SKY,
-  space: SHADER_SPACE,
-  lake: SHADER_EARTH, // placeholder until glsl exports change below
-};
 
 /**
  * Derive the theme from the next-up track id. Used by the home page

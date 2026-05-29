@@ -1,7 +1,7 @@
 /**
- * Tiny key/value store used directly for ad-hoc reads (e.g. the dev
- * notification-seen reset on cold boot) AND surfaced as a `StateStorage`
- * adapter for zustand's `persist` middleware.
+ * Tiny key/value store used for ad-hoc reads (e.g. the dev
+ * notification-seen reset on cold boot) and as the persistence layer the
+ * zustand stores hydrate from on boot (see `hydrateFromDisk`).
  *
  * - Native: `@react-native-async-storage/async-storage` — disk-backed,
  *   survives app relaunches.
@@ -10,7 +10,6 @@
  * Stored values are always JSON-stringified.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { StateStorage } from 'zustand/middleware';
 import { Platform } from 'react-native';
 
 const isWeb = Platform.OS === 'web' && typeof window !== 'undefined' && !!window.localStorage;
@@ -77,26 +76,3 @@ export function hydrateFromDisk<T>(key: string, apply: (stored: T) => void): voi
     })
     .catch(() => { /* AsyncStorage unavailable — nothing to hydrate */ });
 }
-
-export const persistStorage: StateStorage = {
-  getItem: async (name) => {
-    try {
-      if (isWeb) return window.localStorage.getItem(name);
-      return await AsyncStorage.getItem(name);
-    } catch {
-      return null;
-    }
-  },
-  setItem: async (name, value) => {
-    try {
-      if (isWeb) window.localStorage.setItem(name, value);
-      else await AsyncStorage.setItem(name, value);
-    } catch { /* ignore */ }
-  },
-  removeItem: async (name) => {
-    try {
-      if (isWeb) window.localStorage.removeItem(name);
-      else await AsyncStorage.removeItem(name);
-    } catch { /* ignore */ }
-  },
-};
