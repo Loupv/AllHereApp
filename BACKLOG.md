@@ -34,7 +34,7 @@
 
 ## Infrastructure
 - [ ] Host audio assets on a CDN (S3 / Cloudflare R2) rather than shipping in bundle — the app is ~900 MB because mp3s ship with the web build. Critical before native store submission too: iOS hard-caps the IPA at 4 GB but App Store warns from 200 MB; Android AAB needs dynamic delivery configured to avoid a 500 MB+ initial APK.
-- [ ] Persist progress & auth state (zustand + AsyncStorage / MMKV). Today `kv.ts` falls back to in-memory on native, so progress is lost on every app relaunch — same problem on native as on web.
+- [x] Persist progress & auth state (zustand + AsyncStorage). Done: `kv.ts` is disk-backed via AsyncStorage on native / localStorage on web, and `progressStore` / `authStore` / `sessionPrefs` hydrate + write through it, so state survives relaunches. (MMKV remains a possible later optimisation; backend sync is the separate item below.)
 - [ ] **Per-user progress tracking in a backend DB.** Persist each
   user's journey server-side, keyed to their account (depends on the
   real-auth item above). Track at minimum:
@@ -124,10 +124,10 @@ current check.
   push, Playwright web smoke on PRs.
 
 ## Native — to address before store submission
-- [ ] **Background playback**: declare `UIBackgroundModes: ["audio"]` in `app.json > expo > ios > infoPlist`, plus `FOREGROUND_SERVICE` permission + service notification on Android. Without this, audio cuts as soon as the screen locks — unacceptable for a meditation app.
-- [ ] **Lock-screen Now Playing controls**: hook `MPNowPlayingInfoCenter` (iOS) and `MediaSession` (Android) so the user gets play/pause + track title on the lock screen, AirPods double-tap, CarPlay. `expo-audio` doesn't wire this automatically.
+- [x] **Background playback** — done: `app.json` declares `UIBackgroundModes:["audio"]` (iOS) + `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_MEDIA_PLAYBACK` (Android), and the local Expo module `modules/qm-foreground` runs a media-playback foreground service for the QM custom timer. (See the iOS-background-audio + Android-background-timer memory notes for the CPU-watchdog and JS-timer-freeze gotchas behind this.)
+- [x] **Lock-screen Now Playing controls** — wired in `Player.tsx` (MPNowPlayingInfoCenter on iOS, MediaSession + foreground-service notification on Android), incl. artwork. `interruptionMode:'doNotMix'` is required for the iOS card to appear. Remaining to verify on real hardware: AirPods double-tap / CarPlay behaviour.
 - [ ] **Audio interruptions**: test phone-call / Siri / AirPods unpair flow — `expo-audio` should pause but the resume behaviour is inconsistent.
-- [ ] **Round-to-round gap in QM**: each round triggers a fresh `useAudioPlayer(roundSource)` → fetch + decode → ~100–300 ms of silence between rounds on native. Pre-load the next round in the background while the current one plays.
+- [x] **Round-to-round gap in QM** — addressed: `Player.tsx` computes `nextRoundSource` and calls `prefetchAudio` (via `src/content/audioResolver`) to warm the next round + next playlist track while the current one plays. (Tune the prefetch trigger point if a gap still shows on slower devices.)
 - [ ] **Pre-load next-up SM track on Start**: removes the brief delay on first tap of the round CTA.
 - [ ] **Mask-image fallback on native**: the CSS `mask-image` we use on the transcript top/bottom fade and on the EnergyColumn (under header / above tab bar) is web-only. Add `@react-native-masked-view/masked-view` so native gets the same softening — otherwise lines / text clip on hard edges.
 - [ ] **Blur fallback on native for the EnergyColumn**: the `filter: blur(5px)` that gives the column its diffuse "Milky Way" feel is web-only. On native the strokes look sharp / wiry. Either swap to an SVG `<FeGaussianBlur>` filter (gratis via react-native-svg) or layer an `expo-blur` BlurView. Without this, native looks visibly less atmospheric than web.

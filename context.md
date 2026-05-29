@@ -46,6 +46,10 @@ Start-page phases are derived from `useProgress.listened` (the set of
 completed track ids). They change the page layout rather than just
 swapping copy — intro audios come and go, the main CTA changes, etc.
 
+Beyond the five tabs, `app/silent-mind-tree.tsx` is a full-screen
+"journey" view of the Silent Mind path — a vertical paged tree pushed
+on top of the stack (not a tab).
+
 ## Design philosophy
 
 - **Lightness over density.** We've done several rounds of simplification.
@@ -81,8 +85,9 @@ swapping copy — intro audios come and go, the main CTA changes, etc.
 See `BACKLOG.md` for the authoritative list. Highlights:
 
 - Auth is mocked (Skip / Apple / Google / Email — none actually wired).
-- Progress state is in-memory only (`kv.ts` falls back to memory on
-  native). AsyncStorage / MMKV migration is a backlog item.
+- Progress + session prefs now persist on device (`kv.ts` →
+  `AsyncStorage` on native, `localStorage` on web). Cross-device /
+  backend-DB sync is still a backlog item.
 - Audio ships in the bundle — the web build is ~900 MB. CDN migration
   is a backlog item.
 - Several tracks / videos are placeholders (Thai Forest, Silent Flute,

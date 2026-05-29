@@ -17,7 +17,8 @@ Where to find things. Internal first, then external docs.
 - [`src/content/waveforms.generated.ts`](./src/content/waveforms.generated.ts)
   — **auto-generated, do not edit**. Regenerate with `npm run gen:waveforms`.
 - [`src/content/kv.ts`](./src/content/kv.ts) — key/value storage shim
-  (`localStorage` on web, in-memory on native).
+  (`localStorage` on web, `AsyncStorage` on native — disk-backed). Also
+  a zustand `StateStorage` adapter.
 
 ### State stores (zustand)
 - [`src/player/store.ts`](./src/player/store.ts) — current track +
@@ -31,7 +32,7 @@ Where to find things. Internal first, then external docs.
 ### Core components
 - [`src/components/Player.tsx`](./src/components/Player.tsx) — the
   audio player (preplay + play, QM rounds machine, waveform scrubber,
-  transcript view). ~1080 lines, mostly intentionally monolithic.
+  transcript view). ~2300 lines, mostly intentionally monolithic.
 - [`src/components/WaveformProgress.tsx`](./src/components/WaveformProgress.tsx)
   — the scrubber waveform (160 flex bars, split boundary bar).
 - [`src/components/ContentCard.tsx`](./src/components/ContentCard.tsx)
@@ -46,10 +47,14 @@ Where to find things. Internal first, then external docs.
 
 ### Routing
 - [`app/_layout.tsx`](./app/_layout.tsx) — root Stack, font loading,
-  splash, login gate, global Player overlay, slide-from-right
-  animation on detail pages.
+  splash, global Player overlay, slide-from-right animation on detail
+  pages.
 - [`app/(tabs)/_layout.tsx`](./app/(tabs)/_layout.tsx) — bottom tab bar
   (icons, badges, centred items on wide viewports).
+- [`app/silent-mind-tree.tsx`](./app/silent-mind-tree.tsx) — the Silent
+  Mind journey screen: a vertical paged "tree" of the SM path
+  (release-based eased glide, GL atmosphere backgrounds). Large +
+  heavily iterated — audit before editing the scroll/anim logic.
 
 ### Theme
 - [`src/theme/index.ts`](./src/theme/index.ts) — colours, spacing,
