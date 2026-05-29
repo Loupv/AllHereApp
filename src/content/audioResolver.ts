@@ -138,27 +138,6 @@ export async function resolveAudioSource(
 }
 
 /**
- * Batch resolve multiple audio sources (for prefetching)
- */
-export async function resolveAudioSourceBatch(
-  trackIds: string[],
-): Promise<Map<string, ResolvedAudio>> {
-  const results = new Map<string, ResolvedAudio>();
-
-  for (const trackId of trackIds) {
-    try {
-      const resolved = await resolveAudioSource(trackId);
-      results.set(trackId, resolved);
-    } catch (err) {
-      console.warn(`Failed to resolve audio for "${trackId}":`, err);
-      // Continue with next track instead of failing batch
-    }
-  }
-
-  return results;
-}
-
-/**
  * Prefetch audio in background (for better UX during playback)
  */
 export async function prefetchAudio(trackId: string): Promise<void> {

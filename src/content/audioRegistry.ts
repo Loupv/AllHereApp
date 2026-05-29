@@ -463,10 +463,3 @@ export function getOutroSource(trackId: string): AudioSource | null {
   }
   return null;
 }
-
-/**
- * Get WordPress URL for a given local audio path. Returns null if not on WP.
- */
-export function getRemoteUrl(path: string): string | null {
-  return REMOTE_PATTERN(path);
-}

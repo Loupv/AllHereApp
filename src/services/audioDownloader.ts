@@ -4,7 +4,6 @@
 
 import * as FileSystem from 'expo-file-system/legacy';
 import * as audioCacheManager from './audioCacheManager';
-import { getAudioSource } from '../content/audioRegistry';
 
 export class AudioDownloadError extends Error {
   constructor(
@@ -132,47 +131,5 @@ export async function downloadAudio(
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
     throw new AudioDownloadError(`Failed to download audio for track "${trackId}"`, trackId, error);
-  }
-}
-
-/**
- * Download audio by track ID (looks up URL from registry)
- */
-export async function downloadAudioByTrackId(
-  trackId: string,
-  onProgress?: ProgressCallback,
-): Promise<string> {
-  const source = getAudioSource(trackId);
-  if (!source?.remote) {
-    throw new AudioDownloadError(`No remote source found for track "${trackId}"`, trackId);
-  }
-
-  return downloadAudio(trackId, source.remote, onProgress);
-}
-
-/**
- * Cleanup cached audio file
- */
-export async function removeCachedAudio(trackId: string): Promise<void> {
-  const uri = await audioCacheManager.getCachedUri(trackId);
-  if (uri) {
-    try {
-      await FileSystem.deleteAsync(uri, { idempotent: true });
-      await audioCacheManager.removeCached(trackId);
-    } catch (err) {
-      console.warn(`Failed to remove cached audio ${trackId}:`, err);
-    }
-  }
-}
-
-/**
- * Clear all cached audio files
- */
-export async function clearAllCachedAudio(): Promise<void> {
-  try {
-    await FileSystem.deleteAsync(CACHE_DIR, { idempotent: true });
-    await audioCacheManager.clearAllCache();
-  } catch (err) {
-    console.warn('Failed to clear audio cache directory:', err);
   }
 }

@@ -88,14 +88,6 @@ export async function getCachedUri(trackId: string): Promise<string | null> {
 }
 
 /**
- * Get cache metadata for a track
- */
-export async function getMetadata(trackId: string): Promise<CacheMetadata | null> {
-  const store = await loadCacheStore();
-  return store[trackId] ?? null;
-}
-
-/**
  * Mark a track as cached with metadata
  */
 export async function setCached(
@@ -111,14 +103,6 @@ export async function setCached(
     cached: true,
   };
   await saveCacheStore();
-}
-
-/**
- * Get total cache size in bytes
- */
-export async function getTotalCacheSize(): Promise<number> {
-  const store = await loadCacheStore();
-  return Object.values(store).reduce((sum, meta) => sum + (meta.size ?? 0), 0);
 }
 
 /**
@@ -144,22 +128,6 @@ export async function clearOldestUntilUnder(
   }
 
   await saveCacheStore();
-}
-
-/**
- * Clear all cached audio
- */
-export async function clearAllCache(): Promise<void> {
-  cacheStore = {};
-  await saveCacheStore();
-}
-
-/**
- * Get list of all cached track IDs
- */
-export async function getCachedTracks(): Promise<string[]> {
-  const store = await loadCacheStore();
-  return Object.keys(store);
 }
 
 /**

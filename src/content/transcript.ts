@@ -178,14 +178,3 @@ export const findCueIndex = (cues: TranscriptCue[], t: number): number => {
   }
   return cues.length - 1;
 };
-
-export const findWordIndex = (words: TranscriptWord[], t: number): number => {
-  if (words.length === 0) return -1;
-  let lo = 0, hi = words.length - 1, ans = -1;
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    if (words[mid].start <= t) { ans = mid; lo = mid + 1; }
-    else hi = mid - 1;
-  }
-  return ans;
-};

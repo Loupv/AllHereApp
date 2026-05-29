@@ -536,9 +536,6 @@ export const qmUnguidedPresets: AudioTrack[] = [
   },
 ];
 
-export type NewsItem = { id: string; title: string; excerpt: string; date: string };
-export const newsItems: NewsItem[] = [];
-
 /**
  * An image source may come from a bundled asset (require() → number on
  * native / opaque object on web) or from a remote URL ({ uri }) — both are

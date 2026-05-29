@@ -56,23 +56,6 @@ export const JOURNEY_ACCENTS = {
 } as const;
 
 /**
- * Accent colour matching the user's current SM journey position.
- * Used by the Start screen big play button + pills, and by the
- * Player when opening home-* quick meditations (so the play button
- * inherits the same hue the pre-player buttons carry, instead of
- * snapping to the default SM magenta).
- */
-export function accentForJourneyPosition(
-  listened: Record<string, true>,
-): string {
-  const theme = themeForJourneyPosition(listened);
-  if (theme === 'sky') return JOURNEY_ACCENTS.part2;
-  if (theme === 'space') return JOURNEY_ACCENTS.part3;
-  if (theme === 'lake') return JOURNEY_ACCENTS.intro;
-  return JOURNEY_ACCENTS.part1; // earth / grass / default
-}
-
-/**
  * Theme picked from the user's CURRENT SM JOURNEY POSITION rather
  * than from whatever the global `nextTrackId()` happens to point at.
  *

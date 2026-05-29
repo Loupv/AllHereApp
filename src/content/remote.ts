@@ -333,13 +333,6 @@ export async function fetchVideos(): Promise<VideoItem[]> {
   ];
 }
 
-// Exposed for callers that want to know if an item is a true video (vs. a
-// press mention or podcast) — e.g. to swap the ▶ badge.
-export const itemHasVideoEmbed = (item: { contentHtml?: string }) =>
-  hasVideo(item.contentHtml);
-export const itemHasAudioEmbed = (item: { contentHtml?: string }) =>
-  hasAudio(item.contentHtml);
-
 // ---------- Hooks ----------
 
 type RemoteSink<T> = (items: T[]) => void;
