@@ -15,7 +15,7 @@ import { fetchMe, fetchSessions, type LmtSession, type SessionParticipant } from
 import { MiniLineChart } from '../src/components/MiniLineChart';
 import { colors, radius, spacing, type } from '../src/theme';
 
-const PANES = ['Silent Mind program', 'Live Tracker', 'Quantified Meditation Reports'] as const;
+const PANES = ['Silent Mind Practice', 'Live Tracker', 'Quantified Meditation Reports'] as const;
 
 // Per-pane identity colour — magenta (SM program), indigo (Live Tracker),
 // teal (QM reports). Each tints its pane background and the active tab rail.
@@ -195,7 +195,15 @@ export default function AccountScreen() {
       >
         {/* ── Pane 1 · Silent Mind program ─────────────────────── */}
         <Pane width={width} tint={PANE_THEME[0].tint}>
-          <SmProgramPane listened={listened} />
+          <SmProgramPane
+            listened={listened}
+            stats={stats}
+            confirmReset={confirmReset}
+            onReset={() => {
+              if (confirmReset) { resetProgress(); setConfirmReset(false); }
+              else setConfirmReset(true);
+            }}
+          />
         </Pane>
 
         {/* ── Pane 2 · Live Tracker ────────────────────────────── */}
@@ -220,27 +228,14 @@ export default function AccountScreen() {
         </Pane>
       </ScrollView>
 
-      {/* ── Footer · stats + actions ───────────────────────────── */}
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-        {user && stats && (
-          <View style={styles.statsRow}>
-            <Text style={styles.statText}>{stats.listens} listens · {fmtTime(stats.seconds)} listened</Text>
-            <Text style={styles.statText}>{stats.qmRounds} QM rounds · {stats.streakDays}-day streak</Text>
-          </View>
-        )}
-        <View style={styles.footerActions}>
-          <Pressable onPress={() => { if (confirmReset) { resetProgress(); setConfirmReset(false); } else setConfirmReset(true); }} hitSlop={8}>
-            <Text style={[styles.footerLink, confirmReset && styles.footerLinkDanger]}>
-              {confirmReset ? 'Tap again to reset progress' : 'Reset progress'}
-            </Text>
+      {/* ── Footer · log out only (stats + reset live in the SM pane) ── */}
+      {user && (
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+          <Pressable onPress={() => { logout(); router.back(); }} hitSlop={8} style={styles.logoutBtn}>
+            <Text style={styles.footerLink}>Log out</Text>
           </Pressable>
-          {user && (
-            <Pressable onPress={() => { logout(); router.back(); }} hitSlop={8}>
-              <Text style={styles.footerLink}>Log out</Text>
-            </Pressable>
-          )}
         </View>
-      </View>
+      )}
     </View>
   );
 }
@@ -259,7 +254,14 @@ function Pane({ width, tint, children }: { width: number; tint: string; children
 }
 
 // ── Pane 1 ────────────────────────────────────────────────────────────────
-function SmProgramPane({ listened }: { listened: Record<string, true> }) {
+function SmProgramPane({
+  listened, stats, confirmReset, onReset,
+}: {
+  listened: Record<string, true>;
+  stats: AccountStats | null;
+  confirmReset: boolean;
+  onReset: () => void;
+}) {
   // Total counts the FULL planned program, including not-yet-released
   // (coming-soon) audios — so the percentage reflects progress toward the
   // whole journey, not just what's currently downloadable.
@@ -286,6 +288,20 @@ function SmProgramPane({ listened }: { listened: Record<string, true> }) {
           </View>
         ))}
       </View>
+
+      {stats && (
+        <View style={styles.statsBlock}>
+          <Text style={styles.sectionLabel}>Activity</Text>
+          <Text style={styles.statText}>{stats.listens} listens · {fmtTime(stats.seconds)} listened</Text>
+          <Text style={styles.statText}>{stats.qmRounds} QM rounds · {stats.streakDays}-day streak</Text>
+        </View>
+      )}
+
+      <Pressable onPress={onReset} hitSlop={8} style={styles.resetBtn}>
+        <Text style={[styles.footerLink, confirmReset && styles.footerLinkDanger]}>
+          {confirmReset ? 'Tap again to reset progress' : 'Reset progress'}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -488,9 +504,10 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
     paddingHorizontal: spacing.lg, paddingTop: spacing.md, gap: spacing.sm,
   },
-  statsRow: { gap: 2 },
+  statsBlock: { marginTop: spacing.xl, gap: 2 },
   statText: { ...type.caption, color: colors.textDim, fontSize: 12 },
-  footerActions: { flexDirection: 'row', justifyContent: 'space-between' },
+  resetBtn: { marginTop: spacing.xl, alignSelf: 'flex-start' },
+  logoutBtn: { alignSelf: 'center' },
   footerLink: { ...type.caption, color: colors.textDim, textDecorationLine: 'underline' },
   footerLinkDanger: { color: '#FF6B6B' },
 });
