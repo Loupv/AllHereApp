@@ -14,7 +14,7 @@
 		"GOOGLE_ANDROID_CLIENT_ID": "995573673473-ae3j4othcddl1g5bif7l176iptqnvc39.apps.googleusercontent.com",
 		"GOOGLE_WEB_CLIENT_ID": "995573673473-1phdgt49e3c0a9g2ug7fv6h3bpuj1m07.apps.googleusercontent.com",
 		"APPLE_BUNDLE_ID": "org.allhere.silentmind",
-		"EMAIL_FROM": "AllHere <noreply@allhere.org>"
+		"EMAIL_FROM": "AllHere <onboarding@resend.dev>"
 	},
 	// APP_KEY + SESSION_SECRET are SECRETS — set with `wrangler secret put …`,
 	// deliberately NOT vars (an empty var here would reset the secret on every
