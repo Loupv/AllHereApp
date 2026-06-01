@@ -92,6 +92,27 @@ const roundDividers = (protocol: string | null): number[] => {
   return out;
 };
 
+/** mm:ss clock for the chart time axis. */
+const fmtClock = (sec: number): string =>
+  `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, '0')}`;
+
+/** Round-number markers (R1, R2, …) at the fractional centre of each round
+ *  window, for labelling the time axis. */
+const roundMarkers = (protocol: string | null): { frac: number; label: string }[] => {
+  const steps = parseSteps(protocol);
+  if (!steps) return [];
+  const durs = steps.map(st => st.durationSec ?? 0);
+  const total = durs.reduce((a, b) => a + b, 0);
+  if (total <= 0) return [];
+  const out: { frac: number; label: string }[] = [];
+  let cum = 0;
+  steps.forEach((st, i) => {
+    if (st.kind === 'round') out.push({ frac: (cum + durs[i] / 2) / total, label: `R${st.roundIdx}` });
+    cum += durs[i];
+  });
+  return out;
+};
+
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -227,6 +248,8 @@ export default function AccountScreen() {
             sessions={sessions}
             selected={selected}
             onSelect={setSelectedId}
+            onBack={() => goTo(1)}
+            chartWidth={width - spacing.lg * 2}
           />
         </Pane>
       </ScrollView>
@@ -372,49 +395,83 @@ function LiveTrackerPane({
 
 // ── Pane 3 ────────────────────────────────────────────────────────────────
 function ReportPane({
-  user, sessions, selected, onSelect,
+  user, sessions, selected, onSelect, onBack, chartWidth,
 }: {
   user: boolean;
   sessions: LmtSession[] | null;
   selected: LmtSession | null;
   onSelect: (id: string) => void;
+  onBack: () => void;
+  chartWidth: number;
 }) {
   if (!user) return <Text style={styles.empty}>Sign in to see your meditation reports.</Text>;
   if (!sessions || sessions.length === 0) return <Text style={styles.empty}>No reports yet.</Text>;
   if (!selected) return <Text style={styles.empty}>Pick a session in Live Tracker.</Text>;
 
   const dividers = roundDividers(selected.protocol);
+  const markers = roundMarkers(selected.protocol);
+  const idx = sessions.findIndex(s => s.id === selected.id);
+  const prev = idx > 0 ? sessions[idx - 1] : null;       // newer
+  const next = idx < sessions.length - 1 ? sessions[idx + 1] : null; // older
 
   return (
     <View>
-      {/* Session picker (only if more than one) */}
-      {sessions.length > 1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips} contentContainerStyle={{ gap: spacing.xs }}>
-          {sessions.map(s => (
-            <Pressable
-              key={s.id}
-              onPress={() => onSelect(s.id)}
-              style={[styles.chip, s.id === selected.id && styles.chipActive]}
-            >
-              <Text style={[styles.chipLabel, s.id === selected.id && styles.chipLabelActive]}>
-                {fmtSessionDate(s.started_at)}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      )}
+      {/* Navigation: back to the list + step through sessions */}
+      <View style={styles.reportNav}>
+        <Pressable onPress={onBack} hitSlop={8}>
+          <Text style={styles.navLink}>‹ Sessions</Text>
+        </Pressable>
+        <View style={styles.navStep}>
+          <Pressable onPress={() => prev && onSelect(prev.id)} disabled={!prev} hitSlop={8}>
+            <Text style={[styles.navLink, !prev && styles.navDisabled]}>Prev</Text>
+          </Pressable>
+          <Text style={styles.navPos}>{idx + 1} / {sessions.length}</Text>
+          <Pressable onPress={() => next && onSelect(next.id)} disabled={!next} hitSlop={8}>
+            <Text style={[styles.navLink, !next && styles.navDisabled]}>Next</Text>
+          </Pressable>
+        </View>
+      </View>
 
       <Text style={styles.reportTitle}>{sessionTypeLabel(selected)}</Text>
       <Text style={styles.caption}>{fmtSessionDate(selected.started_at)}{selected.mode ? ` · ${selected.mode}` : ''}</Text>
 
       {selected.participants.map(p => (
-        <ParticipantReport key={p.participant} p={p} dividers={dividers} showName={selected.participants.length > 1} />
+        <ParticipantReport
+          key={p.participant}
+          p={p}
+          dividers={dividers}
+          markers={markers}
+          chartWidth={chartWidth}
+          showName={selected.participants.length > 1}
+        />
       ))}
     </View>
   );
 }
 
-function ParticipantReport({ p, dividers, showName }: { p: SessionParticipant; dividers: number[]; showName: boolean }) {
+const seriesRange = (xs: (number | null)[]): { min: number; max: number } | null => {
+  const v = xs.filter((n): n is number => n != null && Number.isFinite(n));
+  return v.length ? { min: Math.min(...v), max: Math.max(...v) } : null;
+};
+
+function ParticipantReport({
+  p, dividers, markers, chartWidth, showName,
+}: {
+  p: SessionParticipant;
+  dividers: number[];
+  markers: { frac: number; label: string }[];
+  chartWidth: number;
+  showName: boolean;
+}) {
+  const [zoom, setZoom] = useState(1);
+  const contentW = Math.round(chartWidth * zoom);
+  const totalSec = p.curve.length ? p.curve[p.curve.length - 1].t : 0;
+  const index = p.curve.map(c => c.index);
+  const alpha = p.curve.map(c => c.alpha);
+  const iR = seriesRange(index);
+  const aR = seriesRange(alpha);
+  const hasCurve = p.curve.length > 1;
+
   return (
     <View style={styles.participant}>
       {showName && <Text style={styles.rowTitle}>{p.participant}</Text>}
@@ -427,11 +484,71 @@ function ParticipantReport({ p, dividers, showName }: { p: SessionParticipant; d
         <Score label="Mean Alpha" value={fmtScore(p.mean_alpha)} />
       </View>
 
-      <Text style={[styles.sectionLabel, { marginTop: spacing.md }]}>Index</Text>
-      <MiniLineChart data={p.curve.map(c => c.index)} color={colors.accentAlt} dividers={dividers} />
+      {hasCurve && (
+        <>
+          {/* Zoom widens the chart content; the horizontal ScrollView then
+              pans through the session and the time axis adapts. */}
+          <View style={styles.zoomRow}>
+            <Pressable onPress={() => setZoom(z => Math.max(1, z - 1))} disabled={zoom <= 1} hitSlop={8}>
+              <Text style={[styles.zoomBtn, zoom <= 1 && styles.navDisabled]}>−</Text>
+            </Pressable>
+            <Text style={styles.zoomLabel}>{zoom}×</Text>
+            <Pressable onPress={() => setZoom(z => Math.min(6, z + 1))} disabled={zoom >= 6} hitSlop={8}>
+              <Text style={[styles.zoomBtn, zoom >= 6 && styles.navDisabled]}>+</Text>
+            </Pressable>
+          </View>
 
-      <Text style={[styles.sectionLabel, { marginTop: spacing.md }]}>Alpha</Text>
-      <MiniLineChart data={p.curve.map(c => c.alpha)} color={colors.accent} dividers={dividers} />
+          <ScrollView
+            horizontal
+            scrollEnabled={zoom > 1}
+            showsHorizontalScrollIndicator={zoom > 1}
+            nestedScrollEnabled
+            directionalLockEnabled
+          >
+            <View style={{ width: contentW }}>
+              <View style={styles.chartHead}>
+                <Text style={styles.sectionLabel}>Index</Text>
+                {iR && <Text style={styles.rangeLabel}>high {iR.max.toFixed(1)} · low {iR.min.toFixed(1)}</Text>}
+              </View>
+              <MiniLineChart data={index} color={colors.accentAlt} dividers={dividers} width={contentW} />
+
+              <View style={[styles.chartHead, { marginTop: spacing.md }]}>
+                <Text style={styles.sectionLabel}>Alpha</Text>
+                {aR && (
+                  <Text style={styles.rangeLabel}>
+                    high {aR.max > 0 ? '+' : ''}{aR.max.toFixed(1)}% · low {aR.min.toFixed(1)}% · baseline 0%
+                  </Text>
+                )}
+              </View>
+              <MiniLineChart data={alpha} color={colors.accent} dividers={dividers} width={contentW} baseline={0} />
+
+              <TimeAxis totalSec={totalSec} markers={markers} width={contentW} />
+            </View>
+          </ScrollView>
+        </>
+      )}
+    </View>
+  );
+}
+
+// Time scale beneath the charts: round-number markers (R1, R2, …) over a row
+// of mm:ss ticks, positioned in pixels against the (possibly zoomed) width.
+function TimeAxis({ totalSec, markers, width }: { totalSec: number; markers: { frac: number; label: string }[]; width: number }) {
+  if (totalSec <= 0) return null;
+  const step = totalSec <= 300 ? 60 : totalSec <= 900 ? 120 : 180;
+  const ticks: number[] = [];
+  for (let t = 0; t <= totalSec; t += step) ticks.push(t);
+  if (ticks[ticks.length - 1] !== totalSec) ticks.push(totalSec);
+  const clamp = (x: number) => Math.max(0, Math.min(x, width - 30));
+
+  return (
+    <View style={[styles.axis, { width }]}>
+      {markers.map((m, i) => (
+        <Text key={`m${i}`} style={[styles.axisRound, { left: clamp(m.frac * width - 8) }]}>{m.label}</Text>
+      ))}
+      {ticks.map((t, i) => (
+        <Text key={`t${i}`} style={[styles.axisTime, { left: clamp((t / totalSec) * width - 14) }]}>{fmtClock(t)}</Text>
+      ))}
     </View>
   );
 }
@@ -496,14 +613,24 @@ const styles = StyleSheet.create({
   },
   code: { ...type.h2, color: colors.text, letterSpacing: 4, fontSize: 24 },
 
-  chips: { marginBottom: spacing.md, flexGrow: 0 },
-  chip: {
-    paddingVertical: spacing.xs, paddingHorizontal: spacing.md, borderRadius: radius.pill,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.03)',
+  reportNav: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: spacing.sm,
   },
-  chipActive: { borderColor: colors.accentAlt, backgroundColor: colors.accentAltSoft },
-  chipLabel: { ...type.caption, color: colors.textDim, fontSize: 12 },
-  chipLabelActive: { color: colors.text },
+  navStep: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  navLink: { ...type.caption, color: colors.text, fontSize: 13 },
+  navDisabled: { color: colors.textDim, opacity: 0.4 },
+  navPos: { ...type.caption, color: colors.textDim, fontSize: 12 },
+
+  zoomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.md, marginTop: spacing.md },
+  zoomBtn: { ...type.h2, color: colors.text, fontSize: 22, lineHeight: 24, width: 24, textAlign: 'center' },
+  zoomLabel: { ...type.caption, color: colors.textDim, fontSize: 12, minWidth: 24, textAlign: 'center' },
+
+  chartHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  rangeLabel: { ...type.caption, color: colors.textDim, fontSize: 11 },
+  axis: { height: 30, marginTop: spacing.xs },
+  axisRound: { position: 'absolute', top: 0, ...type.caption, color: colors.textDim, fontSize: 10 },
+  axisTime: { position: 'absolute', top: 14, ...type.caption, color: colors.textDim, fontSize: 10 },
 
   reportTitle: { ...type.h2, color: colors.text, marginTop: spacing.xs },
   participant: { marginTop: spacing.lg, gap: spacing.xs },

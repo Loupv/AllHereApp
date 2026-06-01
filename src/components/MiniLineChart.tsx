@@ -1,4 +1,4 @@
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, type DimensionValue } from 'react-native';
 import Svg, { Polyline, Line } from 'react-native-svg';
 import { colors } from '../theme';
 
@@ -9,18 +9,25 @@ type Props = {
   height?: number;
   /** Fractional x-positions (0..1) for round boundary guide lines. */
   dividers?: number[];
+  /** Explicit pixel width (for zoom / horizontal scroll). Defaults to 100%. */
+  width?: number;
+  /** Draw a dashed horizontal reference line at this data value (e.g. 0 for
+   *  the alpha "no-deviation" baseline), when it falls inside the Y range. */
+  baseline?: number;
 };
 
 /**
  * Tiny dependency-free line chart (react-native-svg) for the LMT report
  * curves. Auto-scales Y to the series' own min/max, draws each run of
- * non-null points as its own polyline so silence gaps read as breaks, and
- * marks round boundaries with faint vertical guides.
+ * non-null points as its own polyline so silence gaps read as breaks, marks
+ * round boundaries with faint vertical guides, and can draw a horizontal
+ * baseline.
  *
- * Uses a 0..100 viewBox with `preserveAspectRatio="none"` so it fills the
- * parent width without needing an onLayout measure.
+ * Uses a 0..100 viewBox with `preserveAspectRatio="none"` so it stretches to
+ * whatever width it's given (full-width, or wider than the screen when zoomed
+ * inside a horizontal ScrollView).
  */
-export function MiniLineChart({ data, color, height = 96, dividers = [] }: Props) {
+export function MiniLineChart({ data, color, height = 96, dividers = [], width, baseline }: Props) {
   const vals = data.filter((v): v is number => v != null && Number.isFinite(v));
   const min = vals.length ? Math.min(...vals) : 0;
   const max = vals.length ? Math.max(...vals) : 1;
@@ -42,20 +49,27 @@ export function MiniLineChart({ data, color, height = 96, dividers = [] }: Props
   });
   if (cur.length > 1) segments.push(cur.join(' '));
 
+  const baseY = baseline != null ? 100 - ((baseline - min) / span) * 100 : null;
+  const w: DimensionValue = width ?? '100%';
+
   return (
-    <View style={[styles.wrap, { height }]}>
+    <View style={[styles.wrap, { height, width: w }]}>
       <Svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
         {dividers.map((d, i) => (
-          <Line
-            key={`d${i}`}
-            x1={d * 100}
-            y1={0}
-            x2={d * 100}
-            y2={100}
-            stroke={colors.border}
-            strokeWidth={0.5}
-          />
+          <Line key={`d${i}`} x1={d * 100} y1={0} x2={d * 100} y2={100} stroke={colors.border} strokeWidth={0.5} />
         ))}
+        {baseY != null && baseY >= 0 && baseY <= 100 && (
+          <Line
+            x1={0}
+            y1={baseY}
+            x2={100}
+            y2={baseY}
+            stroke={colors.textDim}
+            strokeWidth={0.75}
+            strokeDasharray="2 2"
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
         {segments.map((pts, i) => (
           <Polyline
             key={`s${i}`}
