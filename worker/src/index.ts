@@ -12,6 +12,8 @@
  * a user id. Auth (Apple/Google/email) + linking land in Phase 2.
  */
 
+import { verifyGoogle, verifyApple, issueSession, type Provider } from './auth';
+
 const CORS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*', // token-based, no cookies → * is fine
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -89,6 +91,10 @@ export default {
           return await getProgress(url, env);
         case 'POST /v1/progress':
           return await putProgress(request, env);
+        case 'POST /v1/auth/google':
+          return await authProvider(request, env, 'google');
+        case 'POST /v1/auth/apple':
+          return await authProvider(request, env, 'apple');
         default:
           return bad('not found', 404);
       }
@@ -215,4 +221,55 @@ async function putProgress(request: Request, env: Env): Promise<Response> {
 
   await env.DB.batch(batch);
   return json({ ok: true, upserted: batch.length });
+}
+
+/**
+ * Verify an Apple/Google ID token, upsert the user by provider sub, link
+ * the anonymous device to that user, and return a session JWT. The token
+ * is verified server-side (signature + issuer + audience) — never trusted.
+ */
+async function authProvider(request: Request, env: Env, provider: Provider): Promise<Response> {
+  if (!env.SESSION_SECRET) return json({ error: 'auth not configured (missing SESSION_SECRET)' }, 503);
+  const body = await readJson(request);
+  if (!body) return bad('invalid json');
+  const idToken = str(body.id_token);
+  if (!idToken) return bad('id_token required');
+
+  let identity;
+  try {
+    identity = provider === 'google' ? await verifyGoogle(idToken, env) : await verifyApple(idToken, env);
+  } catch {
+    return json({ error: 'invalid id_token' }, 401);
+  }
+
+  const subCol = provider === 'google' ? 'google_sub' : 'apple_sub'; // not user input — safe to inline
+  const newId = crypto.randomUUID();
+  const upsert = (email: string | null) =>
+    env.DB.prepare(
+      `INSERT INTO users (id, email, ${subCol}, created_at)
+       VALUES (?1, ?2, ?3, ?4)
+       ON CONFLICT(${subCol}) DO UPDATE SET email = COALESCE(?2, users.email)
+       RETURNING id`,
+    )
+      .bind(newId, email, identity.sub, Date.now())
+      .first<{ id: string }>();
+
+  let row: { id: string } | null;
+  try {
+    row = await upsert(identity.email);
+  } catch {
+    // email has a UNIQUE constraint; a cross-provider email collision would
+    // otherwise 500. Keep the account, just don't store the colliding email.
+    row = await upsert(null);
+  }
+  const userId = row?.id ?? newId;
+
+  // Link the anonymous device to this user (analytics joins device → user).
+  const deviceId = str(body.device_id);
+  if (deviceId) {
+    await env.DB.prepare(`UPDATE devices SET user_id = ?1 WHERE id = ?2`).bind(userId, deviceId).run();
+  }
+
+  const session = await issueSession(userId, env);
+  return json({ session, user_id: userId, email: identity.email });
 }
