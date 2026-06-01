@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, useWindowDimensions,
   type NativeSyntheticEvent, type NativeScrollEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useProgress } from '../src/player/progressStore';
@@ -467,14 +469,41 @@ function ParticipantReport({
   chartWidth: number;
   showName: boolean;
 }) {
+  const index = useMemo(() => p.curve.map(c => c.index), [p.curve]);
+  const alpha = useMemo(() => p.curve.map(c => c.alpha), [p.curve]);
+  const n = p.curve.length;
+  const totalSec = n ? p.curve[n - 1].t : 0;
+  const hasCurve = n > 1;
+
+  // Zoom lock: never zoom so far that the visible window holds fewer than
+  // ~12 samples — past that the line is just a few coarse segments ("pas
+  // assez de définition").
+  const maxZoom = Math.max(1, Math.min(8, Math.floor(n / 12)));
   const [zoom, setZoom] = useState(1);
+  const [scrollX, setScrollX] = useState(0);
+  const baseZoom = useRef(1);
+  const setZoomClamped = (z: number) => setZoom(Math.max(1, Math.min(maxZoom, z)));
+
   const contentW = Math.round(chartWidth * zoom);
-  const totalSec = p.curve.length ? p.curve[p.curve.length - 1].t : 0;
-  const index = p.curve.map(c => c.index);
-  const alpha = p.curve.map(c => c.alpha);
-  const iR = seriesRange(index);
-  const aR = seriesRange(alpha);
-  const hasCurve = p.curve.length > 1;
+  const showsAll = contentW <= chartWidth + 1;
+
+  // High/low reflect the visible window, not the whole session — so they
+  // adjust as you pan/zoom.
+  const f0 = showsAll ? 0 : scrollX / contentW;
+  const f1 = showsAll ? 1 : (scrollX + chartWidth) / contentW;
+  const i0 = Math.max(0, Math.floor(f0 * (n - 1)));
+  const i1 = Math.min(n - 1, Math.ceil(f1 * (n - 1)));
+  const iR = seriesRange(index.slice(i0, i1 + 1));
+  const aR = seriesRange(alpha.slice(i0, i1 + 1));
+
+  // Pinch to zoom (buttons still work; handy on the simulator).
+  const rememberZoom = () => { baseZoom.current = zoom; };
+  const applyPinch = (scale: number) => setZoomClamped(baseZoom.current * scale);
+  const pinch = Gesture.Pinch()
+    .onBegin(() => { runOnJS(rememberZoom)(); })
+    .onUpdate(e => { runOnJS(applyPinch)(e.scale); });
+
+  const zoomLabel = Number.isInteger(zoom) ? `${zoom}×` : `${zoom.toFixed(1)}×`;
 
   return (
     <View style={styles.participant}>
@@ -490,45 +519,49 @@ function ParticipantReport({
 
       {hasCurve && (
         <>
-          {/* Zoom widens the chart content; the horizontal ScrollView then
-              pans through the session and the time axis adapts. */}
+          {/* Pinch (or the buttons) widens the chart content; the horizontal
+              ScrollView pans through the session, axis + high/low adapting. */}
           <View style={styles.zoomRow}>
-            <Pressable onPress={() => setZoom(z => Math.max(1, z - 1))} disabled={zoom <= 1} hitSlop={8}>
+            <Pressable onPress={() => setZoomClamped(zoom - 1)} disabled={zoom <= 1} hitSlop={8}>
               <Text style={[styles.zoomBtn, zoom <= 1 && styles.navDisabled]}>−</Text>
             </Pressable>
-            <Text style={styles.zoomLabel}>{zoom}×</Text>
-            <Pressable onPress={() => setZoom(z => Math.min(6, z + 1))} disabled={zoom >= 6} hitSlop={8}>
-              <Text style={[styles.zoomBtn, zoom >= 6 && styles.navDisabled]}>+</Text>
+            <Text style={styles.zoomLabel}>{zoomLabel}</Text>
+            <Pressable onPress={() => setZoomClamped(zoom + 1)} disabled={zoom >= maxZoom} hitSlop={8}>
+              <Text style={[styles.zoomBtn, zoom >= maxZoom && styles.navDisabled]}>+</Text>
             </Pressable>
           </View>
 
-          <ScrollView
-            horizontal
-            scrollEnabled={zoom > 1}
-            showsHorizontalScrollIndicator={zoom > 1}
-            nestedScrollEnabled
-            directionalLockEnabled
-          >
-            <View style={{ width: contentW }}>
-              <View style={styles.chartHead}>
-                <Text style={styles.sectionLabel}>Index</Text>
-                {iR && <Text style={styles.rangeLabel}>high {iR.max.toFixed(1)} · low {iR.min.toFixed(1)}</Text>}
-              </View>
-              <MiniLineChart data={index} color={colors.accentAlt} dividers={dividers} width={contentW} />
+          <GestureDetector gesture={pinch}>
+            <ScrollView
+              horizontal
+              scrollEnabled={!showsAll}
+              showsHorizontalScrollIndicator={!showsAll}
+              nestedScrollEnabled
+              directionalLockEnabled
+              scrollEventThrottle={32}
+              onScroll={e => setScrollX(e.nativeEvent.contentOffset.x)}
+            >
+              <View style={{ width: contentW }}>
+                <View style={styles.chartHead}>
+                  <Text style={styles.sectionLabel}>Index</Text>
+                  {iR && <Text style={styles.rangeLabel}>high {iR.max.toFixed(1)} · low {iR.min.toFixed(1)}</Text>}
+                </View>
+                <MiniLineChart data={index} color={colors.accentAlt} dividers={dividers} width={contentW} />
 
-              <View style={[styles.chartHead, { marginTop: spacing.md }]}>
-                <Text style={styles.sectionLabel}>Alpha</Text>
-                {aR && (
-                  <Text style={styles.rangeLabel}>
-                    high {aR.max > 0 ? '+' : ''}{aR.max.toFixed(1)}% · low {aR.min.toFixed(1)}% · baseline 0%
-                  </Text>
-                )}
-              </View>
-              <MiniLineChart data={alpha} color={colors.accent} dividers={dividers} width={contentW} baseline={0} />
+                <View style={[styles.chartHead, { marginTop: spacing.md }]}>
+                  <Text style={styles.sectionLabel}>Alpha</Text>
+                  {aR && (
+                    <Text style={styles.rangeLabel}>
+                      high {aR.max > 0 ? '+' : ''}{aR.max.toFixed(1)}% · low {aR.min.toFixed(1)}% · baseline 0%
+                    </Text>
+                  )}
+                </View>
+                <MiniLineChart data={alpha} color={colors.accent} dividers={dividers} width={contentW} baseline={0} />
 
-              <TimeAxis totalSec={totalSec} markers={markers} width={contentW} />
-            </View>
-          </ScrollView>
+                <TimeAxis totalSec={totalSec} markers={markers} width={contentW} />
+              </View>
+            </ScrollView>
+          </GestureDetector>
         </>
       )}
     </View>

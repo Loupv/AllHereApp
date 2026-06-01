@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { View, StyleSheet, type DimensionValue } from 'react-native';
 import Svg, { Polyline, Line } from 'react-native-svg';
 import { colors } from '../theme';
@@ -27,7 +28,7 @@ type Props = {
  * whatever width it's given (full-width, or wider than the screen when zoomed
  * inside a horizontal ScrollView).
  */
-export function MiniLineChart({ data, color, height = 96, dividers = [], width, baseline }: Props) {
+export const MiniLineChart = memo(function MiniLineChart({ data, color, height = 96, dividers = [], width, baseline }: Props) {
   const vals = data.filter((v): v is number => v != null && Number.isFinite(v));
   const min = vals.length ? Math.min(...vals) : 0;
   const max = vals.length ? Math.max(...vals) : 1;
@@ -85,7 +86,7 @@ export function MiniLineChart({ data, color, height = 96, dividers = [], width, 
       </Svg>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrap: {
