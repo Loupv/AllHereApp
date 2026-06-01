@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  View, Text, Pressable, StyleSheet, ScrollView, useWindowDimensions,
+  View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, useWindowDimensions,
   type NativeSyntheticEvent, type NativeScrollEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -108,27 +108,30 @@ export default function AccountScreen() {
   const [sessions, setSessions] = useState<LmtSession[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
 
-  useEffect(() => {
+  // Pull the account data. Flushes queued listen events first so the just-
+  // played audio is counted server-side before we read /v1/stats (otherwise
+  // the seconds counter lags a buffer cycle). Also the pull-to-refresh path.
+  const load = useCallback(async (isRefresh = false) => {
     if (!user) return;
-    let on = true;
-    // Flush any queued listen events first so the just-played audio is
-    // counted server-side before we read /v1/stats — otherwise the seconds
-    // counter lags behind by a buffer cycle.
-    void (async () => {
+    if (isRefresh) setRefreshing(true);
+    try {
       await flush();
-      if (!on) return;
-      void fetchStats().then(s => on && setStats(s));
-      void fetchMe().then(m => on && setPairCode(m?.pair_code ?? null));
-      void fetchSessions().then(s => {
-        if (!on) return;
-        setSessions(s);
-        if (s && s.length && !selectedId) setSelectedId(s[0].id);
-      });
-    })();
-    return () => { on = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      const [s, m, sess] = await Promise.all([fetchStats(), fetchMe(), fetchSessions()]);
+      if (!mounted.current) return;
+      setStats(s);
+      setPairCode(m?.pair_code ?? null);
+      setSessions(sess);
+      setSelectedId(prev => prev ?? (sess && sess.length ? sess[0].id : null));
+    } finally {
+      if (mounted.current && isRefresh) setRefreshing(false);
+    }
   }, [user]);
+
+  useEffect(() => { void load(false); }, [load]);
 
   const goTo = (idx: number) => {
     setActive(idx);
@@ -207,7 +210,7 @@ export default function AccountScreen() {
         </Pane>
 
         {/* ── Pane 2 · Live Tracker ────────────────────────────── */}
-        <Pane width={width} tint={PANE_THEME[1].tint}>
+        <Pane width={width} tint={PANE_THEME[1].tint} refreshing={refreshing} onRefresh={() => void load(true)}>
           <LiveTrackerPane
             user={!!user}
             pairCode={pairCode}
@@ -218,7 +221,7 @@ export default function AccountScreen() {
         </Pane>
 
         {/* ── Pane 3 · Quantified Meditation Reports ───────────── */}
-        <Pane width={width} tint={PANE_THEME[2].tint}>
+        <Pane width={width} tint={PANE_THEME[2].tint} refreshing={refreshing} onRefresh={() => void load(true)}>
           <ReportPane
             user={!!user}
             sessions={sessions}
@@ -242,11 +245,24 @@ export default function AccountScreen() {
 
 // Full-width swipe pane: a soft top-down colour wash over the dark base, with
 // the scrollable content on top.
-function Pane({ width, tint, children }: { width: number; tint: string; children: ReactNode }) {
+function Pane({
+  width, tint, children, refreshing, onRefresh,
+}: {
+  width: number; tint: string; children: ReactNode;
+  refreshing?: boolean; onRefresh?: () => void;
+}) {
   return (
     <View style={{ width }}>
       <LinearGradient colors={[tint, 'transparent']} style={styles.paneGradient} pointerEvents="none" />
-      <ScrollView contentContainerStyle={styles.paneContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.paneContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          onRefresh
+            ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={colors.textDim} />
+            : undefined
+        }
+      >
         {children}
       </ScrollView>
     </View>
