@@ -19,6 +19,8 @@ import { colors, radius, spacing, type } from '../src/theme';
 
 const PANES = ['Silent Mind Practice', 'Live Tracker', 'Quantified Meditation Reports'] as const;
 
+const CHART_H = 130; // taller charts — more room for the curve detail
+
 // Per-pane identity colour — magenta (SM program), indigo (Live Tracker),
 // teal (QM reports). Each tints its pane background and the active tab rail.
 const PANE_THEME = [
@@ -364,16 +366,7 @@ function LiveTrackerPane({
   if (!user) return <Text style={styles.empty}>Sign in to connect the Live Meditation Tracker.</Text>;
   return (
     <View>
-      <Text style={styles.sectionLabel}>Your pairing code</Text>
-      <View style={[styles.codeBox, { borderColor: accent }]}>
-        <Text style={styles.code} selectable>{pairCode ?? '…'}</Text>
-      </View>
-      <Text style={styles.caption}>
-        In the Live Meditation Tracker desktop app, open Settings → AllHere sync and paste this code.
-        Your finished sessions will then appear here.
-      </Text>
-
-      <Text style={[styles.sectionLabel, { marginTop: spacing.lg }]}>Available sessions</Text>
+      <Text style={styles.sectionLabel}>Available sessions</Text>
       {sessions == null ? (
         <Text style={styles.empty}>Loading…</Text>
       ) : sessions.length === 0 ? (
@@ -395,6 +388,16 @@ function LiveTrackerPane({
           ))}
         </View>
       )}
+
+      {/* Pairing code — at the bottom: you set it once, then it's just
+          reference. */}
+      <Text style={[styles.sectionLabel, styles.codeHead]}>Pairing code</Text>
+      <View style={[styles.codeBox, { borderColor: accent }]}>
+        <Text style={styles.code} selectable>{pairCode ?? '…'}</Text>
+      </View>
+      <Text style={styles.codeHint}>
+        Paste this in the Live Meditation Tracker → Settings → AllHere sync to link your sessions.
+      </Text>
     </View>
   );
 }
@@ -472,38 +475,63 @@ function ParticipantReport({
   const index = useMemo(() => p.curve.map(c => c.index), [p.curve]);
   const alpha = useMemo(() => p.curve.map(c => c.alpha), [p.curve]);
   const n = p.curve.length;
-  const totalSec = n ? p.curve[n - 1].t : 0;
   const hasCurve = n > 1;
 
-  // Zoom lock: never zoom so far that the visible window holds fewer than
-  // ~12 samples — past that the line is just a few coarse segments ("pas
-  // assez de définition").
-  const maxZoom = Math.max(1, Math.min(8, Math.floor(n / 12)));
+  // Windowed zoom/pan: only the visible slice renders. Labels & axes stay
+  // fixed, Y rescales to the window (real definition + ordinate values), and
+  // pinch/drag drive it directly — no nested ScrollView fighting the pager.
+  const MIN_SAMPLES = 12;
+  const maxZoom = Math.max(1, Math.floor(n / MIN_SAMPLES));
   const [zoom, setZoom] = useState(1);
-  const [scrollX, setScrollX] = useState(0);
+  const [centerFrac, setCenterFrac] = useState(0.5);
   const baseZoom = useRef(1);
+  const baseCenter = useRef(0.5);
   const setZoomClamped = (z: number) => setZoom(Math.max(1, Math.min(maxZoom, z)));
 
-  const contentW = Math.round(chartWidth * zoom);
-  const showsAll = contentW <= chartWidth + 1;
+  const count = Math.min(n, Math.max(Math.min(MIN_SAMPLES, n), Math.round(n / zoom)));
+  const start = Math.max(0, Math.min(n - count, Math.round(centerFrac * (n - 1) - count / 2)));
+  const end = Math.min(n, start + count); // exclusive
+  const idxSlice = index.slice(start, end);
+  const alphaSlice = alpha.slice(start, end);
 
-  // High/low reflect the visible window, not the whole session — so they
-  // adjust as you pan/zoom.
-  const f0 = showsAll ? 0 : scrollX / contentW;
-  const f1 = showsAll ? 1 : (scrollX + chartWidth) / contentW;
-  const i0 = Math.max(0, Math.floor(f0 * (n - 1)));
-  const i1 = Math.min(n - 1, Math.ceil(f1 * (n - 1)));
-  const iR = seriesRange(index.slice(i0, i1 + 1));
-  const aR = seriesRange(alpha.slice(i0, i1 + 1));
+  const iR = seriesRange(idxSlice);
+  const aR = seriesRange(alphaSlice);
+  // Alpha scale always includes the 0 % baseline.
+  const aLo = aR ? Math.min(aR.min, 0) : 0;
+  const aHi = aR ? Math.max(aR.max, 0) : 1;
 
-  // Pinch to zoom (buttons still work; handy on the simulator).
-  const rememberZoom = () => { baseZoom.current = zoom; };
-  const applyPinch = (scale: number) => setZoomClamped(baseZoom.current * scale);
+  const tStart = hasCurve ? p.curve[start].t : 0;
+  const tEnd = hasCurve ? p.curve[Math.max(start, end - 1)].t : 0;
+  // Map global round dividers / markers into the visible window.
+  const denom = n - 1 || 1;
+  const g0 = start / denom;
+  const g1 = (end - 1) / denom;
+  const gSpan = g1 - g0 || 1;
+  const localDividers = dividers.map(d => (d - g0) / gSpan).filter(x => x >= 0 && x <= 1);
+  const localMarkers = markers
+    .map(m => ({ frac: (m.frac - g0) / gSpan, label: m.label }))
+    .filter(m => m.frac >= 0 && m.frac <= 1);
+
+  const pinchBegin = () => { baseZoom.current = zoom; };
+  const pinchMove = (scale: number) => setZoomClamped(baseZoom.current * scale);
+  const panBegin = () => { baseCenter.current = centerFrac; };
+  const panMove = (tx: number) => {
+    const dSamples = (-tx / chartWidth) * count;
+    setCenterFrac(Math.max(0, Math.min(1, (baseCenter.current * denom + dSamples) / denom)));
+  };
   const pinch = Gesture.Pinch()
-    .onBegin(() => { runOnJS(rememberZoom)(); })
-    .onUpdate(e => { runOnJS(applyPinch)(e.scale); });
+    .onBegin(() => runOnJS(pinchBegin)())
+    .onUpdate(e => runOnJS(pinchMove)(e.scale));
+  const pan = Gesture.Pan()
+    .enabled(count < n)
+    .activeOffsetX([-10, 10])
+    .failOffsetY([-12, 12])
+    .onBegin(() => runOnJS(panBegin)())
+    .onUpdate(e => runOnJS(panMove)(e.translationX));
+  const gesture = Gesture.Race(pinch, pan);
 
   const zoomLabel = Number.isInteger(zoom) ? `${zoom}×` : `${zoom.toFixed(1)}×`;
+  const fmtPct = (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`;
 
   return (
     <View style={styles.participant}>
@@ -511,17 +539,16 @@ function ParticipantReport({
 
       <View style={styles.scoreGrid}>
         <Score label="QM3 Index" value={fmtScore(p.qm3_index)} />
-        <Score label="QM3 Alpha +" value={fmtScore(p.qm3_alpha_pos)} />
-        <Score label="QM3 Alpha −" value={fmtScore(p.qm3_alpha_neg)} />
-        <Score label="Mean Index" value={fmtScore(p.mean_index)} />
-        <Score label="Mean Alpha" value={fmtScore(p.mean_alpha)} />
+        <Score label="QM3 α+" value={fmtScore(p.qm3_alpha_pos)} />
+        <Score label="QM3 α−" value={fmtScore(p.qm3_alpha_neg)} />
+        <Score label="Mean idx" value={fmtScore(p.mean_index)} />
+        <Score label="Mean α" value={fmtScore(p.mean_alpha)} />
       </View>
 
       {hasCurve && (
         <>
-          {/* Pinch (or the buttons) widens the chart content; the horizontal
-              ScrollView pans through the session, axis + high/low adapting. */}
           <View style={styles.zoomRow}>
+            <Text style={styles.zoomHint}>pinch / drag to explore</Text>
             <Pressable onPress={() => setZoomClamped(zoom - 1)} disabled={zoom <= 1} hitSlop={8}>
               <Text style={[styles.zoomBtn, zoom <= 1 && styles.navDisabled]}>−</Text>
             </Pressable>
@@ -531,36 +558,34 @@ function ParticipantReport({
             </Pressable>
           </View>
 
-          <GestureDetector gesture={pinch}>
-            <ScrollView
-              horizontal
-              scrollEnabled={!showsAll}
-              showsHorizontalScrollIndicator={!showsAll}
-              nestedScrollEnabled
-              directionalLockEnabled
-              scrollEventThrottle={32}
-              onScroll={e => setScrollX(e.nativeEvent.contentOffset.x)}
-            >
-              <View style={{ width: contentW }}>
-                <View style={styles.chartHead}>
-                  <Text style={styles.sectionLabel}>Index</Text>
-                  {iR && <Text style={styles.rangeLabel}>high {iR.max.toFixed(1)} · low {iR.min.toFixed(1)}</Text>}
+          <GestureDetector gesture={gesture}>
+            <View>
+              <Text style={styles.chartLabel}>Index</Text>
+              <View style={styles.chartRow}>
+                <View style={styles.yAxis}>
+                  <Text style={styles.axisVal}>{iR ? iR.max.toFixed(0) : ''}</Text>
+                  <Text style={styles.axisVal}>{iR ? iR.min.toFixed(0) : ''}</Text>
                 </View>
-                <MiniLineChart data={index} color={colors.accentAlt} dividers={dividers} width={contentW} />
-
-                <View style={[styles.chartHead, { marginTop: spacing.md }]}>
-                  <Text style={styles.sectionLabel}>Alpha</Text>
-                  {aR && (
-                    <Text style={styles.rangeLabel}>
-                      high {aR.max > 0 ? '+' : ''}{aR.max.toFixed(1)}% · low {aR.min.toFixed(1)}% · baseline 0%
-                    </Text>
-                  )}
+                <View style={styles.chartFill}>
+                  <MiniLineChart data={idxSlice} color={colors.accentAlt} dividers={localDividers} height={CHART_H} min={iR?.min} max={iR?.max} />
                 </View>
-                <MiniLineChart data={alpha} color={colors.accent} dividers={dividers} width={contentW} baseline={0} />
-
-                <TimeAxis totalSec={totalSec} markers={markers} width={contentW} />
               </View>
-            </ScrollView>
+
+              <Text style={[styles.chartLabel, { marginTop: spacing.md }]}>Alpha · baseline 0%</Text>
+              <View style={styles.chartRow}>
+                <View style={styles.yAxis}>
+                  <Text style={styles.axisVal}>{fmtPct(aHi)}</Text>
+                  <Text style={styles.axisVal}>{fmtPct(aLo)}</Text>
+                </View>
+                <View style={styles.chartFill}>
+                  <MiniLineChart data={alphaSlice} color={colors.accent} dividers={localDividers} height={CHART_H} min={aLo} max={aHi} baseline={0} />
+                </View>
+              </View>
+
+              <View style={styles.axisRowWrap}>
+                <TimeAxis tStart={tStart} tEnd={tEnd} markers={localMarkers} />
+              </View>
+            </View>
           </GestureDetector>
         </>
       )}
@@ -568,24 +593,23 @@ function ParticipantReport({
   );
 }
 
-// Time scale beneath the charts: round-number markers (R1, R2, …) over a row
-// of mm:ss ticks, positioned in pixels against the (possibly zoomed) width.
-function TimeAxis({ totalSec, markers, width }: { totalSec: number; markers: { frac: number; label: string }[]; width: number }) {
-  if (totalSec <= 0) return null;
-  const step = totalSec <= 300 ? 60 : totalSec <= 900 ? 120 : 180;
-  const ticks: number[] = [];
-  for (let t = 0; t <= totalSec; t += step) ticks.push(t);
-  if (ticks[ticks.length - 1] !== totalSec) ticks.push(totalSec);
-  const clamp = (x: number) => Math.max(0, Math.min(x, width - 30));
-
+// Time scale beneath the charts: evenly-spaced mm:ss ticks (flex row) plus
+// round-number markers (R1, R2…) at their fractional position in the window.
+function TimeAxis({ tStart, tEnd, markers }: { tStart: number; tEnd: number; markers: { frac: number; label: string }[] }) {
+  const span = tEnd - tStart;
+  if (span <= 0) return null;
+  const N = 4;
+  const ticks = Array.from({ length: N + 1 }, (_, i) => tStart + (i / N) * span);
   return (
-    <View style={[styles.axis, { width }]}>
+    <View style={styles.axis}>
       {markers.map((m, i) => (
-        <Text key={`m${i}`} style={[styles.axisRound, { left: clamp(m.frac * width - 8) }]}>{m.label}</Text>
+        <Text key={`m${i}`} style={[styles.axisRound, { left: `${m.frac * 100}%` }]}>{m.label}</Text>
       ))}
-      {ticks.map((t, i) => (
-        <Text key={`t${i}`} style={[styles.axisTime, { left: clamp((t / totalSec) * width - 14) }]}>{fmtClock(t)}</Text>
-      ))}
+      <View style={styles.axisTicksRow}>
+        {ticks.map((t, i) => (
+          <Text key={`t${i}`} style={styles.axisTime}>{fmtClock(t)}</Text>
+        ))}
+      </View>
     </View>
   );
 }
@@ -643,12 +667,15 @@ const styles = StyleSheet.create({
 
   empty: { ...type.body, color: colors.textDim, marginTop: spacing.md },
 
+  codeHead: { marginTop: spacing.xl },
   codeBox: {
-    backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: radius.md,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: radius.sm,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderStrong,
-    paddingVertical: spacing.md, alignItems: 'center', marginBottom: spacing.sm,
+    paddingVertical: spacing.xs, paddingHorizontal: spacing.md, marginBottom: spacing.xs,
   },
-  code: { ...type.h2, color: colors.text, letterSpacing: 4, fontSize: 24 },
+  code: { ...type.h3, color: colors.text, letterSpacing: 3, fontSize: 16 },
+  codeHint: { ...type.caption, color: colors.textDim, fontSize: 11 },
 
   reportNav: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -659,25 +686,31 @@ const styles = StyleSheet.create({
   navDisabled: { color: colors.textDim, opacity: 0.4 },
   navPos: { ...type.caption, color: colors.textDim, fontSize: 12 },
 
-  zoomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.md, marginTop: spacing.md },
+  zoomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.md, marginTop: spacing.sm },
+  zoomHint: { ...type.caption, color: colors.textDim, fontSize: 10, flex: 1 },
   zoomBtn: { ...type.h2, color: colors.text, fontSize: 22, lineHeight: 24, width: 24, textAlign: 'center' },
   zoomLabel: { ...type.caption, color: colors.textDim, fontSize: 12, minWidth: 24, textAlign: 'center' },
 
-  chartHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  rangeLabel: { ...type.caption, color: colors.textDim, fontSize: 11 },
-  axis: { height: 30, marginTop: spacing.xs },
+  chartLabel: { ...type.sectionLabel, color: colors.textDim, marginBottom: spacing.xs },
+  chartRow: { flexDirection: 'row', alignItems: 'stretch' },
+  yAxis: { width: 40, height: CHART_H, justifyContent: 'space-between', paddingRight: spacing.xs },
+  axisVal: { ...type.caption, color: colors.textDim, fontSize: 10, textAlign: 'right' },
+  chartFill: { flex: 1 },
+  axisRowWrap: { paddingLeft: 40 },
+  axis: { height: 26, marginTop: spacing.xs },
+  axisTicksRow: { position: 'absolute', left: 0, right: 0, top: 12, flexDirection: 'row', justifyContent: 'space-between' },
   axisRound: { position: 'absolute', top: 0, ...type.caption, color: colors.textDim, fontSize: 10 },
-  axisTime: { position: 'absolute', top: 14, ...type.caption, color: colors.textDim, fontSize: 10 },
+  axisTime: { ...type.caption, color: colors.textDim, fontSize: 10 },
 
   reportTitle: { ...type.h2, color: colors.text, marginTop: spacing.xs },
-  participant: { marginTop: spacing.lg, gap: spacing.xs },
-  scoreGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  participant: { marginTop: spacing.md, gap: spacing.xs },
+  scoreGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
   score: {
-    minWidth: 96, flexGrow: 1, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: radius.md,
+    minWidth: 60, flexGrow: 1, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: radius.sm,
   },
-  scoreValue: { ...type.h2, color: colors.text, fontSize: 22 },
-  scoreLabel: { ...type.caption, color: colors.textDim, fontSize: 11, marginTop: 2 },
+  scoreValue: { ...type.h3, color: colors.text, fontSize: 15 },
+  scoreLabel: { ...type.caption, color: colors.textDim, fontSize: 10, marginTop: 1 },
 
   footer: {
     backgroundColor: colors.bgDeep,

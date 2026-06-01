@@ -13,8 +13,12 @@ type Props = {
   /** Explicit pixel width (for zoom / horizontal scroll). Defaults to 100%. */
   width?: number;
   /** Draw a dashed horizontal reference line at this data value (e.g. 0 for
-   *  the alpha "no-deviation" baseline), when it falls inside the Y range. */
+   *  the alpha "no-deviation" baseline). The Y range is extended to include
+   *  it so the baseline is always visible. */
   baseline?: number;
+  /** Explicit Y range. When omitted, auto-scales to the data's min/max. */
+  min?: number;
+  max?: number;
 };
 
 /**
@@ -28,11 +32,12 @@ type Props = {
  * whatever width it's given (full-width, or wider than the screen when zoomed
  * inside a horizontal ScrollView).
  */
-export const MiniLineChart = memo(function MiniLineChart({ data, color, height = 96, dividers = [], width, baseline }: Props) {
+export const MiniLineChart = memo(function MiniLineChart({ data, color, height = 96, dividers = [], width, baseline, min, max }: Props) {
   const vals = data.filter((v): v is number => v != null && Number.isFinite(v));
-  const min = vals.length ? Math.min(...vals) : 0;
-  const max = vals.length ? Math.max(...vals) : 1;
-  const span = max - min || 1;
+  let lo = min ?? (vals.length ? Math.min(...vals) : 0);
+  let hi = max ?? (vals.length ? Math.max(...vals) : 1);
+  if (baseline != null) { lo = Math.min(lo, baseline); hi = Math.max(hi, baseline); }
+  const span = hi - lo || 1;
   const n = data.length;
 
   // Split into contiguous non-null segments → one polyline each.
@@ -45,12 +50,12 @@ export const MiniLineChart = memo(function MiniLineChart({ data, color, height =
       return;
     }
     const x = n > 1 ? (i / (n - 1)) * 100 : 0;
-    const y = 100 - ((v - min) / span) * 100;
+    const y = 100 - ((v - lo) / span) * 100;
     cur.push(`${x.toFixed(2)},${y.toFixed(2)}`);
   });
   if (cur.length > 1) segments.push(cur.join(' '));
 
-  const baseY = baseline != null ? 100 - ((baseline - min) / span) * 100 : null;
+  const baseY = baseline != null ? 100 - ((baseline - lo) / span) * 100 : null;
   const w: DimensionValue = width ?? '100%';
 
   return (
