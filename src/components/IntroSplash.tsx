@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Image, StyleSheet, Pressable, Text, ActivityIndicator, Platform } from 'react-native';
+import { View, Image, StyleSheet, Pressable, Text, TextInput, ActivityIndicator, Platform } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -12,7 +12,14 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import pkg from '../../package.json';
 import { colors, type, radius, spacing } from '../theme';
 import { useAuth, type AuthProvider } from '../auth/authStore';
-import { signInWithApple, signInWithGoogle, appleAvailable, googleAvailable } from '../auth/signIn';
+import {
+  signInWithApple,
+  signInWithGoogle,
+  requestEmailOtp,
+  verifyEmailOtp,
+  appleAvailable,
+  googleAvailable,
+} from '../auth/signIn';
 import { GoogleIcon, MailIcon } from './ProviderIcons';
 
 // Full version (e.g. V1.3.30) — reads straight from package.json (the
@@ -40,6 +47,9 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
   const rootOpacity = useSharedValue(1);
 
   const [busy, setBusy] = useState<AuthProvider | null>(null);
+  const [mode, setMode] = useState<'choices' | 'email' | 'code'>('choices');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
 
   const dismiss = () => {
     rootOpacity.value = withTiming(0, { duration: 500, easing: Easing.in(Easing.cubic) }, (done) => {
@@ -82,6 +92,19 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
     }
   };
 
+  const sendCode = async () => {
+    if (busy || !email.includes('@')) return;
+    setBusy('email');
+    try {
+      await requestEmailOtp(email.trim());
+      setMode('code');
+    } catch {
+      /* couldn't send — stay on the email step */
+    }
+    setBusy(null);
+  };
+  const verifyCode = () => run('email', () => verifyEmailOtp(email.trim(), code.trim()));
+
   return (
     <Animated.View style={[styles.root, rootStyle]}>
       <View style={styles.brand}>
@@ -95,44 +118,82 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
 
       {!alreadyAuthed && (
         <Animated.View style={[styles.authBlock, btnStyle]} pointerEvents="box-none">
-          {appleAvailable && (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-              cornerRadius={radius.pill}
-              style={styles.appleBtn}
-              onPress={() => void run('apple', signInWithApple)}
-            />
-          )}
-
-          {googleAvailable && (
-            <Pressable
-              style={[styles.btn, styles.btnLight]}
-              disabled={!!busy}
-              onPress={() => void run('google', signInWithGoogle)}
-            >
-              {busy === 'google' ? (
-                <ActivityIndicator color="#1F1F1F" />
-              ) : (
-                <>
-                  <GoogleIcon size={18} />
-                  <Text style={[styles.btnText, styles.btnTextDark]}>Continue with Google</Text>
-                </>
+          {mode === 'choices' && (
+            <>
+              {appleAvailable && (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                  cornerRadius={radius.pill}
+                  style={styles.appleBtn}
+                  onPress={() => void run('apple', signInWithApple)}
+                />
               )}
-            </Pressable>
+              {googleAvailable && (
+                <Pressable style={[styles.btn, styles.btnLight]} disabled={!!busy} onPress={() => void run('google', signInWithGoogle)}>
+                  {busy === 'google' ? (
+                    <ActivityIndicator color="#1F1F1F" />
+                  ) : (
+                    <>
+                      <GoogleIcon size={18} />
+                      <Text style={[styles.btnText, styles.btnTextDark]}>Continue with Google</Text>
+                    </>
+                  )}
+                </Pressable>
+              )}
+              <Pressable style={[styles.btn, styles.btnDark]} disabled={!!busy} onPress={() => setMode('email')}>
+                <MailIcon size={15} color={colors.text} />
+                <Text style={[styles.btnText, styles.btnTextLight]}>Continue with email</Text>
+              </Pressable>
+              <Pressable hitSlop={10} disabled={!!busy} onPress={dismiss} style={styles.skip}>
+                <Text style={styles.skipText}>Continue without account</Text>
+              </Pressable>
+            </>
           )}
 
-          {/* Email is intentionally disabled until the OTP backend / mail
-              sending infra is set up (see worker auth + BACKLOG). */}
-          <Pressable style={[styles.btn, styles.btnDisabled]} disabled>
-            <MailIcon size={15} color={colors.textDim} />
-            <Text style={[styles.btnText, styles.btnTextMuted]}>Continue with email</Text>
-            <Text style={styles.soon}>SOON</Text>
-          </Pressable>
+          {mode === 'email' && (
+            <>
+              <TextInput
+                style={styles.input}
+                placeholder="you@email.com"
+                placeholderTextColor={colors.textDim}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoFocus
+                value={email}
+                onChangeText={setEmail}
+                onSubmitEditing={() => void sendCode()}
+              />
+              <Pressable style={[styles.btn, styles.btnLight]} disabled={!!busy} onPress={() => void sendCode()}>
+                {busy === 'email' ? <ActivityIndicator color="#1F1F1F" /> : <Text style={[styles.btnText, styles.btnTextDark]}>Send code</Text>}
+              </Pressable>
+              <Pressable hitSlop={10} disabled={!!busy} onPress={() => setMode('choices')} style={styles.skip}>
+                <Text style={styles.skipText}>Back</Text>
+              </Pressable>
+            </>
+          )}
 
-          <Pressable hitSlop={10} disabled={!!busy} onPress={dismiss} style={styles.skip}>
-            <Text style={styles.skipText}>Continue without account</Text>
-          </Pressable>
+          {mode === 'code' && (
+            <>
+              <TextInput
+                style={styles.input}
+                placeholder="6-digit code"
+                placeholderTextColor={colors.textDim}
+                keyboardType="number-pad"
+                autoFocus
+                value={code}
+                onChangeText={setCode}
+                onSubmitEditing={verifyCode}
+              />
+              <Pressable style={[styles.btn, styles.btnLight]} disabled={!!busy} onPress={verifyCode}>
+                {busy === 'email' ? <ActivityIndicator color="#1F1F1F" /> : <Text style={[styles.btnText, styles.btnTextDark]}>Verify &amp; sign in</Text>}
+              </Pressable>
+              <Pressable hitSlop={10} disabled={!!busy} onPress={() => setMode('email')} style={styles.skip}>
+                <Text style={styles.skipText}>Back</Text>
+              </Pressable>
+            </>
+          )}
         </Animated.View>
       )}
 
@@ -180,10 +241,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   btnLight: { backgroundColor: '#FFFFFF' },
-  btnDisabled: { backgroundColor: 'rgba(255,255,255,0.06)' },
+  btnDark: { backgroundColor: 'rgba(255,255,255,0.1)' },
   btnText: { ...type.button, fontSize: 15 },
   btnTextDark: { color: '#1F1F1F' },
-  btnTextMuted: { color: colors.textDim },
+  btnTextLight: { color: colors.text },
+  input: {
+    height: 46,
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    color: colors.text,
+    textAlign: 'center',
+    fontSize: 15,
+  },
   soon: {
     ...type.overline,
     fontSize: 9,

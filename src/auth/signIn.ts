@@ -54,6 +54,26 @@ export const signInWithApple = async (): Promise<void> => {
   await exchange('apple', cred.identityToken);
 };
 
+export const requestEmailOtp = async (email: string): Promise<void> => {
+  const res = await fetch(apiUrl('/v1/auth/email/request'), {
+    method: 'POST',
+    headers: apiHeaders(),
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) throw new Error(`email/request HTTP ${res.status}`);
+};
+
+export const verifyEmailOtp = async (email: string, code: string): Promise<void> => {
+  const res = await fetch(apiUrl('/v1/auth/email/verify'), {
+    method: 'POST',
+    headers: apiHeaders(),
+    body: JSON.stringify({ email, code, device_id: getDeviceId() ?? undefined }),
+  });
+  if (!res.ok) throw new Error(`email/verify HTTP ${res.status}`);
+  const data = (await res.json()) as { session: string; user_id: string; email: string | null };
+  useAuth.getState().login({ userId: data.user_id, email: data.email ?? null, provider: 'email', session: data.session });
+};
+
 export const signInWithGoogle = async (): Promise<void> => {
   configureGoogle();
   await GoogleSignin.hasPlayServices();
