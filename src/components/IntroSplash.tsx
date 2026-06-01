@@ -7,6 +7,8 @@ import Animated, {
   withDelay,
   Easing,
   runOnJS,
+  FadeIn,
+  FadeOut,
 } from 'react-native-reanimated';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import pkg from '../../package.json';
@@ -128,7 +130,7 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
       {!alreadyAuthed && (
         <Animated.View style={[styles.authBlock, btnStyle, kb > 0 && { bottom: kb + 16 }]} pointerEvents="box-none">
           {mode === 'choices' && (
-            <>
+            <Animated.View key="choices" entering={FadeIn.duration(260)} exiting={FadeOut.duration(160)} style={styles.modeGroup}>
               {appleAvailable && (
                 <AppleAuthentication.AppleAuthenticationButton
                   buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
@@ -157,11 +159,11 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
               <Pressable hitSlop={10} disabled={!!busy} onPress={dismiss} style={styles.skip}>
                 <Text style={styles.skipText}>Continue without account</Text>
               </Pressable>
-            </>
+            </Animated.View>
           )}
 
           {mode === 'email' && (
-            <>
+            <Animated.View key="email" entering={FadeIn.duration(260)} exiting={FadeOut.duration(160)} style={styles.modeGroup}>
               <TextInput
                 style={styles.input}
                 placeholder="you@email.com"
@@ -174,17 +176,17 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
                 onChangeText={setEmail}
                 onSubmitEditing={() => void sendCode()}
               />
-              <Pressable style={[styles.btn, styles.btnAccent]} disabled={!!busy} onPress={() => void sendCode()}>
-                {busy === 'email' ? <ActivityIndicator color={colors.text} /> : <Text style={[styles.btnText, styles.btnTextLight]}>Send code</Text>}
+              <Pressable style={[styles.btn, styles.btnOutline]} disabled={!!busy} onPress={() => void sendCode()}>
+                {busy === 'email' ? <ActivityIndicator color={colors.accent} /> : <Text style={[styles.btnText, styles.btnTextAccent]}>Send code</Text>}
               </Pressable>
               <Pressable hitSlop={10} disabled={!!busy} onPress={() => setMode('choices')} style={styles.skip}>
                 <Text style={styles.skipText}>Back</Text>
               </Pressable>
-            </>
+            </Animated.View>
           )}
 
           {mode === 'code' && (
-            <>
+            <Animated.View key="code" entering={FadeIn.duration(260)} exiting={FadeOut.duration(160)} style={styles.modeGroup}>
               <TextInput
                 style={styles.input}
                 placeholder="6-digit code"
@@ -195,13 +197,13 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
                 onChangeText={setCode}
                 onSubmitEditing={verifyCode}
               />
-              <Pressable style={[styles.btn, styles.btnAccent]} disabled={!!busy} onPress={verifyCode}>
-                {busy === 'email' ? <ActivityIndicator color={colors.text} /> : <Text style={[styles.btnText, styles.btnTextLight]}>Verify &amp; sign in</Text>}
+              <Pressable style={[styles.btn, styles.btnOutline]} disabled={!!busy} onPress={verifyCode}>
+                {busy === 'email' ? <ActivityIndicator color={colors.accent} /> : <Text style={[styles.btnText, styles.btnTextAccent]}>Verify &amp; sign in</Text>}
               </Pressable>
               <Pressable hitSlop={10} disabled={!!busy} onPress={() => setMode('email')} style={styles.skip}>
                 <Text style={styles.skipText}>Back</Text>
               </Pressable>
-            </>
+            </Animated.View>
           )}
         </Animated.View>
       )}
@@ -251,10 +253,18 @@ const styles = StyleSheet.create({
   },
   btnLight: { backgroundColor: '#FFFFFF' },
   btnDark: { backgroundColor: 'rgba(255,255,255,0.1)' },
-  btnAccent: { backgroundColor: colors.accent },
+  btnOutline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.accent,
+    alignSelf: 'center',
+    paddingHorizontal: 36,
+  },
   btnText: { ...type.button, fontSize: 15 },
   btnTextDark: { color: '#1F1F1F' },
   btnTextLight: { color: colors.text },
+  btnTextAccent: { color: colors.accent },
+  modeGroup: { gap: 10 },
   input: {
     height: 46,
     borderRadius: radius.pill,
