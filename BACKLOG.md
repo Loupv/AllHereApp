@@ -81,15 +81,18 @@
   pins to), then re-flow the transcript / waveform / controls around
   it as proportional bands. ~30 % of the file gets touched; do it in a
   dedicated session.
-- [ ] **VideoBackground: honour the `paused` prop (currently a no-op).**
+- [ ] **VideoBackground: honour the `paused` prop (still a no-op).**
   The Earth loop is mounted in up to 3 places (`_layout.tsx` root,
-  `Player.tsx` overlay, `silent-mind-tree.tsx`). When the Player
-  overlay opens over an "earth" root screen, two full-screen video
-  decoders run at once (2× `<video>` on web, 2× ExoPlayer on Android,
-  2× AVSampleBufferDisplayLayer on iOS), and `paused` doesn't stop any
-  of them. Either honour `paused` (pause native/exo/html5 decode +
-  short-circuit the iOS CADisplayLink) or share a single instance.
-  Cost: CPU + memory + battery, worst on Android mid-range.
+  `Player.tsx` overlay, `silent-mind-tree.tsx`). As of 1.3.30 each
+  instance owns its OWN player — we removed the shared ExoPlayer
+  (`EarthVideoContext`) because one ExoPlayer can only drive one Android
+  Surface, which froze the tab background after visiting the SM tree /
+  Player. So "share a single instance" is off the table; the remaining
+  lever is to actually honour `paused` (pause exo / html5 / native
+  decode + short-circuit the iOS CADisplayLink) on the off-screen
+  instances. The decoder cost went UP with per-view players: 2–3 full
+  decoders can run at once — CPU + memory + battery, worst on Android
+  mid-range.
 
 ## Testing (automated)
 Prioritised by ROI. Nothing wired yet — `npx tsc --noEmit` is the only
