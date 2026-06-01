@@ -60,7 +60,12 @@
       "expo-router",
       "expo-audio",
       "expo-font",
-      "expo-video"
+      "expo-video",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        { "iosUrlScheme": "com.googleusercontent.apps.995573673473-9ph32u38c6vcdea1lua29cvnd7s0em27" }
+      ]
     ],
     "extra": {
       "router": {},

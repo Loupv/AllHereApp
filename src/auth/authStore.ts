@@ -6,42 +6,34 @@ import { kv } from '../content/kv';
 export type AuthProvider = 'google' | 'apple' | 'email';
 
 export type User = {
-  name: string;
-  email?: string;
+  /** Server-side user id (from /v1/auth/*). */
+  userId: string;
+  email: string | null;
   provider: AuthProvider;
+  /** Session JWT — bearer for authenticated calls. */
+  session: string;
 };
 
 type State = {
   user: User | null;
-  login: (provider: AuthProvider, info?: Partial<User>) => void;
+  login: (user: User) => void;
   logout: () => void;
 };
 
 const STORAGE_KEY = 'ah_auth_v1';
 
-// Hand-rolled persistence (see progressStore for the rationale — zustand's
-// `persist` middleware silently broke web mount in this project). The
-// payload is a single `User | null`, so a one-shot `kv` round-trip per
-// login/logout is plenty.
+// Hand-rolled persistence (zustand's `persist` middleware broke web mount in
+// this project — see progressStore). On native, `kv.get` is synchronous but
+// reads an in-memory cache that's empty at module load, so we async-hydrate
+// below. Web's localStorage is sync, so initial state is correct there.
 //
-// Hydration nuance: on native, `kv.get` is *synchronous* but reads from an
-// in-memory cache that's empty at module load (AsyncStorage is async).
-// So a cold-start `kv.get(STORAGE_KEY)` returns `undefined` even when a
-// previous session saved a user — and the LoginScreen flashes back up
-// despite the user already being signed in.
-//
-// On web, localStorage IS synchronous, so `kv.get` works on the first
-// call. We use it for initial state there and skip the async hydrate.
+// NOTE: the session JWT is stored in AsyncStorage (not encrypted). Fine for
+// an MVP; harden with `expo-secure-store` before handling anything sensitive.
 const initialUser: User | null = kv.get<User>(STORAGE_KEY) ?? null;
 
 export const useAuth = create<State>((set) => ({
   user: initialUser,
-  login: (provider, info) => {
-    const user: User = {
-      name: info?.name ?? (provider === 'email' ? 'Guest' : provider[0].toUpperCase() + provider.slice(1) + ' user'),
-      email: info?.email,
-      provider,
-    };
+  login: (user) => {
     set({ user });
     kv.set(STORAGE_KEY, user);
   },
@@ -51,21 +43,21 @@ export const useAuth = create<State>((set) => ({
   },
 }));
 
-// Native cold-start hydration. The synchronous `kv.get` above missed the
-// stored user (memCache empty at module load); fall back to the async
-// AsyncStorage read and patch the store once it resolves. Skipped on web
-// since localStorage already gave us the right answer.
+// Native cold-start hydration — the synchronous `kv.get` above missed the
+// stored user (memCache empty at module load); read AsyncStorage directly
+// and patch the store once it resolves (unless someone logged in/out since).
 if (Platform.OS !== 'web' && initialUser == null) {
   AsyncStorage.getItem(STORAGE_KEY)
-    .then(raw => {
+    .then((raw) => {
       if (!raw) return;
       try {
         const stored = JSON.parse(raw) as User;
-        // Only patch if no one logged in / out in the meantime.
-        if (useAuth.getState().user == null) {
-          useAuth.setState({ user: stored });
-        }
-      } catch { /* malformed payload — ignore, user just signs in again */ }
+        if (useAuth.getState().user == null) useAuth.setState({ user: stored });
+      } catch {
+        /* malformed payload — ignore, user signs in again */
+      }
     })
-    .catch(() => { /* AsyncStorage unavailable — fall back to login flow */ });
+    .catch(() => {
+      /* AsyncStorage unavailable — fall back to the login flow */
+    });
 }
