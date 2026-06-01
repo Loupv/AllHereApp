@@ -8,6 +8,12 @@
     "enabled": true,
     "head_sampling_rate": 1
   },
+  "vars": {
+    // Optional shared app key. Empty = guard disabled (local dev). In
+    // production set a real value with `wrangler secret put APP_KEY`
+    // (a secret of the same name overrides this var at runtime).
+    "APP_KEY": ""
+  },
   "d1_databases": [
     {
       "binding": "DB",

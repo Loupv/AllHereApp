@@ -27,6 +27,15 @@ const json = (data: unknown, status = 200): Response =>
 
 const bad = (message: string, status = 400): Response => json({ error: message }, status);
 
+/** Constant-time string compare (Workers extension); length leak is fine. */
+const timingSafeEqual = (a: string, b: string): boolean => {
+  const enc = new TextEncoder();
+  const ba = enc.encode(a);
+  const bb = enc.encode(b);
+  if (ba.byteLength !== bb.byteLength) return false;
+  return crypto.subtle.timingSafeEqual(ba, bb);
+};
+
 type ActorKind = 'device' | 'user';
 const isActorKind = (v: unknown): v is ActorKind => v === 'device' || v === 'user';
 
@@ -59,6 +68,14 @@ export default {
 
     const url = new URL(request.url);
     const route = `${request.method} ${url.pathname}`;
+
+    // Optional shared-key guard — enabled only when APP_KEY is set (prod).
+    // Health check stays open; /v1/* requires a matching X-App-Key.
+    if (env.APP_KEY && url.pathname.startsWith('/v1/')) {
+      if (!timingSafeEqual(request.headers.get('X-App-Key') ?? '', env.APP_KEY)) {
+        return json({ error: 'unauthorized' }, 401);
+      }
+    }
 
     try {
       switch (route) {
