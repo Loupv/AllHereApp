@@ -171,11 +171,6 @@ export default function AccountScreen() {
     if (idx !== active) setActive(idx);
   };
 
-  const openReport = (id: string) => {
-    setSelectedId(id);
-    goTo(2);
-  };
-
   const selected = sessions?.find(s => s.id === selectedId) ?? null;
 
   return (
@@ -244,8 +239,8 @@ export default function AccountScreen() {
             user={!!user}
             pairCode={pairCode}
             sessions={sessions}
-            onOpen={openReport}
             accent={PANE_THEME[1].accent}
+            chartWidth={width - spacing.lg * 2}
           />
         </Pane>
 
@@ -256,7 +251,6 @@ export default function AccountScreen() {
             sessions={sessions}
             selected={selected}
             onSelect={setSelectedId}
-            onBack={() => goTo(1)}
             chartWidth={width - spacing.lg * 2}
           />
         </Pane>
@@ -355,15 +349,31 @@ function SmProgramPane({
 
 // ── Pane 2 ────────────────────────────────────────────────────────────────
 function LiveTrackerPane({
-  user, pairCode, sessions, onOpen, accent,
+  user, pairCode, sessions, accent, chartWidth,
 }: {
   user: boolean;
   pairCode: string | null;
   sessions: LmtSession[] | null;
-  onOpen: (id: string) => void;
   accent: string;
+  chartWidth: number;
 }) {
+  // Tapping a session opens its report in place (no tab change); back returns
+  // to the list.
+  const [openId, setOpenId] = useState<string | null>(null);
   if (!user) return <Text style={styles.empty}>Sign in to connect the Live Meditation Tracker.</Text>;
+
+  const open = openId ? sessions?.find(s => s.id === openId) ?? null : null;
+  if (open) {
+    return (
+      <View>
+        <Pressable onPress={() => setOpenId(null)} hitSlop={8} style={styles.backRow}>
+          <Text style={styles.navLink}>‹ Sessions</Text>
+        </Pressable>
+        <SessionReport session={open} chartWidth={chartWidth} />
+      </View>
+    );
+  }
+
   return (
     <View>
       <Text style={styles.sectionLabel}>Available sessions</Text>
@@ -376,7 +386,7 @@ function LiveTrackerPane({
           {sessions.map(s => (
             <Pressable
               key={s.id}
-              onPress={() => onOpen(s.id)}
+              onPress={() => setOpenId(s.id)}
               style={({ pressed }) => [styles.listRow, pressed && styles.rowPressed]}
             >
               <View style={{ flex: 1 }}>
@@ -404,54 +414,57 @@ function LiveTrackerPane({
 
 // ── Pane 3 ────────────────────────────────────────────────────────────────
 function ReportPane({
-  user, sessions, selected, onSelect, onBack, chartWidth,
+  user, sessions, selected, onSelect, chartWidth,
 }: {
   user: boolean;
   sessions: LmtSession[] | null;
   selected: LmtSession | null;
   onSelect: (id: string) => void;
-  onBack: () => void;
   chartWidth: number;
 }) {
   if (!user) return <Text style={styles.empty}>Sign in to see your meditation reports.</Text>;
   if (!sessions || sessions.length === 0) return <Text style={styles.empty}>No reports yet.</Text>;
-  if (!selected) return <Text style={styles.empty}>Pick a session in Live Tracker.</Text>;
+  if (!selected) return <Text style={styles.empty}>No session selected.</Text>;
 
-  const dividers = roundDividers(selected.protocol);
-  const markers = roundMarkers(selected.protocol);
   const idx = sessions.findIndex(s => s.id === selected.id);
   const prev = idx > 0 ? sessions[idx - 1] : null;       // newer
   const next = idx < sessions.length - 1 ? sessions[idx + 1] : null; // older
 
   return (
     <View>
-      {/* Navigation: back to the list + step through sessions */}
+      {/* Step through sessions (newest → oldest) */}
       <View style={styles.reportNav}>
-        <Pressable onPress={onBack} hitSlop={8}>
-          <Text style={styles.navLink}>‹ Sessions</Text>
+        <Pressable onPress={() => prev && onSelect(prev.id)} disabled={!prev} hitSlop={8}>
+          <Text style={[styles.navLink, !prev && styles.navDisabled]}>‹ Prev</Text>
         </Pressable>
-        <View style={styles.navStep}>
-          <Pressable onPress={() => prev && onSelect(prev.id)} disabled={!prev} hitSlop={8}>
-            <Text style={[styles.navLink, !prev && styles.navDisabled]}>Prev</Text>
-          </Pressable>
-          <Text style={styles.navPos}>{idx + 1} / {sessions.length}</Text>
-          <Pressable onPress={() => next && onSelect(next.id)} disabled={!next} hitSlop={8}>
-            <Text style={[styles.navLink, !next && styles.navDisabled]}>Next</Text>
-          </Pressable>
-        </View>
+        <Text style={styles.navPos}>{idx + 1} / {sessions.length}</Text>
+        <Pressable onPress={() => next && onSelect(next.id)} disabled={!next} hitSlop={8}>
+          <Text style={[styles.navLink, !next && styles.navDisabled]}>Next ›</Text>
+        </Pressable>
       </View>
 
-      <Text style={styles.reportTitle}>{sessionTypeLabel(selected)}</Text>
-      <Text style={styles.caption}>{fmtSessionDate(selected.started_at)}{selected.mode ? ` · ${selected.mode}` : ''}</Text>
+      <SessionReport session={selected} chartWidth={chartWidth} />
+    </View>
+  );
+}
 
-      {selected.participants.map(p => (
+// A single session's report: title + per-participant scores & charts. Shared
+// by the inline Live Tracker view and the Quantified Meditation Reports tab.
+function SessionReport({ session, chartWidth }: { session: LmtSession; chartWidth: number }) {
+  const dividers = roundDividers(session.protocol);
+  const markers = roundMarkers(session.protocol);
+  return (
+    <View>
+      <Text style={styles.reportTitle}>{sessionTypeLabel(session)}</Text>
+      <Text style={styles.caption}>{fmtSessionDate(session.started_at)}{session.mode ? ` · ${session.mode}` : ''}</Text>
+      {session.participants.map(p => (
         <ParticipantReport
           key={p.participant}
           p={p}
           dividers={dividers}
           markers={markers}
           chartWidth={chartWidth}
-          showName={selected.participants.length > 1}
+          showName={session.participants.length > 1}
         />
       ))}
     </View>
@@ -681,7 +694,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: spacing.sm,
   },
-  navStep: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  backRow: { marginBottom: spacing.sm },
   navLink: { ...type.caption, color: colors.text, fontSize: 13 },
   navDisabled: { color: colors.textDim, opacity: 0.4 },
   navPos: { ...type.caption, color: colors.textDim, fontSize: 12 },
