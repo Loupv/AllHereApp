@@ -174,8 +174,8 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
                 onChangeText={setEmail}
                 onSubmitEditing={() => void sendCode()}
               />
-              <Pressable style={[styles.btn, styles.btnLight]} disabled={!!busy} onPress={() => void sendCode()}>
-                {busy === 'email' ? <ActivityIndicator color="#1F1F1F" /> : <Text style={[styles.btnText, styles.btnTextDark]}>Send code</Text>}
+              <Pressable style={[styles.btn, styles.btnAccent]} disabled={!!busy} onPress={() => void sendCode()}>
+                {busy === 'email' ? <ActivityIndicator color={colors.text} /> : <Text style={[styles.btnText, styles.btnTextLight]}>Send code</Text>}
               </Pressable>
               <Pressable hitSlop={10} disabled={!!busy} onPress={() => setMode('choices')} style={styles.skip}>
                 <Text style={styles.skipText}>Back</Text>
@@ -195,8 +195,8 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
                 onChangeText={setCode}
                 onSubmitEditing={verifyCode}
               />
-              <Pressable style={[styles.btn, styles.btnLight]} disabled={!!busy} onPress={verifyCode}>
-                {busy === 'email' ? <ActivityIndicator color="#1F1F1F" /> : <Text style={[styles.btnText, styles.btnTextDark]}>Verify &amp; sign in</Text>}
+              <Pressable style={[styles.btn, styles.btnAccent]} disabled={!!busy} onPress={verifyCode}>
+                {busy === 'email' ? <ActivityIndicator color={colors.text} /> : <Text style={[styles.btnText, styles.btnTextLight]}>Verify &amp; sign in</Text>}
               </Pressable>
               <Pressable hitSlop={10} disabled={!!busy} onPress={() => setMode('email')} style={styles.skip}>
                 <Text style={styles.skipText}>Back</Text>
@@ -251,6 +251,7 @@ const styles = StyleSheet.create({
   },
   btnLight: { backgroundColor: '#FFFFFF' },
   btnDark: { backgroundColor: 'rgba(255,255,255,0.1)' },
+  btnAccent: { backgroundColor: colors.accent },
   btnText: { ...type.button, fontSize: 15 },
   btnTextDark: { color: '#1F1F1F' },
   btnTextLight: { color: colors.text },
