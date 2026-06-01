@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.lg, paddingBottom: spacing.md, gap: spacing.md,
-    backgroundColor: colors.bgSoft,
+    backgroundColor: colors.bgDeep,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
   identity: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
   scoreLabel: { ...type.caption, color: colors.textDim, fontSize: 11, marginTop: 2 },
 
   footer: {
-    backgroundColor: colors.bgSoft,
+    backgroundColor: colors.bgDeep,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
     paddingHorizontal: spacing.lg, paddingTop: spacing.md, gap: spacing.sm,
   },
