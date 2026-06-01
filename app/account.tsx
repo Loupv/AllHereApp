@@ -314,7 +314,15 @@ function Pane({
         showsVerticalScrollIndicator={false}
         refreshControl={
           onRefresh
-            ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={colors.textDim} />
+            ? (
+              <RefreshControl
+                refreshing={!!refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.text}
+                colors={[colors.text]}
+                progressBackgroundColor={colors.bgSoft}
+              />
+            )
             : undefined
         }
       >
