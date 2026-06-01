@@ -195,7 +195,7 @@ export default function AccountScreen() {
       >
         {/* ── Pane 1 · Silent Mind program ─────────────────────── */}
         <Pane width={width} tint={PANE_THEME[0].tint}>
-          <SmProgramPane listened={listened} accent={PANE_THEME[0].accent} />
+          <SmProgramPane listened={listened} />
         </Pane>
 
         {/* ── Pane 2 · Live Tracker ────────────────────────────── */}
@@ -259,21 +259,25 @@ function Pane({ width, tint, children }: { width: number; tint: string; children
 }
 
 // ── Pane 1 ────────────────────────────────────────────────────────────────
-function SmProgramPane({ listened, accent }: { listened: Record<string, true>; accent: string }) {
+function SmProgramPane({ listened }: { listened: Record<string, true> }) {
+  // Total counts the FULL planned program, including not-yet-released
+  // (coming-soon) audios — so the percentage reflects progress toward the
+  // whole journey, not just what's currently downloadable.
   const parts = silentMindVolets
     .map(v => {
-      const tracks = [...v.tracks, ...(v.qmTracks ?? [])].filter(t => !t.comingSoon);
+      const tracks = [...v.tracks, ...(v.qmTracks ?? [])];
       const done = tracks.filter(t => listened[t.id]).length;
       return { id: v.id, title: v.title || 'Introduction', done, total: tracks.length };
     })
     .filter(p => p.total > 0);
   const done = parts.reduce((a, p) => a + p.done, 0);
   const total = parts.reduce((a, p) => a + p.total, 0);
+  const pct = total ? Math.round((done / total) * 100) : 0;
 
   return (
     <View>
-      <Text style={[styles.bigStat, { color: accent }]}>{done}<Text style={styles.bigStatDim}> / {total}</Text></Text>
-      <Text style={styles.caption}>tracks completed in the Silent Mind program</Text>
+      <Text style={styles.bigStat}>{pct}<Text style={styles.bigStatDim}>%</Text></Text>
+      <Text style={styles.caption}>of the Silent Mind program completed ({done} / {total} audios)</Text>
       <View style={styles.list}>
         {parts.map(p => (
           <View key={p.id} style={styles.listRow}>
@@ -301,7 +305,7 @@ function LiveTrackerPane({
     <View>
       <Text style={styles.sectionLabel}>Your pairing code</Text>
       <View style={[styles.codeBox, { borderColor: accent }]}>
-        <Text style={[styles.code, { color: accent }]} selectable>{pairCode ?? '…'}</Text>
+        <Text style={styles.code} selectable>{pairCode ?? '…'}</Text>
       </View>
       <Text style={styles.caption}>
         In the Live Meditation Tracker desktop app, open Settings → AllHere sync and paste this code.
@@ -435,10 +439,10 @@ const styles = StyleSheet.create({
   paneGradient: { position: 'absolute', top: 0, left: 0, right: 0, height: 340 },
   paneContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xl, gap: spacing.xs },
 
-  bigStat: { ...type.display, color: colors.text, fontSize: 44 },
+  bigStat: { ...type.h2, color: colors.text, fontSize: 40 },
   bigStatDim: { color: colors.textDim },
-  caption: { ...type.caption, color: colors.textMuted, marginTop: 2 },
-  sectionLabel: { ...type.sectionLabel, color: colors.textMuted, marginBottom: spacing.xs },
+  caption: { ...type.caption, color: colors.textDim, marginTop: 2 },
+  sectionLabel: { ...type.sectionLabel, color: colors.textDim, marginBottom: spacing.xs },
 
   list: { marginTop: spacing.md, gap: 0 },
   listRow: {
@@ -449,7 +453,7 @@ const styles = StyleSheet.create({
   rowPressed: { backgroundColor: 'rgba(255,255,255,0.04)' },
   rowTitle: { ...type.body, color: colors.text, fontSize: 15 },
   rowMeta: { ...type.caption, color: colors.textDim, fontSize: 12, marginTop: 2 },
-  rowScore: { ...type.h3, color: colors.accentAlt },
+  rowScore: { ...type.body, color: colors.text },
 
   empty: { ...type.body, color: colors.textDim, marginTop: spacing.md },
 
@@ -485,7 +489,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingTop: spacing.md, gap: spacing.sm,
   },
   statsRow: { gap: 2 },
-  statText: { ...type.caption, color: colors.textMuted, fontSize: 12 },
+  statText: { ...type.caption, color: colors.textDim, fontSize: 12 },
   footerActions: { flexDirection: 'row', justifyContent: 'space-between' },
   footerLink: { ...type.caption, color: colors.textDim, textDecorationLine: 'underline' },
   footerLinkDanger: { color: '#FF6B6B' },
