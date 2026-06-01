@@ -1,0 +1,20 @@
+{
+  // AllHere activity & progress API (Cloudflare Worker + D1).
+  // Deploy: `npm run deploy` from this dir. Local: `npm run dev`.
+  "name": "allhere-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-01",
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "allhere",
+      // Replace after `npm run db:create` prints the id (local dev works without it).
+      "database_id": "PLACEHOLDER_RUN_db:create",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

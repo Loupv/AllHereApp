@@ -1,0 +1,19 @@
+{
+  "name": "allhere-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AllHere activity & progress API — Cloudflare Worker + D1",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "typecheck": "tsc --noEmit",
+    "db:create": "wrangler d1 create allhere",
+    "db:migrate:local": "wrangler d1 migrations apply allhere --local",
+    "db:migrate:remote": "wrangler d1 migrations apply allhere --remote"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "wrangler": "^4.95.0"
+  }
+}
