@@ -8,20 +8,16 @@
 		"enabled": true,
 		"head_sampling_rate": 1
 	},
+	// Public OAuth client ids — the audiences we accept on provider tokens.
 	"vars": {
-		// Optional shared app key. Empty = guard disabled (local dev). In
-		// production set a real value with `wrangler secret put APP_KEY`
-		// (a secret of the same name overrides this var at runtime).
-		"APP_KEY": "",
-		// Public OAuth client ids — the audiences we accept on provider tokens.
 		"GOOGLE_IOS_CLIENT_ID": "995573673473-9ph32u38c6vcdea1lua29cvnd7s0em27.apps.googleusercontent.com",
 		"GOOGLE_ANDROID_CLIENT_ID": "995573673473-ae3j4othcddl1g5bif7l176iptqnvc39.apps.googleusercontent.com",
 		"GOOGLE_WEB_CLIENT_ID": "995573673473-1phdgt49e3c0a9g2ug7fv6h3bpuj1m07.apps.googleusercontent.com",
-		"APPLE_BUNDLE_ID": "org.allhere.silentmind",
-		// Session-signing secret — set the REAL value with
-		// `wrangler secret put SESSION_SECRET` (overrides this empty default).
-		"SESSION_SECRET": ""
+		"APPLE_BUNDLE_ID": "org.allhere.silentmind"
 	},
+	// APP_KEY + SESSION_SECRET are SECRETS — set with `wrangler secret put …`,
+	// deliberately NOT vars (an empty var here would reset the secret on every
+	// deploy). Their types live in src/env.d.ts.
 	"d1_databases": [
 		{
 			"binding": "DB",
