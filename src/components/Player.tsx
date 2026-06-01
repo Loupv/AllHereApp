@@ -17,6 +17,7 @@ import { trackProgram, trackLocation } from '../content/catalog';
 import { AtmosphereBackground } from './AtmosphereBackground';
 import { VideoBackground } from './VideoBackground';
 import { resolveAudioSource, prefetchAudio } from '../content/audioResolver';
+import { track as trackEvent } from '../analytics';
 import { getAudioSource, getInterSource, getOutroSource, getTranscriptSource, getInterTranscriptSource } from '../content/audioRegistry';
 import { WAVEFORMS } from '../content/waveforms.generated';
 import { colors, radius, spacing, type } from '../theme';
@@ -656,6 +657,22 @@ function PlayerInner() {
       prefetchAudio(nextInPlaylist.id).catch(() => {});
     }
   }, [status.playing, track?.id, currentRound, playlist, index]);
+
+  // Activity tracking: play_start once per track + a play_progress
+  // heartbeat while playing (server sums duration_s → total listening
+  // time). Fire-and-forget; the interval stops on pause / unmount, so
+  // listening time only accrues during actual playback.
+  const playStartedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!status.playing || !track?.id) return;
+    const id = track.id;
+    if (playStartedRef.current !== id) {
+      playStartedRef.current = id;
+      trackEvent('play_start', { audio_id: id });
+    }
+    const hb = setInterval(() => trackEvent('play_progress', { audio_id: id, duration_s: 15 }), 15000);
+    return () => clearInterval(hb);
+  }, [status.playing, track?.id]);
 
   // (Offline download UI moved to ContentCard via TrackCard — see
   // useTrackDownload hook. The Player no longer carries that affordance.)
@@ -1532,7 +1549,7 @@ function PlayerInner() {
                   from inside the player via 'End this round →'. */}
               {rounds ? null : (
                 <Pressable
-                  onPress={playPrev}
+                  onPress={() => { trackEvent('skip', { audio_id: track?.id, payload: { dir: 'prev' } }); playPrev(); }}
                   disabled={!hasPrev}
                   hitSlop={10}
                   style={[styles.navBtn, !hasPrev && styles.navBtnDisabled]}
@@ -1543,7 +1560,7 @@ function PlayerInner() {
               <Text style={styles.title} numberOfLines={2}>{noOrphan(track.title)}</Text>
               {rounds ? null : (
                 <Pressable
-                  onPress={playNext}
+                  onPress={() => { trackEvent('skip', { audio_id: track?.id, payload: { dir: 'next' } }); playNext(); }}
                   disabled={!hasNext}
                   hitSlop={10}
                   style={[styles.navBtn, !hasNext && styles.navBtnDisabled]}

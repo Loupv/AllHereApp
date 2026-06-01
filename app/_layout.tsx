@@ -7,7 +7,7 @@ import Animated, {
   useAnimatedStyle, useSharedValue, withTiming, Easing,
   FadeIn, FadeOut,
 } from 'react-native-reanimated';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -31,7 +31,7 @@ import { VideoBackground } from '../src/components/VideoBackground';
 import { useShaderThemeStore } from '../src/shaders/themeStore';
 import { themeForJourneyPosition } from '../src/shaders';
 import { useProgress } from '../src/player/progressStore';
-import { initAnalytics } from '../src/analytics';
+import { initAnalytics, track as trackEvent } from '../src/analytics';
 import pkg from '../package.json';
 import { WebSwipeBack } from '../src/components/WebSwipeBack';
 import { usePlayerStore } from '../src/player/store';
@@ -84,6 +84,12 @@ export default function RootLayout() {
   useEffect(() => {
     void initAnalytics(pkg.version);
   }, []);
+  // Feature usage: log every screen the user lands on (tabs + detail
+  // pages). One central point via the router path; fire-and-forget.
+  const pathname = usePathname();
+  useEffect(() => {
+    if (pathname) trackEvent('feature_open', { payload: { path: pathname } });
+  }, [pathname]);
   // `playerOpen` is also used below to fade the navigator tree —
   // hoisting the read here so we can pass it into `shaderPaused`.
   const playerOpen = usePlayerStore(s => s.isOpen);
