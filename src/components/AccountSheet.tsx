@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, View, Text, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, SlideInDown, SlideOutDown, FadeOut } from 'react-native-reanimated';
@@ -6,7 +6,14 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { useProgress } from '../player/progressStore';
 import { useAuth } from '../auth/authStore';
+import { fetchStats, type AccountStats } from '../analytics/stats';
 import { colors, radius, spacing, type } from '../theme';
+
+const fmtTime = (s: number): string => {
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m`;
+  return `${Math.floor(m / 60)}h ${m % 60}m`;
+};
 
 type Props = {
   visible: boolean;
@@ -35,6 +42,13 @@ export function AccountSheet({ visible, onClose }: Props) {
   const logout = useAuth(s => s.logout);
   const handleLogout = () => { logout(); onClose(); };
   const insets = useSafeAreaInsets();
+  const [stats, setStats] = useState<AccountStats | null>(null);
+  useEffect(() => {
+    if (!visible || !user) { setStats(null); return; }
+    let on = true;
+    void fetchStats().then((s) => { if (on) setStats(s); });
+    return () => { on = false; };
+  }, [visible, user]);
   const [confirmingReset, setConfirmingReset] = useState(false);
   const handleReset = () => {
     if (!confirmingReset) {
@@ -96,6 +110,13 @@ export function AccountSheet({ visible, onClose }: Props) {
                 into actions; no header line. */}
 
             {user && <Text style={styles.email}>{user.email ?? 'Signed in'}</Text>}
+
+            {user && stats && (
+              <View style={styles.statsBlock}>
+                <Text style={styles.statLine}>{stats.listens} listens · {fmtTime(stats.seconds)} listened</Text>
+                <Text style={styles.statLine}>{stats.qmRounds} QM rounds · {stats.streakDays}-day streak</Text>
+              </View>
+            )}
 
             {/* Reset progress — two-tap confirm. First tap reveals the
                 warning copy in red; second tap commits. Auto-resets if
@@ -169,6 +190,8 @@ const styles = StyleSheet.create({
   },
   greeting: { ...type.h2, color: colors.text, fontSize: 18 },
   email: { ...type.caption, color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  statsBlock: { paddingHorizontal: spacing.sm, paddingVertical: spacing.sm, gap: 2 },
+  statLine: { ...type.caption, color: colors.textMuted, fontSize: 12 },
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: 'rgba(255,255,255,0.12)',

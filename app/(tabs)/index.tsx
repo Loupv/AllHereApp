@@ -11,7 +11,6 @@ import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { CircleButton } from '../../src/components/CircleButton';
 import { KindIcon } from '../../src/components/KindIcon';
 import { AccountSheet } from '../../src/components/AccountSheet';
-import { AccountStats } from '../../src/components/AccountStats';
 import {
   startJourneySteps,
   silentMindVolets,
@@ -228,7 +227,6 @@ export default function StartScreen() {
       >
         <BustIcon size={18} color={colors.text} />
       </Pressable>
-      <AccountStats />
       <SwipeTabs current="index">
         <View style={{ flex: 1 }}>
           {/* No ScrollView on Start. The layout is intentionally
