@@ -9,8 +9,26 @@ import { AppState, StyleSheet, View, useWindowDimensions } from 'react-native';
 // frame already runs past the build-up phase.
 let sharedStart = 0;
 import { GLView } from 'expo-gl';
+import { LinearGradient } from 'expo-linear-gradient';
 import { VERTEX_SHADER, FRAG_FOR_THEME } from '../shaders/glsl';
 import type { ShaderTheme } from '../shaders';
+
+// The iOS Simulator's OpenGL→Metal layer crashes compiling these shaders
+// (SIGBUS in libCoreVMClient). Run a simulator build with
+// `EXPO_PUBLIC_DISABLE_GL=1 npx expo run:ios` to render a cheap static
+// gradient instead of the GLView. Real devices have a native GL stack —
+// leave the flag UNSET there (device builds keep the live shader).
+const GL_DISABLED = process.env.EXPO_PUBLIC_DISABLE_GL === '1';
+
+// Approximate per-theme colours for the no-GL fallback (top → bottom).
+const FALLBACK_COLORS: Record<ShaderTheme, readonly [string, string]> = {
+  default: ['#00102E', '#02060F'],
+  earth: ['#0B2A1A', '#02100A'],
+  grass: ['#0B2A1A', '#02100A'],
+  sky: ['#1A3A6B', '#06122E'],
+  space: ['#1A0F3A', '#05030F'],
+  lake: ['#0A2A33', '#02121A'],
+};
 
 /**
  * Cross-platform shader background using expo-gl. Renders a single
@@ -186,6 +204,18 @@ export function AtmosphereBackground({ theme, paused = false }: Props) {
       glRef.current = null;
     };
   }, []);
+
+  // Simulator / GL-disabled builds: skip the GLView entirely (it would
+  // crash the simulator's GL compiler) and paint a static theme gradient.
+  if (GL_DISABLED) {
+    return (
+      <LinearGradient
+        pointerEvents="none"
+        colors={FALLBACK_COLORS[theme] ?? FALLBACK_COLORS.default}
+        style={StyleSheet.absoluteFillObject}
+      />
+    );
+  }
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
