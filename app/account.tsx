@@ -132,6 +132,9 @@ export default function AccountScreen() {
   const [pairCode, setPairCode] = useState<string | null>(null);
   const [sessions, setSessions] = useState<LmtSession[] | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  // True while a session report is open in Live Tracker — disables the tab
+  // pager's own swipe there so the in-report session swipe owns the gesture.
+  const [reportOpen, setReportOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const mounted = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
@@ -212,6 +215,7 @@ export default function AccountScreen() {
         ref={scrollRef}
         horizontal
         pagingEnabled
+        scrollEnabled={!(reportOpen && active === 1)}
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={onPaged}
         style={styles.pager}
@@ -238,6 +242,7 @@ export default function AccountScreen() {
             accent={PANE_THEME[1].accent}
             chartWidth={width - spacing.lg * 2}
             onTab={goTo}
+            onReportOpen={setReportOpen}
           />
         </Pane>
 
@@ -343,7 +348,7 @@ function SmProgramPane({
 
 // ── Pane 2 ────────────────────────────────────────────────────────────────
 function LiveTrackerPane({
-  user, pairCode, sessions, accent, chartWidth, onTab,
+  user, pairCode, sessions, accent, chartWidth, onTab, onReportOpen,
 }: {
   user: boolean;
   pairCode: string | null;
@@ -351,10 +356,12 @@ function LiveTrackerPane({
   accent: string;
   chartWidth: number;
   onTab: (idx: number) => void;
+  onReportOpen: (open: boolean) => void;
 }) {
   // Tapping a session opens its report in place (no tab change); back returns
   // to the list.
   const [openId, setOpenId] = useState<string | null>(null);
+  useEffect(() => { onReportOpen(!!openId); }, [openId, onReportOpen]);
   if (!user) return <Text style={styles.empty}>Sign in to connect the Live Meditation Tracker.</Text>;
 
   const list = sessions ?? [];
@@ -369,9 +376,11 @@ function LiveTrackerPane({
     const SWIPE = 48;
     const onSwipeEnd = (tx: number, vx: number) => {
       if (tx <= -SWIPE || vx <= -600) {        // swipe left → older / next tab
-        if (next) setOpenId(next.id); else onTab(2);
+        if (next) setOpenId(next.id);
+        else { setOpenId(null); onTab(2); }    // spill: close report, go to QM Reports
       } else if (tx >= SWIPE || vx >= 600) {   // swipe right → newer / prev tab
-        if (prev) setOpenId(prev.id); else onTab(0);
+        if (prev) setOpenId(prev.id);
+        else { setOpenId(null); onTab(0); }    // spill: close report, go to Silent Mind
       }
     };
     const swipe = Gesture.Pan()
