@@ -5,6 +5,7 @@ import Animated, { FadeIn, SlideInDown, SlideOutDown, FadeOut } from 'react-nati
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { useProgress } from '../player/progressStore';
+import { useAuth } from '../auth/authStore';
 import { colors, radius, spacing, type } from '../theme';
 
 type Props = {
@@ -30,6 +31,9 @@ type Props = {
  */
 export function AccountSheet({ visible, onClose }: Props) {
   const resetProgress = useProgress(s => s.resetProgress);
+  const user = useAuth(s => s.user);
+  const logout = useAuth(s => s.logout);
+  const handleLogout = () => { logout(); onClose(); };
   const insets = useSafeAreaInsets();
   const [confirmingReset, setConfirmingReset] = useState(false);
   const handleReset = () => {
@@ -91,6 +95,8 @@ export function AccountSheet({ visible, onClose }: Props) {
                 real account is attached. The sheet opens straight
                 into actions; no header line. */}
 
+            {user && <Text style={styles.email}>{user.email ?? 'Signed in'}</Text>}
+
             {/* Reset progress — two-tap confirm. First tap reveals the
                 warning copy in red; second tap commits. Auto-resets if
                 the sheet is closed. */}
@@ -107,6 +113,15 @@ export function AccountSheet({ visible, onClose }: Props) {
                 </Text>
               ) : null}
             </Pressable>
+
+            {user && (
+              <Pressable
+                onPress={handleLogout}
+                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+              >
+                <Text style={styles.rowLabel}>Log out</Text>
+              </Pressable>
+            )}
 
             <Pressable
               onPress={handleClose}

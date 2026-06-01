@@ -1,34 +1,47 @@
 /**
- * Progress sync (stages listened / progression). Pushes the local
- * `progressStore.listened` map to /v1/progress and pulls the server copy
- * on boot, merging it back so progress follows the anonymous device (and,
- * post-Phase-2, the linked account) across reinstalls. Never throws.
+ * Progress sync (stages listened / progression). When signed in, progress
+ * is keyed to the USER account (authoritative across devices); otherwise to
+ * the anonymous device. Never throws.
  */
 import { apiUrl, apiHeaders, ANALYTICS_ENABLED } from './config';
 import { getDeviceId } from './device';
 import { useProgress } from '../player/progressStore';
+import { useAuth } from '../auth/authStore';
 
-const body = (items: unknown) =>
-  JSON.stringify({ actor_id: getDeviceId(), actor_kind: 'device', items });
+type Actor = { id: string; kind: 'user' | 'device' };
+
+const actor = (): Actor | null => {
+  const u = useAuth.getState().user;
+  if (u) return { id: u.userId, kind: 'user' };
+  const d = getDeviceId();
+  return d ? { id: d, kind: 'device' } : null;
+};
 
 export const pushProgress = async (): Promise<void> => {
-  if (!ANALYTICS_ENABLED || !getDeviceId()) return;
-  const listened = useProgress.getState().listened;
-  const ids = Object.keys(listened);
+  if (!ANALYTICS_ENABLED) return;
+  const a = actor();
+  if (!a) return;
+  const ids = Object.keys(useProgress.getState().listened);
   if (ids.length === 0) return;
   const now = Date.now();
   const items = ids.map((track_id) => ({ track_id, status: 'listened', updated_at: now }));
   try {
-    await fetch(apiUrl('/v1/progress'), { method: 'POST', headers: apiHeaders(), body: body(items) });
+    await fetch(apiUrl('/v1/progress'), {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({ actor_id: a.id, actor_kind: a.kind, items }),
+    });
   } catch {
     /* offline — retried on the next push */
   }
 };
 
 export const pullProgress = async (): Promise<void> => {
-  if (!ANALYTICS_ENABLED || !getDeviceId()) return;
+  if (!ANALYTICS_ENABLED) return;
+  const a = actor();
+  if (!a) return;
   try {
-    const res = await fetch(apiUrl(`/v1/progress?actor_id=${encodeURIComponent(getDeviceId()!)}`), {
+    const res = await fetch(apiUrl(`/v1/progress?actor_id=${encodeURIComponent(a.id)}`), {
       headers: apiHeaders(),
     });
     if (!res.ok) return;

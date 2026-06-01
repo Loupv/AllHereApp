@@ -12,6 +12,7 @@ import { ensureDevice } from './device';
 import { track, flush, hydrateQueue } from './events';
 import { pushProgress, pullProgress } from './progress';
 import { useProgress } from '../player/progressStore';
+import { useAuth } from '../auth/authStore';
 
 export { track } from './events';
 export type { EventType, EventFields } from './events';
@@ -48,6 +49,17 @@ export const initAnalytics = async (appVersion: string): Promise<void> => {
       if (!prevState.listened[id]) track('play_complete', { audio_id: id });
     }
     void pushProgress();
+  });
+
+  // On login/logout, swap the local progress for the new actor's: account
+  // progress is authoritative when signed in (not the local anon map).
+  let lastUserId = useAuth.getState().user?.userId ?? null;
+  useAuth.subscribe((state) => {
+    const id = state.user?.userId ?? null;
+    if (id === lastUserId) return;
+    lastUserId = id;
+    useProgress.getState().resetProgress();
+    void pullProgress();
   });
 
   track('app_session', { payload: { phase: 'start' } });
