@@ -10,6 +10,7 @@ import { useProgress } from '../src/player/progressStore';
 import { useAuth } from '../src/auth/authStore';
 import { silentMindVolets } from '../src/content/catalog';
 import { fetchStats, type AccountStats } from '../src/analytics/stats';
+import { flush } from '../src/analytics/events';
 import { fetchMe, fetchSessions, type LmtSession, type SessionParticipant } from '../src/analytics/sessions';
 import { MiniLineChart } from '../src/components/MiniLineChart';
 import { colors, radius, spacing, type } from '../src/theme';
@@ -111,13 +112,20 @@ export default function AccountScreen() {
   useEffect(() => {
     if (!user) return;
     let on = true;
-    void fetchStats().then(s => on && setStats(s));
-    void fetchMe().then(m => on && setPairCode(m?.pair_code ?? null));
-    void fetchSessions().then(s => {
+    // Flush any queued listen events first so the just-played audio is
+    // counted server-side before we read /v1/stats — otherwise the seconds
+    // counter lags behind by a buffer cycle.
+    void (async () => {
+      await flush();
       if (!on) return;
-      setSessions(s);
-      if (s && s.length && !selectedId) setSelectedId(s[0].id);
-    });
+      void fetchStats().then(s => on && setStats(s));
+      void fetchMe().then(m => on && setPairCode(m?.pair_code ?? null));
+      void fetchSessions().then(s => {
+        if (!on) return;
+        setSessions(s);
+        if (s && s.length && !selectedId) setSelectedId(s[0].id);
+      });
+    })();
     return () => { on = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
@@ -139,9 +147,9 @@ export default function AccountScreen() {
   const selected = sessions?.find(s => s.id === selectedId) ?? null;
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + spacing.sm }]}>
+    <View style={styles.root}>
       {/* Header: identity (avatar + name + email) + close */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <View style={styles.identity}>
           <LinearGradient
             colors={[colors.accent, colors.accentAlt]}
@@ -405,7 +413,9 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, marginBottom: spacing.md, gap: spacing.md,
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.md, gap: spacing.md,
+    backgroundColor: colors.bgSoft,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
   identity: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
@@ -414,7 +424,7 @@ const styles = StyleSheet.create({
   identityEmail: { ...type.caption, color: colors.textDim, fontSize: 12, marginTop: 1 },
   close: { ...type.caption, color: colors.textDim, textDecorationLine: 'underline' },
 
-  segments: { flexDirection: 'row', paddingHorizontal: spacing.md, gap: spacing.sm },
+  segments: { flexDirection: 'row', paddingHorizontal: spacing.md, gap: spacing.sm, marginTop: spacing.md },
   segment: { flex: 1, alignItems: 'center' },
   segmentLabel: { ...type.caption, color: colors.textDim, fontSize: 11, textAlign: 'center', minHeight: 30 },
   segmentLabelActive: { color: colors.text },
@@ -470,6 +480,7 @@ const styles = StyleSheet.create({
   scoreLabel: { ...type.caption, color: colors.textDim, fontSize: 11, marginTop: 2 },
 
   footer: {
+    backgroundColor: colors.bgSoft,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
     paddingHorizontal: spacing.lg, paddingTop: spacing.md, gap: spacing.sm,
   },
