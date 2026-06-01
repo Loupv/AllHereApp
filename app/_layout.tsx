@@ -31,6 +31,8 @@ import { VideoBackground } from '../src/components/VideoBackground';
 import { useShaderThemeStore } from '../src/shaders/themeStore';
 import { themeForJourneyPosition } from '../src/shaders';
 import { useProgress } from '../src/player/progressStore';
+import { initAnalytics } from '../src/analytics';
+import pkg from '../package.json';
 import { WebSwipeBack } from '../src/components/WebSwipeBack';
 import { usePlayerStore } from '../src/player/store';
 import { AppState } from 'react-native';
@@ -75,6 +77,12 @@ export default function RootLayout() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', s => setAppActive(s === 'active'));
     return () => sub.remove();
+  }, []);
+  // Activity tracking: register the anonymous device, sync progress, emit
+  // session events + drive the flush cadence. Fire-and-forget; never blocks
+  // or throws. Points at EXPO_PUBLIC_API_URL (local wrangler dev by default).
+  useEffect(() => {
+    void initAnalytics(pkg.version);
   }, []);
   // `playerOpen` is also used below to fade the navigator tree —
   // hoisting the read here so we can pass it into `shaderPaused`.
