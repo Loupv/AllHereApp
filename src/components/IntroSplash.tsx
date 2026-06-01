@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Image, StyleSheet, Pressable, Text, TextInput, ActivityIndicator, Platform } from 'react-native';
+import { View, Image, StyleSheet, Pressable, Text, TextInput, ActivityIndicator, Platform, Keyboard } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -50,6 +50,15 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
   const [mode, setMode] = useState<'choices' | 'email' | 'code'>('choices');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
+  // Lift the (absolutely-positioned) auth block above the keyboard.
+  const [kb, setKb] = useState(0);
+  useEffect(() => {
+    const show = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hide = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const s = Keyboard.addListener(show, (e) => setKb(e.endCoordinates.height));
+    const h = Keyboard.addListener(hide, () => setKb(0));
+    return () => { s.remove(); h.remove(); };
+  }, []);
 
   const dismiss = () => {
     rootOpacity.value = withTiming(0, { duration: 500, easing: Easing.in(Easing.cubic) }, (done) => {
@@ -117,7 +126,7 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
       </View>
 
       {!alreadyAuthed && (
-        <Animated.View style={[styles.authBlock, btnStyle]} pointerEvents="box-none">
+        <Animated.View style={[styles.authBlock, btnStyle, kb > 0 && { bottom: kb + 16 }]} pointerEvents="box-none">
           {mode === 'choices' && (
             <>
               {appleAvailable && (
