@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import Animated, { runOnJS, useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useNavigation } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -393,6 +393,10 @@ function LiveTrackerPane({
   // to the list.
   const [openId, setOpenId] = useState<string | null>(null);
   useEffect(() => { onReportOpen(!!openId); }, [openId, onReportOpen]);
+  // Slide the report content when moving between sessions, so the change
+  // reads clearly even when two sessions look alike.
+  const slide = useSharedValue(0);
+  const slideStyle = useAnimatedStyle(() => ({ transform: [{ translateX: slide.value }] }));
   if (!user) return <Text style={styles.empty}>Sign in to connect the Live Meditation Tracker.</Text>;
 
   const list = sessions ?? [];
@@ -402,15 +406,24 @@ function LiveTrackerPane({
     const prev = idx > 0 ? list[idx - 1] : null;                 // newer
     const next = idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null; // older
 
+    // Move to another session with a slide: the incoming report starts off
+    // to the side (dir = +1 enters from the right, -1 from the left) and
+    // eases to centre.
+    const go = (id: string, dir: number) => {
+      slide.value = dir * chartWidth;
+      slide.value = withTiming(0, { duration: 240 });
+      setOpenId(id);
+    };
+
     // Horizontal swipe steps between sessions; at the ends it spills over to
     // the neighbouring tab (left → Silent Mind, right → QM Reports).
     const SWIPE = 48;
     const onSwipeEnd = (tx: number, vx: number) => {
       if (tx <= -SWIPE || vx <= -600) {        // swipe left → older / next tab
-        if (next) setOpenId(next.id);
+        if (next) go(next.id, 1);
         else { setOpenId(null); onTab(2); }    // spill: close report, go to QM Reports
       } else if (tx >= SWIPE || vx >= 600) {   // swipe right → newer / prev tab
-        if (prev) setOpenId(prev.id);
+        if (prev) go(prev.id, -1);
         else { setOpenId(null); onTab(0); }    // spill: close report, go to Silent Mind
       }
     };
@@ -428,15 +441,17 @@ function LiveTrackerPane({
               <Text style={styles.navLink}>‹ Sessions</Text>
             </Pressable>
             <View style={styles.navStep}>
-              <Pressable onPress={() => prev && setOpenId(prev.id)} disabled={!prev} hitSlop={8}>
+              <Pressable onPress={() => prev && go(prev.id, -1)} disabled={!prev} hitSlop={8}>
                 <Text style={[styles.navLink, !prev && styles.navDisabled]}>‹ Prev</Text>
               </Pressable>
-              <Pressable onPress={() => next && setOpenId(next.id)} disabled={!next} hitSlop={8}>
+              <Pressable onPress={() => next && go(next.id, 1)} disabled={!next} hitSlop={8}>
                 <Text style={[styles.navLink, !next && styles.navDisabled]}>Next ›</Text>
               </Pressable>
             </View>
           </View>
-          <SessionReport session={open} chartWidth={chartWidth} />
+          <Animated.View style={slideStyle}>
+            <SessionReport session={open} chartWidth={chartWidth} />
+          </Animated.View>
         </View>
       </GestureDetector>
     );
