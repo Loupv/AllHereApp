@@ -670,8 +670,22 @@ function PlayerInner() {
       playStartedRef.current = id;
       trackEvent('play_start', { audio_id: id });
     }
-    const hb = setInterval(() => trackEvent('play_progress', { audio_id: id, duration_s: 15 }), 15000);
-    return () => clearInterval(hb);
+    // Accrue ACTUAL elapsed playback time (second-accurate). Emit the real
+    // delta on each tick + a final partial segment on pause/stop/track-change
+    // (the effect cleanup). Cap per-segment to guard against a frozen/
+    // backgrounded timer reporting a huge jump on resume.
+    let last = Date.now();
+    const emit = () => {
+      const now = Date.now();
+      const delta = Math.min((now - last) / 1000, 30);
+      last = now;
+      if (delta >= 1) trackEvent('play_progress', { audio_id: id, duration_s: delta });
+    };
+    const hb = setInterval(emit, 10000);
+    return () => {
+      clearInterval(hb);
+      emit();
+    };
   }, [status.playing, track?.id]);
 
   // (Offline download UI moved to ContentCard via TrackCard — see
