@@ -355,13 +355,28 @@ function LiveTrackerPane({
   const [openId, setOpenId] = useState<string | null>(null);
   if (!user) return <Text style={styles.empty}>Sign in to connect the Live Meditation Tracker.</Text>;
 
-  const open = openId ? sessions?.find(s => s.id === openId) ?? null : null;
+  const list = sessions ?? [];
+  const open = openId ? list.find(s => s.id === openId) ?? null : null;
   if (open) {
+    const idx = list.findIndex(s => s.id === open.id);
+    const prev = idx > 0 ? list[idx - 1] : null;                 // newer
+    const next = idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null; // older
     return (
       <View>
-        <Pressable onPress={() => setOpenId(null)} hitSlop={8} style={styles.backRow}>
-          <Text style={styles.navLink}>‹ Sessions</Text>
-        </Pressable>
+        {/* Back to the list (left) + step between sessions (top-right) */}
+        <View style={styles.reportTop}>
+          <Pressable onPress={() => setOpenId(null)} hitSlop={8}>
+            <Text style={styles.navLink}>‹ Sessions</Text>
+          </Pressable>
+          <View style={styles.navStep}>
+            <Pressable onPress={() => prev && setOpenId(prev.id)} disabled={!prev} hitSlop={8}>
+              <Text style={[styles.navLink, !prev && styles.navDisabled]}>‹ Prev</Text>
+            </Pressable>
+            <Pressable onPress={() => next && setOpenId(next.id)} disabled={!next} hitSlop={8}>
+              <Text style={[styles.navLink, !next && styles.navDisabled]}>Next ›</Text>
+            </Pressable>
+          </View>
+        </View>
         <SessionReport session={open} chartWidth={chartWidth} />
       </View>
     );
@@ -647,7 +662,11 @@ const styles = StyleSheet.create({
   code: { ...type.h3, color: colors.text, letterSpacing: 3, fontSize: 16 },
   codeHint: { ...type.caption, color: colors.textDim, fontSize: 11 },
 
-  backRow: { marginBottom: spacing.sm },
+  reportTop: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  navStep: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   navLink: { ...type.caption, color: colors.text, fontSize: 13 },
   navDisabled: { color: colors.textDim, opacity: 0.4 },
 
