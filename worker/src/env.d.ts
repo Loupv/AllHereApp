@@ -6,4 +6,6 @@ interface Env {
   SESSION_SECRET: string;
   /** Optional shared app-key guard (`wrangler secret put APP_KEY`). */
   APP_KEY: string;
+  /** Resend API key for email OTP (`wrangler secret put RESEND_API_KEY`). */
+  RESEND_API_KEY: string;
 }

@@ -13,6 +13,7 @@
  */
 
 import { verifyGoogle, verifyApple, issueSession, type Provider } from './auth';
+import { generateCode, hashCode, sendOtp } from './email';
 
 const CORS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*', // token-based, no cookies → * is fine
@@ -95,6 +96,10 @@ export default {
           return await authProvider(request, env, 'google');
         case 'POST /v1/auth/apple':
           return await authProvider(request, env, 'apple');
+        case 'POST /v1/auth/email/request':
+          return await emailRequest(request, env);
+        case 'POST /v1/auth/email/verify':
+          return await emailVerify(request, env);
         default:
           return bad('not found', 404);
       }
@@ -272,4 +277,79 @@ async function authProvider(request: Request, env: Env, provider: Provider): Pro
 
   const session = await issueSession(userId, env);
   return json({ session, user_id: userId, email: identity.email });
+}
+
+const normEmail = (v: unknown): string | null => {
+  const s = str(v)?.toLowerCase().trim();
+  return s && s.includes('@') && s.length <= 254 ? s : null;
+};
+
+/** Email OTP — step 1: generate a code, store its hash, send it via Resend. */
+async function emailRequest(request: Request, env: Env): Promise<Response> {
+  if (!env.RESEND_API_KEY) return json({ error: 'email auth not configured' }, 503);
+  const body = await readJson(request);
+  if (!body) return bad('invalid json');
+  const email = normEmail(body.email);
+  if (!email) return bad('valid email required');
+
+  const code = generateCode();
+  const now = Date.now();
+  await env.DB.prepare(
+    `INSERT INTO email_otps (email, code_hash, expires_at, attempts, created_at)
+     VALUES (?1, ?2, ?3, 0, ?4)
+     ON CONFLICT(email) DO UPDATE SET code_hash = ?2, expires_at = ?3, attempts = 0, created_at = ?4`,
+  )
+    .bind(email, await hashCode(email, code), now + 10 * 60 * 1000, now)
+    .run();
+
+  try {
+    await sendOtp(env, email, code);
+  } catch {
+    return json({ error: 'could not send code' }, 502);
+  }
+  return json({ ok: true });
+}
+
+/** Email OTP — step 2: verify the code, upsert the user, link device, session. */
+async function emailVerify(request: Request, env: Env): Promise<Response> {
+  if (!env.SESSION_SECRET) return json({ error: 'auth not configured (missing SESSION_SECRET)' }, 503);
+  const body = await readJson(request);
+  if (!body) return bad('invalid json');
+  const email = normEmail(body.email);
+  const code = str(body.code);
+  if (!email || !code) return bad('email + code required');
+
+  const row = await env.DB.prepare(
+    `SELECT code_hash, expires_at, attempts FROM email_otps WHERE email = ?1`,
+  )
+    .bind(email)
+    .first<{ code_hash: string; expires_at: number; attempts: number }>();
+  if (!row) return json({ error: 'invalid code' }, 401);
+  if (Date.now() > row.expires_at) return json({ error: 'code expired' }, 401);
+  if (row.attempts >= 5) return json({ error: 'too many attempts' }, 429);
+
+  if (!timingSafeEqual(await hashCode(email, code), row.code_hash)) {
+    await env.DB.prepare(`UPDATE email_otps SET attempts = attempts + 1 WHERE email = ?1`).bind(email).run();
+    return json({ error: 'invalid code' }, 401);
+  }
+  await env.DB.prepare(`DELETE FROM email_otps WHERE email = ?1`).bind(email).run();
+
+  const newId = crypto.randomUUID();
+  const u = await env.DB.prepare(
+    `INSERT INTO users (id, email, created_at)
+     VALUES (?1, ?2, ?3)
+     ON CONFLICT(email) DO UPDATE SET email = excluded.email
+     RETURNING id`,
+  )
+    .bind(newId, email, Date.now())
+    .first<{ id: string }>();
+  const userId = u?.id ?? newId;
+
+  const deviceId = str(body.device_id);
+  if (deviceId) {
+    await env.DB.prepare(`UPDATE devices SET user_id = ?1 WHERE id = ?2`).bind(userId, deviceId).run();
+  }
+
+  const session = await issueSession(userId, env);
+  return json({ session, user_id: userId, email });
 }
