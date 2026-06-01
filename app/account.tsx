@@ -7,7 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProgress } from '../src/player/progressStore';
 import { useAuth } from '../src/auth/authStore';
 import { silentMindVolets } from '../src/content/catalog';
@@ -123,6 +124,7 @@ export default function AccountScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const [active, setActive] = useState(0);
 
+  const navigation = useNavigation();
   const user = useAuth(s => s.user);
   const logout = useAuth(s => s.logout);
   const resetProgress = useProgress(s => s.resetProgress);
@@ -142,6 +144,8 @@ export default function AccountScreen() {
   // Pull the account data. Flushes queued listen events first so the just-
   // played audio is counted server-side before we read /v1/stats (otherwise
   // the seconds counter lags a buffer cycle). Also the pull-to-refresh path.
+  const cacheKey = user ? `ah_lmt_${user.userId}` : null;
+
   const load = useCallback(async (isRefresh = false) => {
     if (!user) return;
     if (isRefresh) setRefreshing(true);
@@ -149,15 +153,42 @@ export default function AccountScreen() {
       await flush();
       const [s, m, sess] = await Promise.all([fetchStats(), fetchMe(), fetchSessions()]);
       if (!mounted.current) return;
-      setStats(s);
-      setPairCode(m?.pair_code ?? null);
-      setSessions(sess);
+      if (s) setStats(s);
+      if (m) setPairCode(m.pair_code ?? null);
+      if (sess) {
+        setSessions(sess);
+        // Cache sessions + pairing code so they're available offline.
+        void AsyncStorage.setItem(`ah_lmt_${user.userId}`, JSON.stringify({ sessions: sess, pairCode: m?.pair_code ?? null }));
+      }
     } finally {
       if (mounted.current && isRefresh) setRefreshing(false);
     }
   }, [user]);
 
   useEffect(() => { void load(false); }, [load]);
+
+  // Hydrate sessions + pairing code from the offline cache first (kept even
+  // when the network read fails), so they show without a connection.
+  useEffect(() => {
+    if (!cacheKey) return;
+    let on = true;
+    AsyncStorage.getItem(cacheKey)
+      .then(raw => {
+        if (!on || !raw) return;
+        const c = JSON.parse(raw) as { sessions: LmtSession[]; pairCode: string | null };
+        setSessions(prev => (prev == null ? c.sessions : prev));
+        setPairCode(prev => (prev == null ? c.pairCode : prev));
+      })
+      .catch(() => { /* no/corrupt cache — network will fill in */ });
+    return () => { on = false; };
+  }, [cacheKey]);
+
+  // Disable the screen's native swipe-back while a session report is open on
+  // Live Tracker — otherwise the full-screen back gesture eats the horizontal
+  // swipe meant to move between sessions.
+  useEffect(() => {
+    navigation.setOptions({ gestureEnabled: !(reportOpen && active === 1) });
+  }, [navigation, reportOpen, active]);
 
   const goTo = (idx: number) => {
     setActive(idx);
