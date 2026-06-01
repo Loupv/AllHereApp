@@ -2,7 +2,7 @@
   "expo": {
     "name": "Silent Mind",
     "slug": "AllHereApp",
-    "version": "1.3.30",
+    "version": "1.3.31",
     "scheme": "allhere",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -25,7 +25,7 @@
     },
     "ios": {
       "bundleIdentifier": "org.allhere.silentmind",
-      "buildNumber": "1.0.29",
+      "buildNumber": "1.0.30",
       "supportsTablet": false,
       "infoPlist": {
         "UIBackgroundModes": [
@@ -37,7 +37,7 @@
     },
     "android": {
       "package": "org.allhere.silentmind",
-      "versionCode": 40,
+      "versionCode": 41,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#00102E"
