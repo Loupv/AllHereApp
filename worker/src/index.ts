@@ -12,7 +12,7 @@
  * a user id. Auth (Apple/Google/email) + linking land in Phase 2.
  */
 
-import { verifyGoogle, verifyApple, issueSession, type Provider } from './auth';
+import { verifyGoogle, verifyApple, issueSession, verifySession, type Provider } from './auth';
 import { generateCode, hashCode, sendOtp } from './email';
 
 const CORS: Record<string, string> = {
@@ -100,6 +100,8 @@ export default {
           return await emailRequest(request, env);
         case 'POST /v1/auth/email/verify':
           return await emailVerify(request, env);
+        case 'GET /v1/stats':
+          return await stats(request, env);
         default:
           return bad('not found', 404);
       }
@@ -352,4 +354,52 @@ async function emailVerify(request: Request, env: Env): Promise<Response> {
 
   const session = await issueSession(userId, env);
   return json({ session, user_id: userId, email });
+}
+
+/** Aggregated activity stats for the signed-in user (Bearer session). */
+async function stats(request: Request, env: Env): Promise<Response> {
+  const auth = request.headers.get('Authorization') ?? '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  const userId = token ? await verifySession(token, env) : null;
+  if (!userId) return json({ error: 'unauthorized' }, 401);
+
+  // The user's events live under their linked device ids.
+  const inDevices = `actor_id IN (SELECT id FROM devices WHERE user_id = ?1)`;
+  const agg = await env.DB.prepare(
+    `SELECT
+       SUM(CASE WHEN type = 'play_start'     THEN 1 ELSE 0 END) AS listens,
+       COALESCE(SUM(CASE WHEN type = 'play_progress' THEN duration_s ELSE 0 END), 0) AS seconds,
+       SUM(CASE WHEN type = 'round_complete' THEN 1 ELSE 0 END) AS qm_rounds
+     FROM events WHERE ${inDevices}`,
+  )
+    .bind(userId)
+    .first<{ listens: number | null; seconds: number | null; qm_rounds: number | null }>();
+
+  const { results } = await env.DB.prepare(
+    `SELECT DISTINCT CAST(server_ts / 86400000 AS INTEGER) AS day
+     FROM events WHERE ${inDevices} ORDER BY day DESC`,
+  )
+    .bind(userId)
+    .all<{ day: number }>();
+
+  // Streak = consecutive days with activity, ending today or yesterday.
+  const today = Math.floor(Date.now() / 86400000);
+  const days = (results ?? []).map((r) => r.day);
+  let streak = 0;
+  if (days.length && (days[0] === today || days[0] === today - 1)) {
+    let expected = days[0];
+    for (const d of days) {
+      if (d === expected) {
+        streak++;
+        expected--;
+      } else if (d < expected) break;
+    }
+  }
+
+  return json({
+    listens: agg?.listens ?? 0,
+    seconds: Math.round(agg?.seconds ?? 0),
+    qmRounds: agg?.qm_rounds ?? 0,
+    streakDays: streak,
+  });
 }
