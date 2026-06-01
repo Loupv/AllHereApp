@@ -10,9 +10,9 @@ import { fetchStats, type AccountStats } from '../analytics/stats';
 import { colors, radius, spacing, type } from '../theme';
 
 const fmtTime = (s: number): string => {
-  const m = Math.round(s / 60);
-  if (m < 60) return `${m}m`;
-  return `${Math.floor(m / 60)}h ${m % 60}m`;
+  const sec = Math.round(s);
+  if (sec < 3600) return `${Math.floor(sec / 60)}min ${sec % 60}s`;
+  return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}min`;
 };
 
 type Props = {
