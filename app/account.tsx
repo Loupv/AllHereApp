@@ -131,7 +131,6 @@ export default function AccountScreen() {
   const [stats, setStats] = useState<AccountStats | null>(null);
   const [pairCode, setPairCode] = useState<string | null>(null);
   const [sessions, setSessions] = useState<LmtSession[] | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const mounted = useRef(true);
@@ -150,7 +149,6 @@ export default function AccountScreen() {
       setStats(s);
       setPairCode(m?.pair_code ?? null);
       setSessions(sess);
-      setSelectedId(prev => prev ?? (sess && sess.length ? sess[0].id : null));
     } finally {
       if (mounted.current && isRefresh) setRefreshing(false);
     }
@@ -170,8 +168,6 @@ export default function AccountScreen() {
     const idx = Math.round(e.nativeEvent.contentOffset.x / width);
     if (idx !== active) setActive(idx);
   };
-
-  const selected = sessions?.find(s => s.id === selectedId) ?? null;
 
   return (
     <View style={styles.root}>
@@ -244,15 +240,12 @@ export default function AccountScreen() {
           />
         </Pane>
 
-        {/* ── Pane 3 · Quantified Meditation Reports ───────────── */}
-        <Pane width={width} tint={PANE_THEME[2].tint} refreshing={refreshing} onRefresh={() => void load(true)}>
-          <ReportPane
-            user={!!user}
-            sessions={sessions}
-            selected={selected}
-            onSelect={setSelectedId}
-            chartWidth={width - spacing.lg * 2}
-          />
+        {/* ── Pane 3 · Quantified Meditation Reports (future) ──── */}
+        <Pane width={width} tint={PANE_THEME[2].tint}>
+          <View style={styles.soonWrap}>
+            <Text style={styles.soonBadge}>Soon</Text>
+            <Text style={styles.caption}>Quantified Meditation reports are on the way.</Text>
+          </View>
         </Pane>
       </ScrollView>
 
@@ -412,44 +405,8 @@ function LiveTrackerPane({
   );
 }
 
-// ── Pane 3 ────────────────────────────────────────────────────────────────
-function ReportPane({
-  user, sessions, selected, onSelect, chartWidth,
-}: {
-  user: boolean;
-  sessions: LmtSession[] | null;
-  selected: LmtSession | null;
-  onSelect: (id: string) => void;
-  chartWidth: number;
-}) {
-  if (!user) return <Text style={styles.empty}>Sign in to see your meditation reports.</Text>;
-  if (!sessions || sessions.length === 0) return <Text style={styles.empty}>No reports yet.</Text>;
-  if (!selected) return <Text style={styles.empty}>No session selected.</Text>;
-
-  const idx = sessions.findIndex(s => s.id === selected.id);
-  const prev = idx > 0 ? sessions[idx - 1] : null;       // newer
-  const next = idx < sessions.length - 1 ? sessions[idx + 1] : null; // older
-
-  return (
-    <View>
-      {/* Step through sessions (newest → oldest) */}
-      <View style={styles.reportNav}>
-        <Pressable onPress={() => prev && onSelect(prev.id)} disabled={!prev} hitSlop={8}>
-          <Text style={[styles.navLink, !prev && styles.navDisabled]}>‹ Prev</Text>
-        </Pressable>
-        <Text style={styles.navPos}>{idx + 1} / {sessions.length}</Text>
-        <Pressable onPress={() => next && onSelect(next.id)} disabled={!next} hitSlop={8}>
-          <Text style={[styles.navLink, !next && styles.navDisabled]}>Next ›</Text>
-        </Pressable>
-      </View>
-
-      <SessionReport session={selected} chartWidth={chartWidth} />
-    </View>
-  );
-}
-
-// A single session's report: title + per-participant scores & charts. Shared
-// by the inline Live Tracker view and the Quantified Meditation Reports tab.
+// A single session's report: title + per-participant scores & charts. Shown
+// inline inside the Live Tracker pane when a session is tapped.
 function SessionReport({ session, chartWidth }: { session: LmtSession; chartWidth: number }) {
   const dividers = roundDividers(session.protocol);
   const markers = roundMarkers(session.protocol);
@@ -690,14 +647,12 @@ const styles = StyleSheet.create({
   code: { ...type.h3, color: colors.text, letterSpacing: 3, fontSize: 16 },
   codeHint: { ...type.caption, color: colors.textDim, fontSize: 11 },
 
-  reportNav: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
   backRow: { marginBottom: spacing.sm },
   navLink: { ...type.caption, color: colors.text, fontSize: 13 },
   navDisabled: { color: colors.textDim, opacity: 0.4 },
-  navPos: { ...type.caption, color: colors.textDim, fontSize: 12 },
+
+  soonWrap: { paddingTop: spacing.xxl, alignItems: 'center', gap: spacing.sm },
+  soonBadge: { ...type.overline, color: colors.textDim },
 
   zoomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.md, marginTop: spacing.sm },
   zoomHint: { ...type.caption, color: colors.textDim, fontSize: 10, flex: 1 },
