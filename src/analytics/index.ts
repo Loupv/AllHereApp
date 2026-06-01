@@ -45,10 +45,15 @@ export const initAnalytics = async (appVersion: string): Promise<void> => {
   // than editing the store) so progressStore stays pure.
   useProgress.subscribe((state, prevState) => {
     if (state.listened === prevState.listened) return;
+    let completed = false;
     for (const id of Object.keys(state.listened)) {
-      if (!prevState.listened[id]) track('play_complete', { audio_id: id });
+      if (!prevState.listened[id]) {
+        track('play_complete', { audio_id: id });
+        completed = true;
+      }
     }
     void pushProgress();
+    if (completed) void flush(); // push events promptly so stats reflect it
   });
 
   // On login/logout, swap the local progress for the new actor's: account
