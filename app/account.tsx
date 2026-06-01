@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   View, Text, Pressable, StyleSheet, ScrollView, useWindowDimensions,
   type NativeSyntheticEvent, type NativeScrollEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useProgress } from '../src/player/progressStore';
 import { useAuth } from '../src/auth/authStore';
@@ -14,6 +15,26 @@ import { MiniLineChart } from '../src/components/MiniLineChart';
 import { colors, radius, spacing, type } from '../src/theme';
 
 const PANES = ['Silent Mind program', 'Live Tracker', 'Quantified Meditation Reports'] as const;
+
+// Per-pane identity colour — magenta (SM program), indigo (Live Tracker),
+// teal (QM reports). Each tints its pane background and the active tab rail.
+const PANE_THEME = [
+  { accent: colors.accent, tint: 'rgba(158,54,148,0.22)' },
+  { accent: '#5A6BD8', tint: 'rgba(90,107,216,0.22)' },
+  { accent: colors.accentAlt, tint: 'rgba(54,160,158,0.22)' },
+] as const;
+
+/** Friendly display name derived from the email local part (we don't store a
+ *  real name): "loup.vuarnesson@…" → "Loup Vuarnesson". */
+const displayName = (email: string | null): string => {
+  if (!email) return 'Guest';
+  const local = email.split('@')[0] ?? email;
+  return local
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ') || email;
+};
 
 const fmtTime = (s: number): string => {
   const sec = Math.round(s);
@@ -119,9 +140,26 @@ export default function AccountScreen() {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top + spacing.sm }]}>
-      {/* Header: title + close */}
+      {/* Header: identity (avatar + name + email) + close */}
       <View style={styles.header}>
-        <Text style={styles.title}>Account</Text>
+        <View style={styles.identity}>
+          <LinearGradient
+            colors={[colors.accent, colors.accentAlt]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.avatar}
+          >
+            <Text style={styles.avatarInitial}>{displayName(user?.email ?? null).charAt(0)}</Text>
+          </LinearGradient>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.name} numberOfLines={1}>{displayName(user?.email ?? null)}</Text>
+            {user?.email ? (
+              <Text style={styles.identityEmail} numberOfLines={1}>{user.email}</Text>
+            ) : (
+              <Text style={styles.identityEmail}>Not signed in</Text>
+            )}
+          </View>
+        </View>
         <Pressable onPress={() => router.back()} hitSlop={12} style={({ pressed }) => pressed && { opacity: 0.6 }}>
           <Text style={styles.close}>Close</Text>
         </Pressable>
@@ -134,7 +172,7 @@ export default function AccountScreen() {
             <Text style={[styles.segmentLabel, active === i && styles.segmentLabelActive]} numberOfLines={2}>
               {label}
             </Text>
-            <View style={[styles.segmentRail, active === i && styles.segmentRailActive]} />
+            <View style={[styles.segmentRail, active === i && { backgroundColor: PANE_THEME[i].accent }]} />
           </Pressable>
         ))}
       </View>
@@ -148,29 +186,30 @@ export default function AccountScreen() {
         style={styles.pager}
       >
         {/* ── Pane 1 · Silent Mind program ─────────────────────── */}
-        <ScrollView style={{ width }} contentContainerStyle={styles.paneContent} showsVerticalScrollIndicator={false}>
-          <SmProgramPane listened={listened} />
-        </ScrollView>
+        <Pane width={width} tint={PANE_THEME[0].tint}>
+          <SmProgramPane listened={listened} accent={PANE_THEME[0].accent} />
+        </Pane>
 
         {/* ── Pane 2 · Live Tracker ────────────────────────────── */}
-        <ScrollView style={{ width }} contentContainerStyle={styles.paneContent} showsVerticalScrollIndicator={false}>
+        <Pane width={width} tint={PANE_THEME[1].tint}>
           <LiveTrackerPane
             user={!!user}
             pairCode={pairCode}
             sessions={sessions}
             onOpen={openReport}
+            accent={PANE_THEME[1].accent}
           />
-        </ScrollView>
+        </Pane>
 
         {/* ── Pane 3 · Quantified Meditation Reports ───────────── */}
-        <ScrollView style={{ width }} contentContainerStyle={styles.paneContent} showsVerticalScrollIndicator={false}>
+        <Pane width={width} tint={PANE_THEME[2].tint}>
           <ReportPane
             user={!!user}
             sessions={sessions}
             selected={selected}
             onSelect={setSelectedId}
           />
-        </ScrollView>
+        </Pane>
       </ScrollView>
 
       {/* ── Footer · stats + actions ───────────────────────────── */}
@@ -198,8 +237,21 @@ export default function AccountScreen() {
   );
 }
 
+// Full-width swipe pane: a soft top-down colour wash over the dark base, with
+// the scrollable content on top.
+function Pane({ width, tint, children }: { width: number; tint: string; children: ReactNode }) {
+  return (
+    <View style={{ width }}>
+      <LinearGradient colors={[tint, 'transparent']} style={styles.paneGradient} pointerEvents="none" />
+      <ScrollView contentContainerStyle={styles.paneContent} showsVerticalScrollIndicator={false}>
+        {children}
+      </ScrollView>
+    </View>
+  );
+}
+
 // ── Pane 1 ────────────────────────────────────────────────────────────────
-function SmProgramPane({ listened }: { listened: Record<string, true> }) {
+function SmProgramPane({ listened, accent }: { listened: Record<string, true>; accent: string }) {
   const parts = silentMindVolets
     .map(v => {
       const tracks = [...v.tracks, ...(v.qmTracks ?? [])].filter(t => !t.comingSoon);
@@ -212,7 +264,7 @@ function SmProgramPane({ listened }: { listened: Record<string, true> }) {
 
   return (
     <View>
-      <Text style={styles.bigStat}>{done}<Text style={styles.bigStatDim}> / {total}</Text></Text>
+      <Text style={[styles.bigStat, { color: accent }]}>{done}<Text style={styles.bigStatDim}> / {total}</Text></Text>
       <Text style={styles.caption}>tracks completed in the Silent Mind program</Text>
       <View style={styles.list}>
         {parts.map(p => (
@@ -228,19 +280,20 @@ function SmProgramPane({ listened }: { listened: Record<string, true> }) {
 
 // ── Pane 2 ────────────────────────────────────────────────────────────────
 function LiveTrackerPane({
-  user, pairCode, sessions, onOpen,
+  user, pairCode, sessions, onOpen, accent,
 }: {
   user: boolean;
   pairCode: string | null;
   sessions: LmtSession[] | null;
   onOpen: (id: string) => void;
+  accent: string;
 }) {
   if (!user) return <Text style={styles.empty}>Sign in to connect the Live Meditation Tracker.</Text>;
   return (
     <View>
       <Text style={styles.sectionLabel}>Your pairing code</Text>
-      <View style={styles.codeBox}>
-        <Text style={styles.code} selectable>{pairCode ?? '…'}</Text>
+      <View style={[styles.codeBox, { borderColor: accent }]}>
+        <Text style={[styles.code, { color: accent }]} selectable>{pairCode ?? '…'}</Text>
       </View>
       <Text style={styles.caption}>
         In the Live Meditation Tracker desktop app, open Settings → AllHere sync and paste this code.
@@ -352,9 +405,13 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, marginBottom: spacing.md,
+    paddingHorizontal: spacing.lg, marginBottom: spacing.md, gap: spacing.md,
   },
-  title: { ...type.h2, color: colors.text },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },
+  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  avatarInitial: { ...type.h2, color: '#FFFFFF', fontSize: 20 },
+  name: { ...type.h2, color: colors.text, fontSize: 18 },
+  identityEmail: { ...type.caption, color: colors.textDim, fontSize: 12, marginTop: 1 },
   close: { ...type.caption, color: colors.textDim, textDecorationLine: 'underline' },
 
   segments: { flexDirection: 'row', paddingHorizontal: spacing.md, gap: spacing.sm },
@@ -365,6 +422,7 @@ const styles = StyleSheet.create({
   segmentRailActive: { backgroundColor: colors.accent },
 
   pager: { flex: 1 },
+  paneGradient: { position: 'absolute', top: 0, left: 0, right: 0, height: 340 },
   paneContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xl, gap: spacing.xs },
 
   bigStat: { ...type.display, color: colors.text, fontSize: 44 },
