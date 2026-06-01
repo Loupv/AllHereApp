@@ -1,26 +1,25 @@
 {
-  // AllHere activity & progress API (Cloudflare Worker + D1).
-  // Deploy: `npm run deploy` from this dir. Local: `npm run dev`.
-  "name": "allhere-api",
-  "main": "src/index.ts",
-  "compatibility_date": "2026-06-01",
-  "observability": {
-    "enabled": true,
-    "head_sampling_rate": 1
-  },
-  "vars": {
-    // Optional shared app key. Empty = guard disabled (local dev). In
-    // production set a real value with `wrangler secret put APP_KEY`
-    // (a secret of the same name overrides this var at runtime).
-    "APP_KEY": ""
-  },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "allhere",
-      // Replace after `npm run db:create` prints the id (local dev works without it).
-      "database_id": "PLACEHOLDER_RUN_db:create",
-      "migrations_dir": "migrations"
-    }
-  ]
+	// AllHere activity & progress API (Cloudflare Worker + D1).
+	// Deploy: `npm run deploy` from this dir. Local: `npm run dev`.
+	"name": "allhere-api",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-06-01",
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	},
+	"vars": {
+		// Optional shared app key. Empty = guard disabled (local dev). In
+		// production set a real value with `wrangler secret put APP_KEY`
+		// (a secret of the same name overrides this var at runtime).
+		"APP_KEY": ""
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "allhere",
+			"database_id": "43f5644d-6d01-4f70-9939-7f3c57c1bf4f",
+			"migrations_dir": "migrations"
+		}
+	]
 }
