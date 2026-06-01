@@ -272,6 +272,7 @@ export default function RootLayout() {
             animationDuration: 320,
           }}
         />
+        <Stack.Screen name="account" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
         <Stack.Screen name="news/[id]" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
         <Stack.Screen name="video/[id]" options={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
       </Stack>

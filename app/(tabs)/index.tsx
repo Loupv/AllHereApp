@@ -6,11 +6,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { useLayout } from '../../src/hooks/useLayout';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
 import { CircleButton } from '../../src/components/CircleButton';
 import { KindIcon } from '../../src/components/KindIcon';
-import { AccountSheet } from '../../src/components/AccountSheet';
 import {
   startJourneySteps,
   silentMindVolets,
@@ -143,8 +143,6 @@ export default function StartScreen() {
     return true;
   });
 
-  const [accountOpen, setAccountOpen] = useState(false);
-
   // Flat catalog of every playable track, in journey order. Drives both
   // id→track lookup and the playlist passed to the player so "next" /
   // "previous" inside the player follow the same SM walk the Start page
@@ -219,7 +217,7 @@ export default function StartScreen() {
           of floating mid-band. The (tabs) layout already consumes
           insets.top, so `top: 4` reads as just below the status bar. */}
       <Pressable
-        onPress={() => setAccountOpen(true)}
+        onPress={() => router.push('/account')}
         hitSlop={10}
         accessibilityRole="button"
         accessibilityLabel="Open account menu"
@@ -390,7 +388,6 @@ export default function StartScreen() {
         />
       </View>
 
-      <AccountSheet visible={accountOpen} onClose={() => setAccountOpen(false)} />
     </View>
   );
 }

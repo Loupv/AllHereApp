@@ -18,7 +18,7 @@ import { generateCode, hashCode, sendOtp } from './email';
 const CORS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*', // token-based, no cookies → * is fine
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-App-Key',
   'Access-Control-Max-Age': '86400',
 };
 
@@ -65,6 +65,40 @@ const readJson = async (request: Request): Promise<Record<string, unknown> | nul
   }
 };
 
+/** Resolve the signed-in user id from a Bearer session, or null. */
+const userFromAuth = async (request: Request, env: Env): Promise<string | null> => {
+  const auth = request.headers.get('Authorization') ?? '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  return token ? await verifySession(token, env) : null;
+};
+
+// Crockford-ish alphabet — no 0/O/1/I so the code is easy to read & retype.
+const PAIR_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+const genPairCode = (): string => {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  let out = '';
+  for (const b of bytes) out += PAIR_ALPHABET[b % 32];
+  return out;
+};
+
+/** Return the user's pair code, minting one on first request (unique-retry). */
+async function ensurePairCode(userId: string, env: Env): Promise<string | null> {
+  const row = await env.DB.prepare(`SELECT pair_code FROM users WHERE id = ?1`)
+    .bind(userId).first<{ pair_code: string | null }>();
+  if (!row) return null;
+  if (row.pair_code) return row.pair_code;
+  for (let i = 0; i < 6; i++) {
+    const code = genPairCode();
+    try {
+      await env.DB.prepare(`UPDATE users SET pair_code = ?1 WHERE id = ?2`).bind(code, userId).run();
+      return code;
+    } catch {
+      // UNIQUE collision — vanishingly rare with 32^8 space; retry.
+    }
+  }
+  return null;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
@@ -102,6 +136,12 @@ export default {
           return await emailVerify(request, env);
         case 'GET /v1/stats':
           return await stats(request, env);
+        case 'GET /v1/me':
+          return await me(request, env);
+        case 'POST /v1/sessions':
+          return await ingestSession(request, env);
+        case 'GET /v1/sessions':
+          return await listSessions(request, env);
         default:
           return bad('not found', 404);
       }
@@ -401,5 +441,129 @@ async function stats(request: Request, env: Env): Promise<Response> {
     seconds: Math.round(agg?.seconds ?? 0),
     qmRounds: agg?.qm_rounds ?? 0,
     streakDays: streak,
+  });
+}
+
+/**
+ * Ingest a finished Live Meditation Tracker session (recap + per-participant
+ * QM3 aggregates + a ~1 Hz curve). Idempotent upsert on session.id: a re-push
+ * replaces the session row and wholesale-replaces its participant rows. The
+ * whole write is one atomic D1 batch so partial sessions never land.
+ */
+async function ingestSession(request: Request, env: Env): Promise<Response> {
+  const body = await readJson(request);
+  if (!body) return bad('invalid json');
+
+  const s = body.session as Record<string, unknown> | undefined;
+  const participants = body.participants;
+  if (!s || typeof s !== 'object') return bad('session required');
+  if (!Array.isArray(participants)) return bad('participants[] required');
+  if (participants.length > 64) return bad('too many participants (max 64)');
+
+  const id = str(s.id);
+  const ownerId = str(s.owner_id);
+  const startedAt = num(s.started_at);
+  if (!id || !ownerId || startedAt === null) {
+    return bad('session needs id, owner_id, started_at');
+  }
+  const now = Date.now();
+
+  const statements = [
+    env.DB.prepare(
+      `INSERT INTO lmt_sessions (id, owner_id, started_at, ended_at, mode, protocol, created_at, updated_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
+       ON CONFLICT(id) DO UPDATE SET
+         owner_id = excluded.owner_id, started_at = excluded.started_at,
+         ended_at = excluded.ended_at, mode = excluded.mode,
+         protocol = excluded.protocol, updated_at = excluded.updated_at`,
+    ).bind(
+      id, ownerId, startedAt, num(s.ended_at),
+      str(s.mode), str(s.protocol), now,
+    ),
+    // Re-push replaces participants wholesale (clean upsert semantics).
+    env.DB.prepare(`DELETE FROM lmt_session_participants WHERE session_id = ?1`).bind(id),
+  ];
+
+  const pStmt = env.DB.prepare(
+    `INSERT INTO lmt_session_participants
+       (session_id, participant, user_ref, qm3_index, qm3_alpha_pos, qm3_alpha_neg,
+        mean_index, mean_alpha, duration_ms, curve)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`,
+  );
+  for (const p of participants) {
+    if (!p || typeof p !== 'object') return bad('each participant must be an object');
+    const row = p as Record<string, unknown>;
+    const name = str(row.participant);
+    if (!name) return bad('participant needs a name');
+    statements.push(
+      pStmt.bind(
+        id, name, str(row.user_ref),
+        num(row.qm3_index), num(row.qm3_alpha_pos), num(row.qm3_alpha_neg),
+        num(row.mean_index), num(row.mean_alpha), num(row.duration_ms),
+        row.curve != null ? JSON.stringify(row.curve) : null,
+      ),
+    );
+  }
+
+  await env.DB.batch(statements); // atomic — partial sessions never land
+  return json({ ok: true, session_id: id });
+}
+
+/** `GET /v1/me` — the signed-in user's identity + their LMT pairing code
+ *  (minted on first read). The app shows this code so the user can paste it
+ *  into the Live Meditation Tracker desktop app. */
+async function me(request: Request, env: Env): Promise<Response> {
+  const userId = await userFromAuth(request, env);
+  if (!userId) return json({ error: 'unauthorized' }, 401);
+  const row = await env.DB.prepare(`SELECT email FROM users WHERE id = ?1`)
+    .bind(userId).first<{ email: string | null }>();
+  const pairCode = await ensurePairCode(userId, env);
+  return json({ user_id: userId, email: row?.email ?? null, pair_code: pairCode });
+}
+
+/**
+ * List the signed-in user's LMT sessions, newest first. A session belongs to
+ * the user when its `owner_id` equals the user's pair code, or any of its
+ * participants carry `user_ref = pair_code` — so the LMT side can stamp the
+ * code in either place. Each session carries its participant rows (curve JSON
+ * parsed back to an array).
+ */
+async function listSessions(request: Request, env: Env): Promise<Response> {
+  const userId = await userFromAuth(request, env);
+  if (!userId) return json({ error: 'unauthorized' }, 401);
+  const code = await ensurePairCode(userId, env);
+  if (!code) return json({ sessions: [] });
+
+  const sessions = await env.DB.prepare(
+    `SELECT id, owner_id, started_at, ended_at, mode, protocol
+     FROM lmt_sessions
+     WHERE owner_id = ?1
+        OR id IN (SELECT session_id FROM lmt_session_participants WHERE user_ref = ?1)
+     ORDER BY started_at DESC LIMIT 200`,
+  ).bind(code).all();
+
+  const ids = (sessions.results ?? []).map((r) => (r as { id: string }).id);
+  if (ids.length === 0) return json({ sessions: [] });
+
+  const placeholders = ids.map((_, i) => `?${i + 1}`).join(', ');
+  const parts = await env.DB.prepare(
+    `SELECT session_id, participant, user_ref, qm3_index, qm3_alpha_pos, qm3_alpha_neg,
+            mean_index, mean_alpha, duration_ms, curve
+     FROM lmt_session_participants WHERE session_id IN (${placeholders})`,
+  ).bind(...ids).all();
+
+  const bySession = new Map<string, unknown[]>();
+  for (const p of parts.results ?? []) {
+    const row = p as Record<string, unknown> & { session_id: string; curve: string | null };
+    const list = bySession.get(row.session_id) ?? [];
+    list.push({ ...row, curve: row.curve ? JSON.parse(row.curve) : [] });
+    bySession.set(row.session_id, list);
+  }
+
+  return json({
+    sessions: (sessions.results ?? []).map((r) => {
+      const row = r as Record<string, unknown> & { id: string };
+      return { ...row, participants: bySession.get(row.id) ?? [] };
+    }),
   });
 }
