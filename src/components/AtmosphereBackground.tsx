@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { AppState, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { AppState, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
+import * as Device from 'expo-device';
 
 // Module-level shared start time so the shader clock survives a
 // theme switch (which remounts the GLView via key={theme}). Set
@@ -14,11 +15,13 @@ import { VERTEX_SHADER, FRAG_FOR_THEME } from '../shaders/glsl';
 import type { ShaderTheme } from '../shaders';
 
 // The iOS Simulator's OpenGL→Metal layer crashes compiling these shaders
-// (SIGBUS in libCoreVMClient). Run a simulator build with
-// `EXPO_PUBLIC_DISABLE_GL=1 npx expo run:ios` to render a cheap static
-// gradient instead of the GLView. Real devices have a native GL stack —
-// leave the flag UNSET there (device builds keep the live shader).
-const GL_DISABLED = process.env.EXPO_PUBLIC_DISABLE_GL === '1';
+// (SIGBUS in libCoreVMClient). Auto-disable the GLView on any
+// simulator/emulator (`Device.isDevice === false`) — reliable, no env-var
+// needed. `EXPO_PUBLIC_DISABLE_GL=1` forces it off too (e.g. perf testing).
+// Web keeps WebGL; real devices keep the live shader.
+const GL_DISABLED =
+  process.env.EXPO_PUBLIC_DISABLE_GL === '1' ||
+  (Platform.OS !== 'web' && Device.isDevice === false);
 
 // Approximate per-theme colours for the no-GL fallback (top → bottom).
 const FALLBACK_COLORS: Record<ShaderTheme, readonly [string, string]> = {
