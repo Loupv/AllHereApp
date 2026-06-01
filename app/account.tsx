@@ -237,6 +237,7 @@ export default function AccountScreen() {
             sessions={sessions}
             accent={PANE_THEME[1].accent}
             chartWidth={width - spacing.lg * 2}
+            onTab={goTo}
           />
         </Pane>
 
@@ -342,13 +343,14 @@ function SmProgramPane({
 
 // ── Pane 2 ────────────────────────────────────────────────────────────────
 function LiveTrackerPane({
-  user, pairCode, sessions, accent, chartWidth,
+  user, pairCode, sessions, accent, chartWidth, onTab,
 }: {
   user: boolean;
   pairCode: string | null;
   sessions: LmtSession[] | null;
   accent: string;
   chartWidth: number;
+  onTab: (idx: number) => void;
 }) {
   // Tapping a session opens its report in place (no tab change); back returns
   // to the list.
@@ -361,24 +363,42 @@ function LiveTrackerPane({
     const idx = list.findIndex(s => s.id === open.id);
     const prev = idx > 0 ? list[idx - 1] : null;                 // newer
     const next = idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null; // older
+
+    // Horizontal swipe steps between sessions; at the ends it spills over to
+    // the neighbouring tab (left → Silent Mind, right → QM Reports).
+    const SWIPE = 48;
+    const onSwipeEnd = (tx: number, vx: number) => {
+      if (tx <= -SWIPE || vx <= -600) {        // swipe left → older / next tab
+        if (next) setOpenId(next.id); else onTab(2);
+      } else if (tx >= SWIPE || vx >= 600) {   // swipe right → newer / prev tab
+        if (prev) setOpenId(prev.id); else onTab(0);
+      }
+    };
+    const swipe = Gesture.Pan()
+      .activeOffsetX([-20, 20])
+      .failOffsetY([-16, 16])
+      .onEnd(e => runOnJS(onSwipeEnd)(e.translationX, e.velocityX));
+
     return (
-      <View>
-        {/* Back to the list (left) + step between sessions (top-right) */}
-        <View style={styles.reportTop}>
-          <Pressable onPress={() => setOpenId(null)} hitSlop={8}>
-            <Text style={styles.navLink}>‹ Sessions</Text>
-          </Pressable>
-          <View style={styles.navStep}>
-            <Pressable onPress={() => prev && setOpenId(prev.id)} disabled={!prev} hitSlop={8}>
-              <Text style={[styles.navLink, !prev && styles.navDisabled]}>‹ Prev</Text>
+      <GestureDetector gesture={swipe}>
+        <View>
+          {/* Back to the list (left) + step between sessions (top-right) */}
+          <View style={styles.reportTop}>
+            <Pressable onPress={() => setOpenId(null)} hitSlop={8}>
+              <Text style={styles.navLink}>‹ Sessions</Text>
             </Pressable>
-            <Pressable onPress={() => next && setOpenId(next.id)} disabled={!next} hitSlop={8}>
-              <Text style={[styles.navLink, !next && styles.navDisabled]}>Next ›</Text>
-            </Pressable>
+            <View style={styles.navStep}>
+              <Pressable onPress={() => prev && setOpenId(prev.id)} disabled={!prev} hitSlop={8}>
+                <Text style={[styles.navLink, !prev && styles.navDisabled]}>‹ Prev</Text>
+              </Pressable>
+              <Pressable onPress={() => next && setOpenId(next.id)} disabled={!next} hitSlop={8}>
+                <Text style={[styles.navLink, !next && styles.navDisabled]}>Next ›</Text>
+              </Pressable>
+            </View>
           </View>
+          <SessionReport session={open} chartWidth={chartWidth} />
         </View>
-        <SessionReport session={open} chartWidth={chartWidth} />
-      </View>
+      </GestureDetector>
     );
   }
 
