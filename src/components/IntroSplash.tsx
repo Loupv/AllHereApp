@@ -13,6 +13,7 @@ import pkg from '../../package.json';
 import { colors, type, radius, spacing } from '../theme';
 import { useAuth, type AuthProvider } from '../auth/authStore';
 import { signInWithApple, signInWithGoogle, appleAvailable, googleAvailable } from '../auth/signIn';
+import { GoogleIcon, MailIcon } from './ProviderIcons';
 
 // Full version (e.g. V1.3.30) — reads straight from package.json (the
 // source of truth, kept in sync with app.json at release time). Going
@@ -113,7 +114,10 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
               {busy === 'google' ? (
                 <ActivityIndicator color="#1F1F1F" />
               ) : (
-                <Text style={[styles.btnText, styles.btnTextDark]}>Continue with Google</Text>
+                <>
+                  <GoogleIcon size={18} />
+                  <Text style={[styles.btnText, styles.btnTextDark]}>Continue with Google</Text>
+                </>
               )}
             </Pressable>
           )}
@@ -121,6 +125,7 @@ export function IntroSplash({ onDone }: { onDone: () => void }) {
           {/* Email is intentionally disabled until the OTP backend / mail
               sending infra is set up (see worker auth + BACKLOG). */}
           <Pressable style={[styles.btn, styles.btnDisabled]} disabled>
+            <MailIcon size={15} color={colors.textDim} />
             <Text style={[styles.btnText, styles.btnTextMuted]}>Continue with email</Text>
             <Text style={styles.soon}>SOON</Text>
           </Pressable>
@@ -160,23 +165,23 @@ const styles = StyleSheet.create({
   },
   authBlock: {
     position: 'absolute',
-    left: spacing.lg,
-    right: spacing.lg,
-    bottom: 84,
-    gap: spacing.sm,
+    left: spacing.lg + spacing.md,
+    right: spacing.lg + spacing.md,
+    bottom: 72,
+    gap: 10,
   },
-  appleBtn: { height: 52, width: '100%' },
+  appleBtn: { height: 46, width: '100%' },
   btn: {
-    height: 52,
+    height: 46,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: 8,
   },
   btnLight: { backgroundColor: '#FFFFFF' },
-  btnDisabled: { backgroundColor: 'rgba(255,255,255,0.08)' },
-  btnText: { ...type.button },
+  btnDisabled: { backgroundColor: 'rgba(255,255,255,0.06)' },
+  btnText: { ...type.button, fontSize: 15 },
   btnTextDark: { color: '#1F1F1F' },
   btnTextMuted: { color: colors.textDim },
   soon: {
