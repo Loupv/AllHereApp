@@ -545,9 +545,10 @@ function ParticipantReport({
   const n = p.curve.length;
   const hasCurve = n > 1;
 
-  // Windowed zoom/pan: only the visible slice renders. Labels & axes stay
-  // fixed, Y rescales to the window (real definition + ordinate values), and
-  // pinch/drag drive it directly — no nested ScrollView fighting the pager.
+  // Windowed zoom/pan: only the visible slice renders horizontally. The Y
+  // scale stays FIXED to the whole-session range (no vertical auto-scale on
+  // zoom), so the curve doesn't stretch as you zoom — pinch/drag drive it
+  // directly, no nested ScrollView fighting the pager.
   const MIN_SAMPLES = 12;
   const maxZoom = Math.max(1, Math.floor(n / MIN_SAMPLES));
   const [zoom, setZoom] = useState(1);
@@ -562,8 +563,10 @@ function ParticipantReport({
   const idxSlice = index.slice(start, end);
   const alphaSlice = alpha.slice(start, end);
 
-  const iR = seriesRange(idxSlice);
-  const aR = seriesRange(alphaSlice);
+  // Y range over the WHOLE session (not the visible slice) → fixed vertical
+  // scale + stable high/low labels.
+  const iR = seriesRange(index);
+  const aR = seriesRange(alpha);
   // Alpha scale always includes the 0 % baseline.
   const aLo = aR ? Math.min(aR.min, 0) : 0;
   const aHi = aR ? Math.max(aR.max, 0) : 1;
