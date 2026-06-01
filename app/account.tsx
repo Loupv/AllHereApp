@@ -156,7 +156,11 @@ export default function AccountScreen() {
 
   const goTo = (idx: number) => {
     setActive(idx);
-    scrollRef.current?.scrollTo({ x: idx * width, animated: true });
+    // Defer to the next frame: when this is triggered from a Pressable that
+    // lives inside a pane's (vertical) ScrollView — e.g. tapping a session
+    // row — calling scrollTo synchronously inside the touch gesture gets
+    // swallowed by the horizontal pager, so only the tab highlight moved.
+    requestAnimationFrame(() => scrollRef.current?.scrollTo({ x: idx * width, animated: true }));
   };
   const onPaged = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const idx = Math.round(e.nativeEvent.contentOffset.x / width);
