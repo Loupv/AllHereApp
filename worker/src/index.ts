@@ -552,9 +552,22 @@ async function listSessions(request: Request, env: Env): Promise<Response> {
      FROM lmt_session_participants WHERE session_id IN (${placeholders})`,
   ).bind(...ids).all();
 
+  // Per-session participant visibility (privacy):
+  //  - if the requester OWNS the session (owner_id == their code), they're the
+  //    host → see every participant;
+  //  - otherwise they only matched via a participant.user_ref == code → show
+  //    only their own row, never another meditant's performance.
+  const ownerById = new Map<string, string>();
+  for (const r of sessions.results ?? []) {
+    const row = r as { id: string; owner_id: string };
+    ownerById.set(row.id, row.owner_id);
+  }
+
   const bySession = new Map<string, unknown[]>();
   for (const p of parts.results ?? []) {
-    const row = p as Record<string, unknown> & { session_id: string; curve: string | null };
+    const row = p as Record<string, unknown> & { session_id: string; user_ref: string | null; curve: string | null };
+    const isOwner = ownerById.get(row.session_id) === code;
+    if (!isOwner && row.user_ref !== code) continue;
     const list = bySession.get(row.session_id) ?? [];
     list.push({ ...row, curve: row.curve ? JSON.parse(row.curve) : [] });
     bySession.set(row.session_id, list);
