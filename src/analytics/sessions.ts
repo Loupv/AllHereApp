@@ -30,6 +30,8 @@ export type LmtSession = {
   mode: string | null;
   /** JSON string of the session plan (rounds × minutes), or null. */
   protocol: string | null;
+  /** 1 when the user has starred this session. */
+  starred?: number;
   participants: SessionParticipant[];
 };
 
@@ -75,6 +77,22 @@ export const deleteSession = async (id: string): Promise<boolean> => {
       method: 'POST',
       headers,
       body: JSON.stringify({ id }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
+
+/** Star / unstar a session you own. Returns true on success. */
+export const starSession = async (id: string, starred: boolean): Promise<boolean> => {
+  const headers = authHeaders();
+  if (!headers) return false;
+  try {
+    const res = await fetch(apiUrl('/v1/sessions/star'), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ id, starred }),
     });
     return res.ok;
   } catch {

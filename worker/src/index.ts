@@ -144,6 +144,8 @@ export default {
           return await listSessions(request, env);
         case 'POST /v1/sessions/delete':
           return await deleteSession(request, env);
+        case 'POST /v1/sessions/star':
+          return await starSession(request, env);
         default:
           return bad('not found', 404);
       }
@@ -537,11 +539,11 @@ async function listSessions(request: Request, env: Env): Promise<Response> {
   if (!code) return json({ sessions: [] });
 
   const sessions = await env.DB.prepare(
-    `SELECT id, owner_id, started_at, ended_at, mode, protocol
+    `SELECT id, owner_id, started_at, ended_at, mode, protocol, starred
      FROM lmt_sessions
      WHERE owner_id = ?1
         OR id IN (SELECT session_id FROM lmt_session_participants WHERE user_ref = ?1)
-     ORDER BY started_at DESC LIMIT 200`,
+     ORDER BY starred DESC, started_at DESC LIMIT 200`,
   ).bind(code).all();
 
   const ids = (sessions.results ?? []).map((r) => (r as { id: string }).id);
@@ -607,4 +609,24 @@ async function deleteSession(request: Request, env: Env): Promise<Response> {
     env.DB.prepare(`DELETE FROM lmt_sessions WHERE id = ?1`).bind(id),
   ]);
   return json({ ok: true, deleted: 1 });
+}
+
+/** Star/unstar a session you own. Body: { id, starred }. */
+async function starSession(request: Request, env: Env): Promise<Response> {
+  const userId = await userFromAuth(request, env);
+  if (!userId) return json({ error: 'unauthorized' }, 401);
+  const body = await readJson(request);
+  const id = str(body?.id);
+  if (!id) return bad('id required');
+  const starred = body?.starred ? 1 : 0;
+
+  const code = await ensurePairCode(userId, env);
+  const row = await env.DB.prepare(`SELECT owner_id FROM lmt_sessions WHERE id = ?1`)
+    .bind(id).first<{ owner_id: string }>();
+  if (!row) return json({ ok: true, starred: 0 });
+  if (!code || row.owner_id !== code) return json({ error: 'forbidden' }, 403);
+
+  await env.DB.prepare(`UPDATE lmt_sessions SET starred = ?2, updated_at = ?3 WHERE id = ?1`)
+    .bind(id, starred, Date.now()).run();
+  return json({ ok: true, starred });
 }

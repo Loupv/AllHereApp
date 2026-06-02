@@ -14,7 +14,7 @@ import { useAuth, type User } from '../src/auth/authStore';
 import { silentMindVolets } from '../src/content/catalog';
 import { fetchStats, type AccountStats } from '../src/analytics/stats';
 import { flush } from '../src/analytics/events';
-import { fetchMe, fetchSessions, deleteSession, type LmtSession, type SessionParticipant } from '../src/analytics/sessions';
+import { fetchMe, fetchSessions, deleteSession, starSession, type LmtSession, type SessionParticipant } from '../src/analytics/sessions';
 import { MiniLineChart } from '../src/components/MiniLineChart';
 import { colors, radius, spacing, type } from '../src/theme';
 
@@ -415,6 +415,15 @@ function LiveTrackerPane({
   // to the list.
   const [openId, setOpenId] = useState<string | null>(null);
   useEffect(() => { onReportOpen(!!openId); }, [openId, onReportOpen]);
+  // Star state: optimistic local overrides + a "starred only" filter.
+  const [starOverride, setStarOverride] = useState<Record<string, boolean>>({});
+  const [starredOnly, setStarredOnly] = useState(false);
+  const isStarred = (s: LmtSession) => starOverride[s.id] ?? !!s.starred;
+  const toggleStar = (s: LmtSession) => {
+    const next = !isStarred(s);
+    setStarOverride(prev => ({ ...prev, [s.id]: next }));
+    void starSession(s.id, next).then(ok => { if (ok) onReload(); });
+  };
   // Slide the report content when moving between sessions, so the change
   // reads clearly even when two sessions look alike.
   const slide = useSharedValue(0);
@@ -506,16 +515,25 @@ function LiveTrackerPane({
     );
   }
 
+  const visible = (sessions ?? []).filter(s => !starredOnly || isStarred(s));
+
   return (
     <View>
-      <Text style={styles.sectionLabel}>Available sessions</Text>
+      <View style={styles.listHead}>
+        <Text style={styles.sectionLabel}>Available sessions</Text>
+        <Pressable onPress={() => setStarredOnly(v => !v)} hitSlop={8}>
+          <Text style={[styles.filterChip, starredOnly && styles.filterChipOn]}>★ Starred</Text>
+        </Pressable>
+      </View>
       {sessions == null ? (
         <Text style={styles.empty}>Loading…</Text>
-      ) : sessions.length === 0 ? (
-        <Text style={styles.empty}>No sessions yet. They show up after you run one in the tracker.</Text>
+      ) : visible.length === 0 ? (
+        <Text style={styles.empty}>
+          {starredOnly ? 'No starred sessions yet.' : 'No sessions yet. They show up after you run one in the tracker.'}
+        </Text>
       ) : (
         <View style={styles.list}>
-          {sessions.map(s => (
+          {visible.map(s => (
             <Pressable
               key={s.id}
               onPress={() => setOpenId(s.id)}
@@ -525,6 +543,14 @@ function LiveTrackerPane({
                 <Text style={styles.rowTitle}>{sessionTypeLabel(s)}</Text>
                 <Text style={styles.rowMeta}>{fmtSessionDate(s.started_at)}</Text>
               </View>
+              <Pressable
+                onPress={() => toggleStar(s)}
+                hitSlop={10}
+                style={({ pressed }) => [styles.starBtn, pressed && { opacity: 0.6 }]}
+                accessibilityLabel={isStarred(s) ? 'Unstar session' : 'Star session'}
+              >
+                <Text style={[styles.star, isStarred(s) && styles.starOn]}>{isStarred(s) ? '★' : '☆'}</Text>
+              </Pressable>
               <Text style={styles.rowScore}>QM3 {fmtScore(s.participants[0]?.qm3_index ?? null)}</Text>
               <Pressable
                 onPress={() => requestDelete(s.id)}
@@ -820,6 +846,17 @@ const styles = StyleSheet.create({
   caption: { ...type.caption, color: colors.textDim, marginTop: 2 },
   sectionLabel: { ...type.sectionLabel, color: colors.textDim, marginBottom: spacing.xs },
 
+  listHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  filterChip: {
+    ...type.caption, fontSize: 11, color: colors.textDim,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    borderRadius: radius.pill, paddingVertical: 3, paddingHorizontal: spacing.sm,
+    overflow: 'hidden',
+  },
+  filterChipOn: { color: '#E6B34A', borderColor: 'rgba(230,179,74,0.6)' },
+  starBtn: { marginLeft: spacing.sm, paddingHorizontal: 2 },
+  star: { fontSize: 16, color: colors.textDim },
+  starOn: { color: '#E6B34A' },
   list: { marginTop: spacing.md, gap: 0 },
   listRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
