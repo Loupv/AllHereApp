@@ -73,13 +73,16 @@ const parseSteps = (protocol: string | null): PlanStep[] | null => {
 const sessionTypeLabel = (s: LmtSession): string => {
   const steps = parseSteps(s.protocol);
   const rounds = steps?.filter(st => st.kind === 'round') ?? [];
-  if (rounds.length) {
+  const dur = s.participants[0]?.duration_ms;
+  const mins = dur ? Math.round(dur / 60000) : null;
+  // A genuine rounds session (rounds mode, or a multi-round protocol).
+  const isRounds = s.mode === 'rounds' || rounds.length > 1;
+  if (isRounds && rounds.length) {
     const sec = rounds[0].durationSec;
     return sec ? `${rounds.length} × ${Math.round(sec / 60)} min` : `${rounds.length} rounds`;
   }
-  const dur = s.participants[0]?.duration_ms;
-  if (dur) return `${Math.round(dur / 60000)} min`;
-  return s.mode ?? 'Session';
+  // Infinite / intensity / guided → no fixed rounds.
+  return mins ? `Free format · ${mins} min` : 'Free format';
 };
 
 /** mm:ss clock for the chart time axis. */
