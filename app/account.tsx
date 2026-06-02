@@ -83,24 +83,6 @@ const sessionTypeLabel = (s: LmtSession): string => {
   return s.mode ?? 'Session';
 };
 
-/** Fractional x-positions (0..1) of each round/break transition, for the
- *  chart guide lines. Normalised by the planned total so round windows line
- *  up with the time-axis curve. */
-const roundDividers = (protocol: string | null): number[] => {
-  const steps = parseSteps(protocol);
-  if (!steps || steps.length < 2) return [];
-  const durs = steps.map(st => st.durationSec ?? 0);
-  const total = durs.reduce((a, b) => a + b, 0);
-  if (total <= 0) return [];
-  const out: number[] = [];
-  let cum = 0;
-  for (let i = 0; i < steps.length - 1; i++) {
-    cum += durs[i];
-    out.push(cum / total);
-  }
-  return out;
-};
-
 /** mm:ss clock for the chart time axis. */
 const fmtClock = (sec: number): string =>
   `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, '0')}`;
@@ -517,8 +499,8 @@ function ProfilePane({ user, pairCode, accent }: { user: User | null; pairCode: 
 // A single session's report: title + per-participant scores & charts. Shown
 // inline inside the Live Tracker pane when a session is tapped.
 function SessionReport({ session, chartWidth }: { session: LmtSession; chartWidth: number }) {
-  const dividers = roundDividers(session.protocol);
-  const markers = roundMarkers(session.protocol);
+  const steps = useMemo(() => parseSteps(session.protocol), [session.protocol]);
+  const markers = useMemo(() => roundMarkers(session.protocol), [session.protocol]);
   return (
     <View>
       <Text style={styles.reportTitle}>{sessionTypeLabel(session)}</Text>
@@ -527,7 +509,7 @@ function SessionReport({ session, chartWidth }: { session: LmtSession; chartWidt
         <ParticipantReport
           key={p.participant}
           p={p}
-          dividers={dividers}
+          steps={steps}
           markers={markers}
           chartWidth={chartWidth}
           showName={session.participants.length > 1}
@@ -542,24 +524,48 @@ const seriesRange = (xs: (number | null)[]): { min: number; max: number } | null
   return v.length ? { min: Math.min(...v), max: Math.max(...v) } : null;
 };
 
+const fmtPct1 = (v: number): string => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`;
+const fmtAlpha = (v: number | null): string => (v == null ? '—' : `${v.toFixed(1)}%`);
+
+// Break time ranges (seconds) from the protocol — used to blank the curve
+// between rounds so each round renders as its own segment.
+const breakRanges = (steps: PlanStep[] | null): [number, number][] => {
+  if (!steps) return [];
+  const out: [number, number][] = [];
+  let cum = 0;
+  for (const st of steps) {
+    const d = st.durationSec ?? 0;
+    if (st.kind === 'break') out.push([cum, cum + d]);
+    cum += d;
+  }
+  return out;
+};
+
 function ParticipantReport({
-  p, dividers, markers, chartWidth, showName,
+  p, steps, markers, chartWidth, showName,
 }: {
   p: SessionParticipant;
-  dividers: number[];
+  steps: PlanStep[] | null;
   markers: { frac: number; label: string }[];
   chartWidth: number;
   showName: boolean;
 }) {
-  const index = useMemo(() => p.curve.map(c => c.index), [p.curve]);
-  const alpha = useMemo(() => p.curve.map(c => c.alpha), [p.curve]);
+  // Cut the curve between rounds: blank samples that fall in a break, so each
+  // round shows as its own segment with a gap.
+  const { index, alpha } = useMemo(() => {
+    const breaks = breakRanges(steps);
+    const inBreak = (t: number) => breaks.some(([a, b]) => t >= a && t < b);
+    return {
+      index: p.curve.map(c => (inBreak(c.t) ? null : c.index)),
+      alpha: p.curve.map(c => (inBreak(c.t) ? null : c.alpha)),
+    };
+  }, [p.curve, steps]);
   const n = p.curve.length;
   const hasCurve = n > 1;
 
   // Windowed zoom/pan: only the visible slice renders horizontally. The Y
-  // scale stays FIXED to the whole-session range (no vertical auto-scale on
-  // zoom), so the curve doesn't stretch as you zoom — pinch/drag drive it
-  // directly, no nested ScrollView fighting the pager.
+  // scale stays FIXED to the whole-session range — pinch/drag drive both
+  // charts at once, no nested ScrollView fighting the pager.
   const MIN_SAMPLES = 12;
   const maxZoom = Math.max(1, Math.floor(n / MIN_SAMPLES));
   const [zoom, setZoom] = useState(1);
@@ -574,24 +580,22 @@ function ParticipantReport({
   const idxSlice = index.slice(start, end);
   const alphaSlice = alpha.slice(start, end);
 
-  // Y range over the WHOLE session (not the visible slice) → fixed vertical
-  // scale + stable high/low labels.
+  // Y range over the WHOLE session (fixed vertical scale + stable labels).
   const iR = seriesRange(index);
   const aR = seriesRange(alpha);
-  // Alpha bottom of scale (includes 0 so the centred baseline always shows).
-  const aMin = aR ? Math.min(aR.min, 0) : 0;
+  const aMin = aR ? Math.min(aR.min, 0) : 0; // include 0 so the baseline shows
 
   const tStart = hasCurve ? p.curve[start].t : 0;
   const tEnd = hasCurve ? p.curve[Math.max(start, end - 1)].t : 0;
-  // Map global round dividers / markers into the visible window.
+  // Map round markers into the visible window.
   const denom = n - 1 || 1;
   const g0 = start / denom;
   const g1 = (end - 1) / denom;
   const gSpan = g1 - g0 || 1;
-  const localDividers = dividers.map(d => (d - g0) / gSpan).filter(x => x >= 0 && x <= 1);
   const localMarkers = markers
     .map(m => ({ frac: (m.frac - g0) / gSpan, label: m.label }))
     .filter(m => m.frac >= 0 && m.frac <= 1);
+  const showRounds = markers.length > 1; // only label rounds when there's > 1
 
   const pinchBegin = () => { baseZoom.current = zoom; };
   const pinchMove = (scale: number) => setZoomClamped(baseZoom.current * scale);
@@ -611,9 +615,6 @@ function ParticipantReport({
     .onUpdate(e => runOnJS(panMove)(e.translationX));
   const gesture = Gesture.Race(pinch, pan);
 
-  const zoomLabel = Number.isInteger(zoom) ? `${zoom}×` : `${zoom.toFixed(1)}×`;
-  const fmtPct = (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`;
-
   return (
     <View style={styles.participant}>
       {showName && <Text style={styles.rowTitle}>{p.participant}</Text>}
@@ -623,85 +624,79 @@ function ParticipantReport({
           <Text style={styles.scoreGroupLabel}>QM3</Text>
           <View style={styles.scoreRow}>
             <Score label="Index" value={fmtScore(p.qm3_index)} />
-            <Score label="Alpha +" value={fmtScore(p.qm3_alpha_pos)} />
-            <Score label="Alpha −" value={fmtScore(p.qm3_alpha_neg)} />
+            <Score label="Alpha +" value={fmtAlpha(p.qm3_alpha_pos)} />
+            <Score label="Alpha −" value={fmtAlpha(p.qm3_alpha_neg)} />
           </View>
         </View>
         <View style={styles.scoreGroup}>
           <Text style={styles.scoreGroupLabel}>Session mean</Text>
           <View style={styles.scoreRow}>
             <Score label="Index" value={fmtScore(p.mean_index)} />
-            <Score label="Alpha" value={fmtScore(p.mean_alpha)} />
+            <Score label="Alpha" value={fmtAlpha(p.mean_alpha)} />
           </View>
         </View>
       </View>
 
+      {/* One gesture surface over BOTH charts — pinch zoom / drag pan apply
+          to the index + alpha pair together. */}
       {hasCurve && (
-        <>
-          <View style={styles.zoomRow}>
-            <Text style={styles.zoomHint}>pinch / drag to explore</Text>
-            <Pressable onPress={() => setZoomClamped(zoom - 1)} disabled={zoom <= 1} hitSlop={8}>
-              <Text style={[styles.zoomBtn, zoom <= 1 && styles.navDisabled]}>−</Text>
-            </Pressable>
-            <Text style={styles.zoomLabel}>{zoomLabel}</Text>
-            <Pressable onPress={() => setZoomClamped(zoom + 1)} disabled={zoom >= maxZoom} hitSlop={8}>
-              <Text style={[styles.zoomBtn, zoom >= maxZoom && styles.navDisabled]}>+</Text>
-            </Pressable>
-          </View>
-
-          <GestureDetector gesture={gesture}>
-            <View>
-              <Text style={styles.chartLabel}>Index</Text>
-              <View style={styles.chartRow}>
-                <View style={styles.yAxis}>
-                  <Text style={styles.axisVal}>{iR ? iR.max.toFixed(0) : ''}</Text>
-                  <Text style={styles.axisVal}>0</Text>
-                </View>
-                <View style={styles.chartFill}>
-                  <MiniLineChart data={idxSlice} color={colors.accentAlt} dividers={localDividers} height={CHART_H} min={0} max={iR?.max} />
+        <GestureDetector gesture={gesture}>
+          <View style={styles.combo}>
+            {showRounds && (
+              <View style={styles.roundLabelsRow}>
+                <View style={styles.yAxisSpacer} />
+                <View style={styles.roundLabelsFill}>
+                  {localMarkers.map((m, i) => (
+                    <Text key={i} style={[styles.roundLabel, { left: `${m.frac * 100}%` }]}>{m.label}</Text>
+                  ))}
                 </View>
               </View>
+            )}
 
-              <Text style={[styles.chartLabel, { marginTop: spacing.md }]}>Alpha</Text>
-              <View style={styles.chartRow}>
-                <View style={styles.yAxis}>
-                  <Text style={styles.axisVal}>+400%</Text>
-                  <Text style={styles.axisValMid}>baseline</Text>
-                  <Text style={styles.axisVal}>{fmtPct(aMin)}</Text>
-                </View>
-                <View style={styles.chartFill}>
-                  <MiniLineChart data={alphaSlice} color={colors.accent} dividers={localDividers} height={CHART_H} min={aMin} max={400} pivot={0} baseline={0} />
-                </View>
+            <Text style={styles.chartLabel}>Index</Text>
+            <View style={styles.chartRow}>
+              <View style={styles.yAxis}>
+                <Text style={styles.axisVal}>{iR ? iR.max.toFixed(0) : ''}</Text>
+                <Text style={styles.axisVal}>0</Text>
               </View>
-
-              <View style={styles.axisRowWrap}>
-                <TimeAxis tStart={tStart} tEnd={tEnd} markers={localMarkers} />
+              <View style={styles.chartFill}>
+                <MiniLineChart data={idxSlice} color={colors.accentAlt} height={CHART_H} min={0} max={iR?.max} />
               </View>
             </View>
-          </GestureDetector>
-        </>
+
+            <Text style={styles.chartLabelTight}>Alpha</Text>
+            <View style={styles.chartRow}>
+              <View style={styles.yAxis}>
+                <Text style={styles.axisVal}>+400%</Text>
+                <Text style={styles.axisValMid}>baseline</Text>
+                <Text style={styles.axisVal}>{fmtPct1(aMin)}</Text>
+              </View>
+              <View style={styles.chartFill}>
+                <MiniLineChart data={alphaSlice} color={colors.accent} height={CHART_H} min={aMin} max={400} pivot={0} baseline={0} />
+              </View>
+            </View>
+
+            <View style={styles.axisRowWrap}>
+              <TimeAxis tStart={tStart} tEnd={tEnd} />
+            </View>
+          </View>
+        </GestureDetector>
       )}
     </View>
   );
 }
 
-// Time scale beneath the charts: evenly-spaced mm:ss ticks (flex row) plus
-// round-number markers (R1, R2…) at their fractional position in the window.
-function TimeAxis({ tStart, tEnd, markers }: { tStart: number; tEnd: number; markers: { frac: number; label: string }[] }) {
+// Time scale beneath the charts: evenly-spaced mm:ss ticks (flex row).
+function TimeAxis({ tStart, tEnd }: { tStart: number; tEnd: number }) {
   const span = tEnd - tStart;
   if (span <= 0) return null;
   const N = 4;
   const ticks = Array.from({ length: N + 1 }, (_, i) => tStart + (i / N) * span);
   return (
-    <View style={styles.axis}>
-      {markers.map((m, i) => (
-        <Text key={`m${i}`} style={[styles.axisRound, { left: `${m.frac * 100}%` }]}>{m.label}</Text>
+    <View style={styles.axisTicksOnly}>
+      {ticks.map((t, i) => (
+        <Text key={`t${i}`} style={styles.axisTime}>{fmtClock(t)}</Text>
       ))}
-      <View style={styles.axisTicksRow}>
-        {ticks.map((t, i) => (
-          <Text key={`t${i}`} style={styles.axisTime}>{fmtClock(t)}</Text>
-        ))}
-      </View>
     </View>
   );
 }
@@ -780,21 +775,21 @@ const styles = StyleSheet.create({
   soonWrap: { paddingTop: spacing.xxl, alignItems: 'center', gap: spacing.sm },
   soonBadge: { ...type.overline, color: colors.textDim },
 
-  zoomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.md, marginTop: spacing.sm },
-  zoomHint: { ...type.caption, color: colors.textDim, fontSize: 10, flex: 1 },
-  zoomBtn: { ...type.h2, color: colors.text, fontSize: 22, lineHeight: 24, width: 24, textAlign: 'center' },
-  zoomLabel: { ...type.caption, color: colors.textDim, fontSize: 12, minWidth: 24, textAlign: 'center' },
+  combo: { marginTop: spacing.md },
+  roundLabelsRow: { flexDirection: 'row', height: 16, marginBottom: 2 },
+  yAxisSpacer: { width: 48 },
+  roundLabelsFill: { flex: 1 },
+  roundLabel: { position: 'absolute', top: 0, marginLeft: -8, ...type.overline, color: colors.textDim, fontSize: 10, letterSpacing: 1 },
 
   chartLabel: { ...type.sectionLabel, color: colors.textDim, marginBottom: spacing.xs },
+  chartLabelTight: { ...type.sectionLabel, color: colors.textDim, marginTop: spacing.sm, marginBottom: spacing.xs },
   chartRow: { flexDirection: 'row', alignItems: 'stretch' },
   yAxis: { width: 48, height: CHART_H, justifyContent: 'space-between', paddingRight: spacing.xs },
   axisVal: { ...type.caption, color: colors.textDim, fontSize: 10, textAlign: 'right' },
   axisValMid: { ...type.caption, color: colors.textDim, fontSize: 9, textAlign: 'right' },
   chartFill: { flex: 1 },
-  axisRowWrap: { paddingLeft: 40 },
-  axis: { height: 26, marginTop: spacing.xs },
-  axisTicksRow: { position: 'absolute', left: 0, right: 0, top: 12, flexDirection: 'row', justifyContent: 'space-between' },
-  axisRound: { position: 'absolute', top: 0, ...type.caption, color: colors.textDim, fontSize: 10 },
+  axisRowWrap: { paddingLeft: 48, marginTop: spacing.xs },
+  axisTicksOnly: { flexDirection: 'row', justifyContent: 'space-between' },
   axisTime: { ...type.caption, color: colors.textDim, fontSize: 10 },
 
   reportTitle: { ...type.h2, color: colors.text, marginTop: spacing.xs },
