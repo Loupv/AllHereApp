@@ -18,17 +18,16 @@ import { fetchMe, fetchSessions, deleteSession, type LmtSession, type SessionPar
 import { MiniLineChart } from '../src/components/MiniLineChart';
 import { colors, radius, spacing, type } from '../src/theme';
 
-const PANES = ['Profile', 'Silent Mind Practice', 'Live Tracker', 'Quantified Meditation Reports'] as const;
+const PANES = ['Silent Mind Profile', 'Live Tracker', 'Quantified Meditation Reports'] as const;
 // Tab indices (kept in sync with PANES) — referenced for swipe spill + the
 // pager/gesture guards on the Live Tracker tab.
-const TAB = { profile: 0, sm: 1, live: 2, qm: 3 } as const;
+const TAB = { sm: 0, live: 1, qm: 2 } as const;
 
 const CHART_H = 130; // taller charts — more room for the curve detail
 
-// Per-pane identity colour — amber (Profile), magenta (Silent Mind), indigo
-// (Live Tracker), teal (QM reports). Each tints its pane bg + active tab rail.
+// Per-pane identity colour — magenta (Silent Mind Profile), indigo (Live
+// Tracker), teal (QM reports). Each tints its pane bg + active tab rail.
 const PANE_THEME = [
-  { accent: '#C2913F', tint: 'rgba(194,145,63,0.22)' },
   { accent: colors.accent, tint: 'rgba(158,54,148,0.22)' },
   { accent: '#5A6BD8', tint: 'rgba(90,107,216,0.22)' },
   { accent: colors.accentAlt, tint: 'rgba(54,160,158,0.22)' },
@@ -206,12 +205,13 @@ export default function AccountScreen() {
         onMomentumScrollEnd={onPaged}
         style={styles.pager}
       >
-        {/* ── Profile (account hub) ────────────────────────────── */}
-        <Pane width={width} tint={PANE_THEME[TAB.profile].tint} bottomPad={bottomPad}>
-          <ProfilePane
+        {/* ── Silent Mind Profile ──────────────────────────────── */}
+        <Pane width={width} tint={PANE_THEME[TAB.sm].tint} bottomPad={bottomPad}>
+          <SilentMindProfilePane
+            listened={listened}
             user={user}
             pairCode={pairCode}
-            accent={PANE_THEME[TAB.profile].accent}
+            accent={PANE_THEME[TAB.sm].accent}
             stats={stats}
             sessionCount={sessions?.length ?? 0}
             confirmReset={confirmReset}
@@ -221,11 +221,6 @@ export default function AccountScreen() {
             }}
             onLogout={() => { logout(); router.back(); }}
           />
-        </Pane>
-
-        {/* ── Silent Mind Practice ─────────────────────────────── */}
-        <Pane width={width} tint={PANE_THEME[TAB.sm].tint} bottomPad={bottomPad}>
-          <SmProgramPane listened={listened} />
         </Pane>
 
         {/* ── Live Tracker ─────────────────────────────────────── */}
@@ -287,11 +282,24 @@ function Pane({
   );
 }
 
-// ── Pane 1 ────────────────────────────────────────────────────────────────
-function SmProgramPane({ listened }: { listened: Record<string, true> }) {
-  // Total counts the FULL planned program, including not-yet-released
-  // (coming-soon) audios — so the percentage reflects progress toward the
-  // whole journey, not just what's currently downloadable.
+// ── Pane 1 · Silent Mind Profile ───────────────────────────────────────────
+// One tab combining identity, program progress, activity stats, the Live
+// Tracker pairing/connection, and account actions.
+function SilentMindProfilePane({
+  listened, user, pairCode, accent, stats, sessionCount, confirmReset, onReset, onLogout,
+}: {
+  listened: Record<string, true>;
+  user: User | null;
+  pairCode: string | null;
+  accent: string;
+  stats: AccountStats | null;
+  sessionCount: number;
+  confirmReset: boolean;
+  onReset: () => void;
+  onLogout: () => void;
+}) {
+  // Program completion counts the FULL planned program, including not-yet-
+  // released (coming-soon) audios.
   const parts = silentMindVolets
     .map(v => {
       const tracks = [...v.tracks, ...(v.qmTracks ?? [])];
@@ -305,15 +313,66 @@ function SmProgramPane({ listened }: { listened: Record<string, true> }) {
 
   return (
     <View>
-      <Text style={styles.bigStat}>{pct}<Text style={styles.bigStatDim}>%</Text></Text>
-      <Text style={styles.caption}>of the Silent Mind program completed ({done} / {total} audios)</Text>
-      <View style={styles.list}>
-        {parts.map(p => (
-          <View key={p.id} style={styles.listRow}>
-            <Text style={styles.rowTitle}>{p.title}</Text>
-            <Text style={styles.rowMeta}>{p.done} / {p.total}</Text>
-          </View>
-        ))}
+      <View style={styles.profileTop}>
+        <LinearGradient
+          colors={[colors.accent, colors.accentAlt]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.avatar}
+        >
+          <Text style={styles.avatarInitial}>{displayName(user?.email ?? null).charAt(0)}</Text>
+        </LinearGradient>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.name} numberOfLines={1}>{displayName(user?.email ?? null)}</Text>
+          <Text style={styles.identityEmail} numberOfLines={1}>{user?.email ?? 'Not signed in'}</Text>
+        </View>
+      </View>
+
+      <View style={styles.profileSection}>
+        <Text style={styles.sectionLabel}>Silent Mind program</Text>
+        <Text style={styles.bigStat}>{pct}<Text style={styles.bigStatDim}>%</Text></Text>
+        <Text style={styles.caption}>completed ({done} / {total} audios)</Text>
+        <View style={styles.list}>
+          {parts.map(p => (
+            <View key={p.id} style={styles.listRow}>
+              <Text style={styles.rowTitle}>{p.title}</Text>
+              <Text style={styles.rowMeta}>{p.done} / {p.total}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {stats && (
+        <View style={styles.profileSection}>
+          <Text style={styles.sectionLabel}>Activity</Text>
+          <Text style={styles.statText}>{stats.listens} listens · {fmtTime(stats.seconds)} listened</Text>
+          <Text style={styles.statText}>{stats.qmRounds} QM rounds · {stats.streakDays}-day streak</Text>
+        </View>
+      )}
+
+      <View style={styles.profileSection}>
+        <Text style={styles.sectionLabel}>Live Tracker</Text>
+        <View style={[styles.codeBox, { borderColor: accent }]}>
+          <Text style={styles.code} selectable>{pairCode ?? '…'}</Text>
+        </View>
+        <Text style={styles.codeHint}>
+          {sessionCount > 0
+            ? `Linked · ${sessionCount} session${sessionCount > 1 ? 's' : ''} synced.`
+            : 'Paste this code in the Live Meditation Tracker → Settings → AllHere sync to link your sessions.'}
+        </Text>
+      </View>
+
+      <View style={styles.profileActions}>
+        <Pressable onPress={onReset} hitSlop={8}>
+          <Text style={[styles.footerLink, confirmReset && styles.footerLinkDanger]}>
+            {confirmReset ? 'Tap again to reset progress' : 'Reset progress'}
+          </Text>
+        </Pressable>
+        {user && (
+          <Pressable onPress={onLogout} hitSlop={8}>
+            <Text style={styles.footerLink}>Log out</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -458,75 +517,6 @@ function LiveTrackerPane({
           ))}
         </View>
       )}
-    </View>
-  );
-}
-
-// ── Profile ─────────────────────────────────────────────────────────────
-// Account hub: identity, your activity stats, Live Tracker connection (pairing
-// code + status), and account actions. The landing tab — keeps the other
-// panes focused (SM Practice = progress, Live Tracker = sessions).
-function ProfilePane({
-  user, pairCode, accent, stats, sessionCount, confirmReset, onReset, onLogout,
-}: {
-  user: User | null;
-  pairCode: string | null;
-  accent: string;
-  stats: AccountStats | null;
-  sessionCount: number;
-  confirmReset: boolean;
-  onReset: () => void;
-  onLogout: () => void;
-}) {
-  return (
-    <View>
-      <View style={styles.profileTop}>
-        <LinearGradient
-          colors={[colors.accent, colors.accentAlt]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.avatar}
-        >
-          <Text style={styles.avatarInitial}>{displayName(user?.email ?? null).charAt(0)}</Text>
-        </LinearGradient>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.name} numberOfLines={1}>{displayName(user?.email ?? null)}</Text>
-          <Text style={styles.identityEmail} numberOfLines={1}>{user?.email ?? 'Not signed in'}</Text>
-        </View>
-      </View>
-
-      {stats && (
-        <View style={styles.profileSection}>
-          <Text style={styles.sectionLabel}>Activity</Text>
-          <Text style={styles.statText}>{stats.listens} listens · {fmtTime(stats.seconds)} listened</Text>
-          <Text style={styles.statText}>{stats.qmRounds} QM rounds · {stats.streakDays}-day streak</Text>
-        </View>
-      )}
-
-      <View style={styles.profileSection}>
-        <Text style={styles.sectionLabel}>Live Tracker</Text>
-        <View style={[styles.codeBox, { borderColor: accent }]}>
-          <Text style={styles.code} selectable>{pairCode ?? '…'}</Text>
-        </View>
-        <Text style={styles.codeHint}>
-          {sessionCount > 0
-            ? `Linked · ${sessionCount} session${sessionCount > 1 ? 's' : ''} synced.`
-            : 'Paste this code in the Live Meditation Tracker → Settings → AllHere sync to link your sessions.'}
-        </Text>
-      </View>
-
-      <View style={styles.profileActions}>
-        <Pressable onPress={onReset} hitSlop={8}>
-          <Text style={[styles.footerLink, confirmReset && styles.footerLinkDanger]}>
-            {confirmReset ? 'Tap again to reset progress' : 'Reset progress'}
-          </Text>
-        </Pressable>
-        {user && (
-          <Pressable onPress={onLogout} hitSlop={8}>
-            <Text style={styles.footerLink}>Log out</Text>
-          </Pressable>
-        )}
-      </View>
     </View>
   );
 }
