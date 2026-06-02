@@ -6,6 +6,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useLayout } from '../../src/hooks/useLayout';
 import { SwipeTabs } from '../../src/components/SwipeTabs';
@@ -223,7 +224,19 @@ export default function StartScreen() {
         accessibilityLabel="Open account menu"
         style={({ pressed }) => [styles.avatarBtnCorner, pressed && { opacity: 0.7 }]}
       >
-        <BustIcon size={18} color={colors.text} />
+        {user?.email ? (
+          <>
+            <LinearGradient
+              colors={[colors.accent, colors.accentAlt]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.avatarFill}
+            />
+            <Text style={styles.avatarInitial}>{user.email.trim().charAt(0).toUpperCase()}</Text>
+          </>
+        ) : (
+          <BustIcon size={18} color={colors.text} />
+        )}
       </Pressable>
       <SwipeTabs current="index">
         <View style={{ flex: 1 }}>
@@ -449,8 +462,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     zIndex: 100,
   },
+  avatarFill: { ...StyleSheet.absoluteFillObject },
+  avatarInitial: { ...type.h3, color: '#FFFFFF', fontSize: 14 },
 
   title: {
     // Matches ProgramHeader's title style on the SM / QM / About tabs

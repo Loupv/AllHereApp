@@ -309,20 +309,7 @@ function SilentMindProfilePane({
 
   return (
     <View>
-      <View style={styles.profileTop}>
-        <LinearGradient
-          colors={[colors.accent, colors.accentAlt]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.avatar}
-        >
-          <Text style={styles.avatarInitial}>{displayName(user?.email ?? null).charAt(0)}</Text>
-        </LinearGradient>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.name} numberOfLines={1}>{displayName(user?.email ?? null)}</Text>
-          <Text style={styles.identityEmail} numberOfLines={1}>{user?.email ?? 'Not signed in'}</Text>
-        </View>
-      </View>
+      <Text style={styles.profileName} numberOfLines={1}>{displayName(user?.email ?? null)}</Text>
 
       {/* Silent Mind program — on its own magenta-washed card */}
       <LinearGradient
@@ -358,14 +345,11 @@ function SilentMindProfilePane({
         </View>
       )}
 
-      <View style={styles.profileSection}>
+      <View style={styles.idSection}>
         <Text style={styles.sectionLabel}>All Here ID</Text>
         <View style={styles.codeBox}>
           <Text style={styles.code} selectable>{pairCode ?? '…'}</Text>
         </View>
-        <Text style={styles.codeHint}>
-          Your global All Here ID. Paste it into All Here products (e.g. the Live Meditation Tracker) to link your activity.
-        </Text>
       </View>
 
       <View style={styles.profileActions}>
@@ -786,11 +770,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgDeep,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
-  profileTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
-  avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { ...type.h2, color: '#FFFFFF', fontSize: 20 },
-  name: { ...type.h2, color: colors.text, fontSize: 18 },
-  identityEmail: { ...type.caption, color: colors.textDim, fontSize: 12, marginTop: 1 },
+  profileName: { ...type.h2, color: colors.text, fontSize: 18, textAlign: 'center', marginTop: spacing.xs },
   close: { ...type.caption, color: colors.textDim, textDecorationLine: 'underline' },
 
   segments: { flexDirection: 'row', paddingHorizontal: spacing.md, gap: spacing.sm, marginTop: spacing.md },
@@ -829,6 +809,7 @@ const styles = StyleSheet.create({
   empty: { ...type.body, color: colors.textDim, marginTop: spacing.md },
 
   profileSection: { marginTop: spacing.xl, gap: spacing.xs },
+  idSection: { marginTop: spacing.xl, alignItems: 'center', gap: spacing.sm },
   profileActions: { marginTop: spacing.xxl, gap: spacing.md, alignItems: 'flex-start' },
 
   smCard: {
@@ -854,13 +835,12 @@ const styles = StyleSheet.create({
   statTileValue: { ...type.h2, color: colors.text, fontSize: 18 },
   statTileLabel: { ...type.caption, color: colors.textDim, fontSize: 10 },
   codeBox: {
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: radius.sm,
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderStrong,
-    paddingVertical: spacing.xs, paddingHorizontal: spacing.md, marginBottom: spacing.xs,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.lg,
   },
   code: { ...type.h3, color: colors.text, letterSpacing: 3, fontSize: 16 },
-  codeHint: { ...type.caption, color: colors.textDim, fontSize: 11 },
 
   reportTop: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
