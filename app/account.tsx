@@ -211,9 +211,7 @@ export default function AccountScreen() {
             listened={listened}
             user={user}
             pairCode={pairCode}
-            accent={PANE_THEME[TAB.sm].accent}
             stats={stats}
-            sessionCount={sessions?.length ?? 0}
             confirmReset={confirmReset}
             onReset={() => {
               if (confirmReset) { resetProgress(); setConfirmReset(false); }
@@ -286,14 +284,12 @@ function Pane({
 // One tab combining identity, program progress, activity stats, the Live
 // Tracker pairing/connection, and account actions.
 function SilentMindProfilePane({
-  listened, user, pairCode, accent, stats, sessionCount, confirmReset, onReset, onLogout,
+  listened, user, pairCode, confirmReset, onReset, onLogout, stats,
 }: {
   listened: Record<string, true>;
   user: User | null;
   pairCode: string | null;
-  accent: string;
   stats: AccountStats | null;
-  sessionCount: number;
   confirmReset: boolean;
   onReset: () => void;
   onLogout: () => void;
@@ -328,37 +324,47 @@ function SilentMindProfilePane({
         </View>
       </View>
 
-      <View style={styles.profileSection}>
-        <Text style={styles.sectionLabel}>Silent Mind program</Text>
-        <Text style={styles.bigStat}>{pct}<Text style={styles.bigStatDim}>%</Text></Text>
-        <Text style={styles.caption}>completed ({done} / {total} audios)</Text>
+      {/* Silent Mind program — on its own magenta-washed card */}
+      <LinearGradient
+        colors={['rgba(158,54,148,0.28)', 'rgba(158,54,148,0.06)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.smCard}
+      >
+        <Text style={styles.smCardLabel}>Silent Mind program</Text>
+        <View style={styles.smPctRow}>
+          <Text style={styles.bigStat}>{pct}<Text style={styles.bigStatDim}>%</Text></Text>
+          <Text style={styles.smPctMeta}>{done} / {total} audios</Text>
+        </View>
         <View style={styles.list}>
           {parts.map(p => (
-            <View key={p.id} style={styles.listRow}>
+            <View key={p.id} style={styles.smRow}>
               <Text style={styles.rowTitle}>{p.title}</Text>
               <Text style={styles.rowMeta}>{p.done} / {p.total}</Text>
             </View>
           ))}
         </View>
-      </View>
+      </LinearGradient>
 
       {stats && (
         <View style={styles.profileSection}>
           <Text style={styles.sectionLabel}>Activity</Text>
-          <Text style={styles.statText}>{stats.listens} listens · {fmtTime(stats.seconds)} listened</Text>
-          <Text style={styles.statText}>{stats.qmRounds} QM rounds · {stats.streakDays}-day streak</Text>
+          <View style={styles.statTiles}>
+            <StatTile value={String(stats.listens)} label="listens" />
+            <StatTile value={fmtTime(stats.seconds)} label="listened" />
+            <StatTile value={String(stats.qmRounds)} label="QM rounds" />
+            <StatTile value={`${stats.streakDays}d`} label="streak" />
+          </View>
         </View>
       )}
 
       <View style={styles.profileSection}>
-        <Text style={styles.sectionLabel}>Live Tracker</Text>
-        <View style={[styles.codeBox, { borderColor: accent }]}>
+        <Text style={styles.sectionLabel}>All Here ID</Text>
+        <View style={styles.codeBox}>
           <Text style={styles.code} selectable>{pairCode ?? '…'}</Text>
         </View>
         <Text style={styles.codeHint}>
-          {sessionCount > 0
-            ? `Linked · ${sessionCount} session${sessionCount > 1 ? 's' : ''} synced.`
-            : 'Paste this code in the Live Meditation Tracker → Settings → AllHere sync to link your sessions.'}
+          Your global All Here ID. Paste it into All Here products (e.g. the Live Meditation Tracker) to link your activity.
         </Text>
       </View>
 
@@ -763,6 +769,15 @@ function Score({ label, value }: { label: string; value: string }) {
   );
 }
 
+function StatTile({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={styles.statTile}>
+      <Text style={styles.statTileValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</Text>
+      <Text style={styles.statTileLabel}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   header: {
@@ -813,8 +828,31 @@ const styles = StyleSheet.create({
 
   empty: { ...type.body, color: colors.textDim, marginTop: spacing.md },
 
-  profileSection: { marginTop: spacing.xl, gap: 2 },
+  profileSection: { marginTop: spacing.xl, gap: spacing.xs },
   profileActions: { marginTop: spacing.xxl, gap: spacing.md, alignItems: 'flex-start' },
+
+  smCard: {
+    marginTop: spacing.lg, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(158,54,148,0.45)',
+    overflow: 'hidden',
+  },
+  smCardLabel: { ...type.sectionLabel, color: colors.text, marginBottom: spacing.xs },
+  smPctRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
+  smPctMeta: { ...type.caption, color: colors.textMuted, fontSize: 12 },
+  smRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.12)',
+  },
+
+  statTiles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
+  statTile: {
+    flexGrow: 1, flexBasis: '22%', minWidth: 70,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.sm,
+    backgroundColor: colors.surfaceElevated, borderRadius: radius.md, gap: 2,
+  },
+  statTileValue: { ...type.h2, color: colors.text, fontSize: 18 },
+  statTileLabel: { ...type.caption, color: colors.textDim, fontSize: 10 },
   codeBox: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: radius.sm,
@@ -868,7 +906,6 @@ const styles = StyleSheet.create({
   scoreValue: { ...type.h3, color: colors.text, fontSize: 15 },
   scoreLabel: { ...type.caption, color: colors.textDim, fontSize: 10, marginTop: 1 },
 
-  statText: { ...type.caption, color: colors.textDim, fontSize: 12 },
   footerLink: { ...type.caption, color: colors.textDim, textDecorationLine: 'underline' },
   footerLinkDanger: { color: '#FF6B6B' },
 });
