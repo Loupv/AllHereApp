@@ -461,8 +461,6 @@ function LiveTrackerPane({
             <Pressable
               key={s.id}
               onPress={() => setOpenId(s.id)}
-              onLongPress={() => requestDelete(s.id)}
-              delayLongPress={400}
               style={({ pressed }) => [styles.listRow, pressed && styles.rowPressed]}
             >
               <View style={{ flex: 1 }}>
@@ -470,6 +468,14 @@ function LiveTrackerPane({
                 <Text style={styles.rowMeta}>{fmtSessionDate(s.started_at)}</Text>
               </View>
               <Text style={styles.rowScore}>QM3 {fmtScore(s.participants[0]?.qm3_index ?? null)}</Text>
+              <Pressable
+                onPress={() => requestDelete(s.id)}
+                hitSlop={10}
+                style={({ pressed }) => [styles.delCircle, pressed && { opacity: 0.6 }]}
+                accessibilityLabel="Delete session"
+              >
+                <Text style={styles.delMinus}>−</Text>
+              </Pressable>
             </Pressable>
           ))}
         </View>
@@ -793,6 +799,12 @@ const styles = StyleSheet.create({
   rowTitle: { ...type.body, color: colors.text, fontSize: 15 },
   rowMeta: { ...type.caption, color: colors.textDim, fontSize: 12, marginTop: 2 },
   rowScore: { ...type.body, color: colors.text },
+  delCircle: {
+    width: 24, height: 24, borderRadius: 12, marginLeft: spacing.md,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,107,107,0.55)',
+  },
+  delMinus: { color: '#FF6B6B', fontSize: 18, lineHeight: 20, marginTop: -2 },
 
   empty: { ...type.body, color: colors.textDim, marginTop: spacing.md },
 
