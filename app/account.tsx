@@ -537,28 +537,34 @@ function ParticipantReport({
   // slot at each round → round transition, so the line breaks with a tiny
   // (one-sample, few-px) gap that shows the background. Works whether or not
   // the source curve has samples during the breaks.
-  const { index, alpha, times, roundCenters } = useMemo(() => {
+  const { index, alpha, relTimes, roundCenters, roundBounds } = useMemo(() => {
     const segAt = roundSegmenter(steps);
     const idx: (number | null)[] = [];
     const alp: (number | null)[] = [];
-    const ts: (number | null)[] = [];
+    const ts: (number | null)[] = []; // round-relative time (0 at each round start)
     const spans = new Map<number, [number, number]>();
     let prevSeg: number | null = null;
+    let segStartT = 0;
     for (const c of p.curve) {
       const seg = segAt(c.t);
       if (seg === -1) continue;              // drop break samples
       if (prevSeg !== null && seg !== prevSeg) { idx.push(null); alp.push(null); ts.push(null); }
+      if (seg !== prevSeg) segStartT = c.t;  // a new round → reset the clock
       const oi = idx.length;
-      idx.push(c.index); alp.push(c.alpha); ts.push(c.t);
+      idx.push(c.index); alp.push(c.alpha); ts.push(c.t - segStartT);
       const sp = spans.get(seg);
       if (sp) sp[1] = oi; else spans.set(seg, [oi, oi]);
       prevSeg = seg;
     }
     const len = idx.length || 1;
-    const centers = [...spans.entries()]
-      .sort((a, b) => a[0] - b[0])
-      .map(([id, [s, e]]) => ({ frac: ((s + e) / 2) / (len - 1 || 1), label: `R${id}` }));
-    return { index: idx, alpha: alp, times: ts, roundCenters: centers };
+    const denomL = len - 1 || 1;
+    const ordered = [...spans.entries()].sort((a, b) => a[1][0] - b[1][0]);
+    const centers = ordered.map(([id, [s, e]]) => ({ frac: ((s + e) / 2) / denomL, label: `R${id}` }));
+    // Vertical boundary lines at each round's start + end (always, even for a
+    // single round).
+    const bounds: number[] = [];
+    for (const [, [s, e]] of ordered) { bounds.push(s / denomL); bounds.push(e / denomL); }
+    return { index: idx, alpha: alp, relTimes: ts, roundCenters: centers, roundBounds: bounds };
   }, [p.curve, steps]);
   const n = index.length;
   const hasCurve = n > 1;
@@ -585,9 +591,7 @@ function ParticipantReport({
   const aR = seriesRange(alpha);
   const aMin = aR ? Math.min(aR.min, 0) : 0; // include 0 so the baseline shows
 
-  const winTimes = times.slice(start, end).filter((t): t is number => t != null);
-  const tStart = winTimes.length ? winTimes[0] : 0;
-  const tEnd = winTimes.length ? winTimes[winTimes.length - 1] : 0;
+  const relWin = relTimes.slice(start, end);
   // Map round-centre labels into the visible window.
   const denom = n - 1 || 1;
   const g0 = start / denom;
@@ -596,6 +600,9 @@ function ParticipantReport({
   const localMarkers = roundCenters
     .map(m => ({ frac: (m.frac - g0) / gSpan, label: m.label }))
     .filter(m => m.frac >= 0 && m.frac <= 1);
+  const localBounds = roundBounds
+    .map(b => (b - g0) / gSpan)
+    .filter(x => x >= 0 && x <= 1);
   const showRounds = roundCenters.length > 1; // only label rounds when there's > 1
 
   const pinchBegin = () => { baseZoom.current = zoom; };
@@ -661,7 +668,7 @@ function ParticipantReport({
                 <Text style={styles.axisVal}>0</Text>
               </View>
               <View style={styles.chartFill}>
-                <MiniLineChart data={idxSlice} color={colors.accentAlt} height={CHART_H} min={0} max={iR?.max} />
+                <MiniLineChart data={idxSlice} color={colors.accentAlt} dividers={localBounds} height={CHART_H} min={0} max={iR?.max} />
               </View>
             </View>
 
@@ -673,12 +680,12 @@ function ParticipantReport({
                 <Text style={styles.axisVal}>{fmtPct1(aMin)}</Text>
               </View>
               <View style={styles.chartFill}>
-                <MiniLineChart data={alphaSlice} color={colors.accent} height={CHART_H} min={aMin} max={400} pivot={0} baseline={0} />
+                <MiniLineChart data={alphaSlice} color={colors.accent} dividers={localBounds} height={CHART_H} min={aMin} max={400} pivot={0} baseline={0} />
               </View>
             </View>
 
             <View style={styles.axisRowWrap}>
-              <TimeAxis tStart={tStart} tEnd={tEnd} />
+              <TimeAxis times={relWin} />
             </View>
           </View>
         </GestureDetector>
@@ -687,12 +694,15 @@ function ParticipantReport({
   );
 }
 
-// Time scale beneath the charts: evenly-spaced mm:ss ticks (flex row).
-function TimeAxis({ tStart, tEnd }: { tStart: number; tEnd: number }) {
-  const span = tEnd - tStart;
-  if (span <= 0) return null;
+// Time scale beneath the charts. Reads round-relative times sampled at evenly
+// spaced points across the visible window, so the clock restarts at 0:00 at
+// each round boundary instead of running cumulatively.
+function TimeAxis({ times }: { times: (number | null)[] }) {
+  if (times.length < 2) return null;
   const N = 4;
-  const ticks = Array.from({ length: N + 1 }, (_, i) => tStart + (i / N) * span);
+  const at = (idx: number): number =>
+    times[idx] ?? times[Math.max(0, idx - 1)] ?? times[Math.min(times.length - 1, idx + 1)] ?? 0;
+  const ticks = Array.from({ length: N + 1 }, (_, i) => at(Math.round((i / N) * (times.length - 1))));
   return (
     <View style={styles.axisTicksOnly}>
       {ticks.map((t, i) => (

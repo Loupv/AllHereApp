@@ -77,9 +77,21 @@ export const MiniLineChart = memo(function MiniLineChart({ data, color, height =
   return (
     <View style={[styles.wrap, { height, width: w }]}>
       <Svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-        {dividers.map((d, i) => (
-          <Line key={`d${i}`} x1={d * 100} y1={0} x2={d * 100} y2={100} stroke={colors.border} strokeWidth={0.5} />
-        ))}
+        {dividers.map((d, i) => {
+          const x = Math.max(0.6, Math.min(99.4, d * 100)); // keep edge lines visible
+          return (
+            <Line
+              key={`d${i}`}
+              x1={x}
+              y1={0}
+              x2={x}
+              y2={100}
+              stroke={colors.borderStrong}
+              strokeWidth={1}
+              vectorEffect="non-scaling-stroke"
+            />
+          );
+        })}
         {baseY != null && baseY >= 0 && baseY <= 100 && (
           <Line
             x1={0}
