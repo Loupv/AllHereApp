@@ -10,7 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useNavigation } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProgress } from '../src/player/progressStore';
-import { useAuth } from '../src/auth/authStore';
+import { useAuth, type User } from '../src/auth/authStore';
 import { silentMindVolets } from '../src/content/catalog';
 import { fetchStats, type AccountStats } from '../src/analytics/stats';
 import { flush } from '../src/analytics/events';
@@ -18,13 +18,17 @@ import { fetchMe, fetchSessions, type LmtSession, type SessionParticipant } from
 import { MiniLineChart } from '../src/components/MiniLineChart';
 import { colors, radius, spacing, type } from '../src/theme';
 
-const PANES = ['Silent Mind Practice', 'Live Tracker', 'Quantified Meditation Reports'] as const;
+const PANES = ['Profile', 'Silent Mind Practice', 'Live Tracker', 'Quantified Meditation Reports'] as const;
+// Tab indices (kept in sync with PANES) — referenced for swipe spill + the
+// pager/gesture guards on the Live Tracker tab.
+const TAB = { profile: 0, sm: 1, live: 2, qm: 3 } as const;
 
 const CHART_H = 130; // taller charts — more room for the curve detail
 
-// Per-pane identity colour — magenta (SM program), indigo (Live Tracker),
-// teal (QM reports). Each tints its pane background and the active tab rail.
+// Per-pane identity colour — amber (Profile), magenta (Silent Mind), indigo
+// (Live Tracker), teal (QM reports). Each tints its pane bg + active tab rail.
 const PANE_THEME = [
+  { accent: '#C2913F', tint: 'rgba(194,145,63,0.22)' },
   { accent: colors.accent, tint: 'rgba(158,54,148,0.22)' },
   { accent: '#5A6BD8', tint: 'rgba(90,107,216,0.22)' },
   { accent: colors.accentAlt, tint: 'rgba(54,160,158,0.22)' },
@@ -187,7 +191,7 @@ export default function AccountScreen() {
   // Live Tracker — otherwise the full-screen back gesture eats the horizontal
   // swipe meant to move between sessions.
   useEffect(() => {
-    navigation.setOptions({ gestureEnabled: !(reportOpen && active === 1) });
+    navigation.setOptions({ gestureEnabled: !(reportOpen && active === TAB.live) });
   }, [navigation, reportOpen, active]);
 
   const goTo = (idx: number) => {
@@ -205,32 +209,14 @@ export default function AccountScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Header: identity (avatar + name + email) + close */}
+      {/* Slim header — identity moved into the Profile tab to free space */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <View style={styles.identity}>
-          <LinearGradient
-            colors={[colors.accent, colors.accentAlt]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.avatar}
-          >
-            <Text style={styles.avatarInitial}>{displayName(user?.email ?? null).charAt(0)}</Text>
-          </LinearGradient>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.name} numberOfLines={1}>{displayName(user?.email ?? null)}</Text>
-            {user?.email ? (
-              <Text style={styles.identityEmail} numberOfLines={1}>{user.email}</Text>
-            ) : (
-              <Text style={styles.identityEmail}>Not signed in</Text>
-            )}
-          </View>
-        </View>
         <Pressable onPress={() => router.back()} hitSlop={12} style={({ pressed }) => pressed && { opacity: 0.6 }}>
           <Text style={styles.close}>Close</Text>
         </Pressable>
       </View>
 
-      {/* Three-pane nav */}
+      {/* Tab nav */}
       <View style={styles.segments}>
         {PANES.map((label, i) => (
           <Pressable key={label} onPress={() => goTo(i)} style={styles.segment} hitSlop={6}>
@@ -246,13 +232,18 @@ export default function AccountScreen() {
         ref={scrollRef}
         horizontal
         pagingEnabled
-        scrollEnabled={!(reportOpen && active === 1)}
+        scrollEnabled={!(reportOpen && active === TAB.live)}
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={onPaged}
         style={styles.pager}
       >
-        {/* ── Pane 1 · Silent Mind program ─────────────────────── */}
-        <Pane width={width} tint={PANE_THEME[0].tint}>
+        {/* ── Profile ─────────────────────────────────────────── */}
+        <Pane width={width} tint={PANE_THEME[TAB.profile].tint}>
+          <ProfilePane user={user} pairCode={pairCode} accent={PANE_THEME[TAB.profile].accent} />
+        </Pane>
+
+        {/* ── Silent Mind Practice ─────────────────────────────── */}
+        <Pane width={width} tint={PANE_THEME[TAB.sm].tint}>
           <SmProgramPane
             listened={listened}
             stats={stats}
@@ -264,21 +255,20 @@ export default function AccountScreen() {
           />
         </Pane>
 
-        {/* ── Pane 2 · Live Tracker ────────────────────────────── */}
-        <Pane width={width} tint={PANE_THEME[1].tint} refreshing={refreshing} onRefresh={() => void load(true)}>
+        {/* ── Live Tracker ─────────────────────────────────────── */}
+        <Pane width={width} tint={PANE_THEME[TAB.live].tint} refreshing={refreshing} onRefresh={() => void load(true)}>
           <LiveTrackerPane
             user={!!user}
-            pairCode={pairCode}
             sessions={sessions}
-            accent={PANE_THEME[1].accent}
             chartWidth={width - spacing.lg * 2}
-            onTab={goTo}
             onReportOpen={setReportOpen}
+            onSpillLeft={() => goTo(TAB.live - 1)}
+            onSpillRight={() => goTo(TAB.live + 1)}
           />
         </Pane>
 
-        {/* ── Pane 3 · Quantified Meditation Reports (future) ──── */}
-        <Pane width={width} tint={PANE_THEME[2].tint}>
+        {/* ── Quantified Meditation Reports (future) ───────────── */}
+        <Pane width={width} tint={PANE_THEME[TAB.qm].tint}>
           <View style={styles.soonWrap}>
             <Text style={styles.soonBadge}>Soon</Text>
             <Text style={styles.caption}>Quantified Meditation reports are on the way.</Text>
@@ -387,15 +377,14 @@ function SmProgramPane({
 
 // ── Pane 2 ────────────────────────────────────────────────────────────────
 function LiveTrackerPane({
-  user, pairCode, sessions, accent, chartWidth, onTab, onReportOpen,
+  user, sessions, chartWidth, onReportOpen, onSpillLeft, onSpillRight,
 }: {
   user: boolean;
-  pairCode: string | null;
   sessions: LmtSession[] | null;
-  accent: string;
   chartWidth: number;
-  onTab: (idx: number) => void;
   onReportOpen: (open: boolean) => void;
+  onSpillLeft: () => void;
+  onSpillRight: () => void;
 }) {
   // Tapping a session opens its report in place (no tab change); back returns
   // to the list.
@@ -429,10 +418,10 @@ function LiveTrackerPane({
     const onSwipeEnd = (tx: number, vx: number) => {
       if (tx <= -SWIPE || vx <= -600) {        // swipe left → older / next tab
         if (next) go(next.id, 1);
-        else { setOpenId(null); onTab(2); }    // spill: close report, go to QM Reports
+        else { setOpenId(null); onSpillRight(); }   // spill to the tab on the right
       } else if (tx >= SWIPE || vx >= 600) {   // swipe right → newer / prev tab
         if (prev) go(prev.id, -1);
-        else { setOpenId(null); onTab(0); }    // spill: close report, go to Silent Mind
+        else { setOpenId(null); onSpillLeft(); }    // spill to the tab on the left
       }
     };
     const swipe = Gesture.Pan()
@@ -489,9 +478,31 @@ function LiveTrackerPane({
           ))}
         </View>
       )}
+    </View>
+  );
+}
 
-      {/* Pairing code — at the bottom: you set it once, then it's just
-          reference. */}
+// ── Profile ─────────────────────────────────────────────────────────────
+// Identity + LMT pairing code. Lives in its own tab so the header and the
+// other panes stay uncluttered.
+function ProfilePane({ user, pairCode, accent }: { user: User | null; pairCode: string | null; accent: string }) {
+  return (
+    <View>
+      <View style={styles.profileTop}>
+        <LinearGradient
+          colors={[colors.accent, colors.accentAlt]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.avatar}
+        >
+          <Text style={styles.avatarInitial}>{displayName(user?.email ?? null).charAt(0)}</Text>
+        </LinearGradient>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.name} numberOfLines={1}>{displayName(user?.email ?? null)}</Text>
+          <Text style={styles.identityEmail} numberOfLines={1}>{user?.email ?? 'Not signed in'}</Text>
+        </View>
+      </View>
+
       <Text style={[styles.sectionLabel, styles.codeHead]}>Pairing code</Text>
       <View style={[styles.codeBox, { borderColor: accent }]}>
         <Text style={styles.code} selectable>{pairCode ?? '…'}</Text>
@@ -567,9 +578,8 @@ function ParticipantReport({
   // scale + stable high/low labels.
   const iR = seriesRange(index);
   const aR = seriesRange(alpha);
-  // Alpha scale always includes the 0 % baseline.
-  const aLo = aR ? Math.min(aR.min, 0) : 0;
-  const aHi = aR ? Math.max(aR.max, 0) : 1;
+  // Alpha bottom of scale (includes 0 so the centred baseline always shows).
+  const aMin = aR ? Math.min(aR.min, 0) : 0;
 
   const tStart = hasCurve ? p.curve[start].t : 0;
   const tEnd = hasCurve ? p.curve[Math.max(start, end - 1)].t : 0;
@@ -608,12 +618,22 @@ function ParticipantReport({
     <View style={styles.participant}>
       {showName && <Text style={styles.rowTitle}>{p.participant}</Text>}
 
-      <View style={styles.scoreGrid}>
-        <Score label="QM3 Index" value={fmtScore(p.qm3_index)} />
-        <Score label="QM3 α+" value={fmtScore(p.qm3_alpha_pos)} />
-        <Score label="QM3 α−" value={fmtScore(p.qm3_alpha_neg)} />
-        <Score label="Mean idx" value={fmtScore(p.mean_index)} />
-        <Score label="Mean α" value={fmtScore(p.mean_alpha)} />
+      <View style={styles.scores}>
+        <View style={styles.scoreGroup}>
+          <Text style={styles.scoreGroupLabel}>QM3</Text>
+          <View style={styles.scoreRow}>
+            <Score label="Index" value={fmtScore(p.qm3_index)} />
+            <Score label="Alpha +" value={fmtScore(p.qm3_alpha_pos)} />
+            <Score label="Alpha −" value={fmtScore(p.qm3_alpha_neg)} />
+          </View>
+        </View>
+        <View style={styles.scoreGroup}>
+          <Text style={styles.scoreGroupLabel}>Session mean</Text>
+          <View style={styles.scoreRow}>
+            <Score label="Index" value={fmtScore(p.mean_index)} />
+            <Score label="Alpha" value={fmtScore(p.mean_alpha)} />
+          </View>
+        </View>
       </View>
 
       {hasCurve && (
@@ -635,21 +655,22 @@ function ParticipantReport({
               <View style={styles.chartRow}>
                 <View style={styles.yAxis}>
                   <Text style={styles.axisVal}>{iR ? iR.max.toFixed(0) : ''}</Text>
-                  <Text style={styles.axisVal}>{iR ? iR.min.toFixed(0) : ''}</Text>
+                  <Text style={styles.axisVal}>0</Text>
                 </View>
                 <View style={styles.chartFill}>
-                  <MiniLineChart data={idxSlice} color={colors.accentAlt} dividers={localDividers} height={CHART_H} min={iR?.min} max={iR?.max} />
+                  <MiniLineChart data={idxSlice} color={colors.accentAlt} dividers={localDividers} height={CHART_H} min={0} max={iR?.max} />
                 </View>
               </View>
 
-              <Text style={[styles.chartLabel, { marginTop: spacing.md }]}>Alpha · baseline 0%</Text>
+              <Text style={[styles.chartLabel, { marginTop: spacing.md }]}>Alpha</Text>
               <View style={styles.chartRow}>
                 <View style={styles.yAxis}>
-                  <Text style={styles.axisVal}>{fmtPct(aHi)}</Text>
-                  <Text style={styles.axisVal}>{fmtPct(aLo)}</Text>
+                  <Text style={styles.axisVal}>+400%</Text>
+                  <Text style={styles.axisValMid}>baseline</Text>
+                  <Text style={styles.axisVal}>{fmtPct(aMin)}</Text>
                 </View>
                 <View style={styles.chartFill}>
-                  <MiniLineChart data={alphaSlice} color={colors.accent} dividers={localDividers} height={CHART_H} min={aLo} max={aHi} baseline={0} />
+                  <MiniLineChart data={alphaSlice} color={colors.accent} dividers={localDividers} height={CHART_H} min={aMin} max={400} pivot={0} baseline={0} />
                 </View>
               </View>
 
@@ -697,13 +718,13 @@ function Score({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg, paddingBottom: spacing.md, gap: spacing.md,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end',
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
     backgroundColor: colors.bgDeep,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
-  identity: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },
-  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  profileTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
+  avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
   avatarInitial: { ...type.h2, color: '#FFFFFF', fontSize: 20 },
   name: { ...type.h2, color: colors.text, fontSize: 18 },
   identityEmail: { ...type.caption, color: colors.textDim, fontSize: 12, marginTop: 1 },
@@ -766,8 +787,9 @@ const styles = StyleSheet.create({
 
   chartLabel: { ...type.sectionLabel, color: colors.textDim, marginBottom: spacing.xs },
   chartRow: { flexDirection: 'row', alignItems: 'stretch' },
-  yAxis: { width: 40, height: CHART_H, justifyContent: 'space-between', paddingRight: spacing.xs },
+  yAxis: { width: 48, height: CHART_H, justifyContent: 'space-between', paddingRight: spacing.xs },
   axisVal: { ...type.caption, color: colors.textDim, fontSize: 10, textAlign: 'right' },
+  axisValMid: { ...type.caption, color: colors.textDim, fontSize: 9, textAlign: 'right' },
   chartFill: { flex: 1 },
   axisRowWrap: { paddingLeft: 40 },
   axis: { height: 26, marginTop: spacing.xs },
@@ -777,7 +799,10 @@ const styles = StyleSheet.create({
 
   reportTitle: { ...type.h2, color: colors.text, marginTop: spacing.xs },
   participant: { marginTop: spacing.md, gap: spacing.xs },
-  scoreGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
+  scores: { marginTop: spacing.xs, gap: spacing.sm },
+  scoreGroup: { gap: spacing.xs },
+  scoreGroupLabel: { ...type.overline, color: colors.textDim, fontSize: 10 },
+  scoreRow: { flexDirection: 'row', gap: spacing.xs },
   score: {
     minWidth: 60, flexGrow: 1, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
     backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: radius.sm,
