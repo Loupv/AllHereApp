@@ -142,6 +142,8 @@ export default {
           return await ingestSession(request, env);
         case 'GET /v1/sessions':
           return await listSessions(request, env);
+        case 'POST /v1/sessions/delete':
+          return await deleteSession(request, env);
         default:
           return bad('not found', 404);
       }
@@ -579,4 +581,30 @@ async function listSessions(request: Request, env: Env): Promise<Response> {
       return { ...row, participants: bySession.get(row.id) ?? [] };
     }),
   });
+}
+
+/**
+ * Permanently delete an LMT session (and its participant rows). Allowed only
+ * when the requester owns the session (`owner_id` == their pair code) — a
+ * participant-only match can't wipe a session that may hold others' data.
+ */
+async function deleteSession(request: Request, env: Env): Promise<Response> {
+  const userId = await userFromAuth(request, env);
+  if (!userId) return json({ error: 'unauthorized' }, 401);
+  const body = await readJson(request);
+  const id = str(body?.id);
+  if (!id) return bad('id required');
+
+  const code = await ensurePairCode(userId, env);
+  const row = await env.DB.prepare(`SELECT owner_id FROM lmt_sessions WHERE id = ?1`)
+    .bind(id).first<{ owner_id: string }>();
+  if (!row) return json({ ok: true, deleted: 0 }); // already gone
+  if (!code || row.owner_id !== code) return json({ error: 'forbidden' }, 403);
+
+  // Explicit child delete (don't rely on FK cascade being enabled in D1).
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM lmt_session_participants WHERE session_id = ?1`).bind(id),
+    env.DB.prepare(`DELETE FROM lmt_sessions WHERE id = ?1`).bind(id),
+  ]);
+  return json({ ok: true, deleted: 1 });
 }

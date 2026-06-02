@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, useWindowDimensions,
+  View, Text, Pressable, StyleSheet, ScrollView, RefreshControl, Alert, useWindowDimensions,
   type NativeSyntheticEvent, type NativeScrollEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +14,7 @@ import { useAuth, type User } from '../src/auth/authStore';
 import { silentMindVolets } from '../src/content/catalog';
 import { fetchStats, type AccountStats } from '../src/analytics/stats';
 import { flush } from '../src/analytics/events';
-import { fetchMe, fetchSessions, type LmtSession, type SessionParticipant } from '../src/analytics/sessions';
+import { fetchMe, fetchSessions, deleteSession, type LmtSession, type SessionParticipant } from '../src/analytics/sessions';
 import { MiniLineChart } from '../src/components/MiniLineChart';
 import { colors, radius, spacing, type } from '../src/theme';
 
@@ -227,6 +227,7 @@ export default function AccountScreen() {
             sessions={sessions}
             chartWidth={width - spacing.lg * 2}
             onReportOpen={setReportOpen}
+            onReload={() => void load(false)}
             onSpillLeft={() => goTo(TAB.live - 1)}
             onSpillRight={() => goTo(TAB.live + 1)}
           />
@@ -342,12 +343,13 @@ function SmProgramPane({
 
 // ── Pane 2 ────────────────────────────────────────────────────────────────
 function LiveTrackerPane({
-  user, sessions, chartWidth, onReportOpen, onSpillLeft, onSpillRight,
+  user, sessions, chartWidth, onReportOpen, onReload, onSpillLeft, onSpillRight,
 }: {
   user: boolean;
   sessions: LmtSession[] | null;
   chartWidth: number;
   onReportOpen: (open: boolean) => void;
+  onReload: () => void;
   onSpillLeft: () => void;
   onSpillRight: () => void;
 }) {
@@ -394,6 +396,28 @@ function LiveTrackerPane({
       .failOffsetY([-16, 16])
       .onEnd(e => runOnJS(onSwipeEnd)(e.translationX, e.velocityX));
 
+    const confirmDelete = () => {
+      Alert.alert(
+        'Delete this session?',
+        'This permanently removes the session and its data. This cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => {
+              const id = open.id;
+              setOpenId(null);
+              void deleteSession(id).then(ok => {
+                onReload();
+                if (!ok) Alert.alert('Could not delete', 'Please try again when you’re online.');
+              });
+            },
+          },
+        ],
+      );
+    };
+
     return (
       <GestureDetector gesture={swipe}>
         <View>
@@ -414,6 +438,9 @@ function LiveTrackerPane({
           <Animated.View style={slideStyle}>
             <SessionReport session={open} chartWidth={chartWidth} />
           </Animated.View>
+          <Pressable onPress={confirmDelete} hitSlop={8} style={styles.deleteBtn}>
+            <Text style={styles.deleteLabel}>Delete session</Text>
+          </Pressable>
         </View>
       </GestureDetector>
     );
@@ -782,6 +809,9 @@ const styles = StyleSheet.create({
   navStep: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   navLink: { ...type.caption, color: colors.text, fontSize: 13 },
   navDisabled: { color: colors.textDim, opacity: 0.4 },
+
+  deleteBtn: { alignSelf: 'center', marginTop: spacing.xl, paddingVertical: spacing.sm },
+  deleteLabel: { ...type.caption, color: '#FF6B6B', textDecorationLine: 'underline' },
 
   soonWrap: { paddingTop: spacing.xxl, alignItems: 'center', gap: spacing.sm },
   soonBadge: { ...type.overline, color: colors.textDim },

@@ -65,3 +65,19 @@ export const fetchSessions = async (): Promise<LmtSession[] | null> => {
     return null;
   }
 };
+
+/** Permanently delete a session you own. Returns true on success. */
+export const deleteSession = async (id: string): Promise<boolean> => {
+  const headers = authHeaders();
+  if (!headers) return false;
+  try {
+    const res = await fetch(apiUrl('/v1/sessions/delete'), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ id }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+};
