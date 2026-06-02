@@ -59,6 +59,13 @@ const fmtTime = (s: number): string => {
 
 const fmtScore = (v: number | null): string => (v == null ? '—' : v.toFixed(1));
 
+/** Red (lowest) → green (highest) across [lo, hi], via HSL hue 0→120. */
+const scoreColor = (v: number | null, lo: number, hi: number): string => {
+  if (v == null) return colors.textDim;
+  const t = hi > lo ? Math.max(0, Math.min(1, (v - lo) / (hi - lo))) : 1;
+  return `hsl(${Math.round(t * 120)}, 60%, 56%)`;
+};
+
 const fmtSessionDate = (ms: number): string =>
   new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
@@ -516,6 +523,10 @@ function LiveTrackerPane({
   }
 
   const visible = (sessions ?? []).filter(s => !starredOnly || isStarred(s));
+  // Colour range for the QM3 score across the visible sessions.
+  const scoreVals = visible.map(s => s.participants[0]?.qm3_index).filter((n): n is number => n != null);
+  const scoreLo = scoreVals.length ? Math.min(...scoreVals) : 0;
+  const scoreHi = scoreVals.length ? Math.max(...scoreVals) : 1;
 
   return (
     <View>
@@ -539,10 +550,6 @@ function LiveTrackerPane({
               onPress={() => setOpenId(s.id)}
               style={({ pressed }) => [styles.listRow, pressed && styles.rowPressed]}
             >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowTitle}>{sessionTypeLabel(s)}</Text>
-                <Text style={styles.rowMeta}>{fmtSessionDate(s.started_at)}</Text>
-              </View>
               <Pressable
                 onPress={() => toggleStar(s)}
                 hitSlop={10}
@@ -551,7 +558,13 @@ function LiveTrackerPane({
               >
                 <Text style={[styles.star, isStarred(s) && styles.starOn]}>{isStarred(s) ? '★' : '☆'}</Text>
               </Pressable>
-              <Text style={styles.rowScore}>QM3 {fmtScore(s.participants[0]?.qm3_index ?? null)}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle}>{sessionTypeLabel(s)}</Text>
+                <Text style={styles.rowMeta}>{fmtSessionDate(s.started_at)}</Text>
+              </View>
+              <Text style={[styles.rowScore, { color: scoreColor(s.participants[0]?.qm3_index ?? null, scoreLo, scoreHi) }]}>
+                {fmtScore(s.participants[0]?.qm3_index ?? null)}
+              </Text>
               <Pressable
                 onPress={() => requestDelete(s.id)}
                 hitSlop={10}
@@ -854,7 +867,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   filterChipOn: { color: '#E6B34A', borderColor: 'rgba(230,179,74,0.6)' },
-  starBtn: { marginLeft: spacing.sm, paddingHorizontal: 2 },
+  starBtn: { marginRight: spacing.sm, paddingHorizontal: 2 },
   star: { fontSize: 16, color: colors.textDim },
   starOn: { color: '#E6B34A' },
   list: { marginTop: spacing.md, gap: 0 },
