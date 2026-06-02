@@ -172,6 +172,10 @@ export default function AccountScreen() {
     if (idx !== active) setActive(idx);
   };
 
+  // No footer anymore (logout moved into Profile) — panes carry the bottom
+  // safe-area padding themselves.
+  const bottomPad = Math.max(insets.bottom, spacing.xl);
+
   return (
     <View style={styles.root}>
       {/* Slim header — identity moved into the Profile tab to free space */}
@@ -202,26 +206,30 @@ export default function AccountScreen() {
         onMomentumScrollEnd={onPaged}
         style={styles.pager}
       >
-        {/* ── Profile ─────────────────────────────────────────── */}
-        <Pane width={width} tint={PANE_THEME[TAB.profile].tint}>
-          <ProfilePane user={user} pairCode={pairCode} accent={PANE_THEME[TAB.profile].accent} />
-        </Pane>
-
-        {/* ── Silent Mind Practice ─────────────────────────────── */}
-        <Pane width={width} tint={PANE_THEME[TAB.sm].tint}>
-          <SmProgramPane
-            listened={listened}
+        {/* ── Profile (account hub) ────────────────────────────── */}
+        <Pane width={width} tint={PANE_THEME[TAB.profile].tint} bottomPad={bottomPad}>
+          <ProfilePane
+            user={user}
+            pairCode={pairCode}
+            accent={PANE_THEME[TAB.profile].accent}
             stats={stats}
+            sessionCount={sessions?.length ?? 0}
             confirmReset={confirmReset}
             onReset={() => {
               if (confirmReset) { resetProgress(); setConfirmReset(false); }
               else setConfirmReset(true);
             }}
+            onLogout={() => { logout(); router.back(); }}
           />
         </Pane>
 
+        {/* ── Silent Mind Practice ─────────────────────────────── */}
+        <Pane width={width} tint={PANE_THEME[TAB.sm].tint} bottomPad={bottomPad}>
+          <SmProgramPane listened={listened} />
+        </Pane>
+
         {/* ── Live Tracker ─────────────────────────────────────── */}
-        <Pane width={width} tint={PANE_THEME[TAB.live].tint} refreshing={refreshing} onRefresh={() => void load(true)}>
+        <Pane width={width} tint={PANE_THEME[TAB.live].tint} bottomPad={bottomPad} refreshing={refreshing} onRefresh={() => void load(true)}>
           <LiveTrackerPane
             user={!!user}
             sessions={sessions}
@@ -234,22 +242,13 @@ export default function AccountScreen() {
         </Pane>
 
         {/* ── Quantified Meditation Reports (future) ───────────── */}
-        <Pane width={width} tint={PANE_THEME[TAB.qm].tint}>
+        <Pane width={width} tint={PANE_THEME[TAB.qm].tint} bottomPad={bottomPad}>
           <View style={styles.soonWrap}>
             <Text style={styles.soonBadge}>Soon</Text>
             <Text style={styles.caption}>Quantified Meditation reports are on the way.</Text>
           </View>
         </Pane>
       </ScrollView>
-
-      {/* ── Footer · log out only (stats + reset live in the SM pane) ── */}
-      {user && (
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-          <Pressable onPress={() => { logout(); router.back(); }} hitSlop={8} style={styles.logoutBtn}>
-            <Text style={styles.footerLink}>Log out</Text>
-          </Pressable>
-        </View>
-      )}
     </View>
   );
 }
@@ -257,16 +256,16 @@ export default function AccountScreen() {
 // Full-width swipe pane: a soft top-down colour wash over the dark base, with
 // the scrollable content on top.
 function Pane({
-  width, tint, children, refreshing, onRefresh,
+  width, tint, children, refreshing, onRefresh, bottomPad = 0,
 }: {
   width: number; tint: string; children: ReactNode;
-  refreshing?: boolean; onRefresh?: () => void;
+  refreshing?: boolean; onRefresh?: () => void; bottomPad?: number;
 }) {
   return (
     <View style={{ width }}>
       <LinearGradient colors={[tint, 'transparent']} style={styles.paneGradient} pointerEvents="none" />
       <ScrollView
-        contentContainerStyle={styles.paneContent}
+        contentContainerStyle={[styles.paneContent, { paddingBottom: bottomPad }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           onRefresh
@@ -289,14 +288,7 @@ function Pane({
 }
 
 // ── Pane 1 ────────────────────────────────────────────────────────────────
-function SmProgramPane({
-  listened, stats, confirmReset, onReset,
-}: {
-  listened: Record<string, true>;
-  stats: AccountStats | null;
-  confirmReset: boolean;
-  onReset: () => void;
-}) {
+function SmProgramPane({ listened }: { listened: Record<string, true> }) {
   // Total counts the FULL planned program, including not-yet-released
   // (coming-soon) audios — so the percentage reflects progress toward the
   // whole journey, not just what's currently downloadable.
@@ -323,20 +315,6 @@ function SmProgramPane({
           </View>
         ))}
       </View>
-
-      {stats && (
-        <View style={styles.statsBlock}>
-          <Text style={styles.sectionLabel}>Activity</Text>
-          <Text style={styles.statText}>{stats.listens} listens · {fmtTime(stats.seconds)} listened</Text>
-          <Text style={styles.statText}>{stats.qmRounds} QM rounds · {stats.streakDays}-day streak</Text>
-        </View>
-      )}
-
-      <Pressable onPress={onReset} hitSlop={8} style={styles.resetBtn}>
-        <Text style={[styles.footerLink, confirmReset && styles.footerLinkDanger]}>
-          {confirmReset ? 'Tap again to reset progress' : 'Reset progress'}
-        </Text>
-      </Pressable>
     </View>
   );
 }
@@ -485,9 +463,21 @@ function LiveTrackerPane({
 }
 
 // ── Profile ─────────────────────────────────────────────────────────────
-// Identity + LMT pairing code. Lives in its own tab so the header and the
-// other panes stay uncluttered.
-function ProfilePane({ user, pairCode, accent }: { user: User | null; pairCode: string | null; accent: string }) {
+// Account hub: identity, your activity stats, Live Tracker connection (pairing
+// code + status), and account actions. The landing tab — keeps the other
+// panes focused (SM Practice = progress, Live Tracker = sessions).
+function ProfilePane({
+  user, pairCode, accent, stats, sessionCount, confirmReset, onReset, onLogout,
+}: {
+  user: User | null;
+  pairCode: string | null;
+  accent: string;
+  stats: AccountStats | null;
+  sessionCount: number;
+  confirmReset: boolean;
+  onReset: () => void;
+  onLogout: () => void;
+}) {
   return (
     <View>
       <View style={styles.profileTop}>
@@ -505,13 +495,38 @@ function ProfilePane({ user, pairCode, accent }: { user: User | null; pairCode: 
         </View>
       </View>
 
-      <Text style={[styles.sectionLabel, styles.codeHead]}>Pairing code</Text>
-      <View style={[styles.codeBox, { borderColor: accent }]}>
-        <Text style={styles.code} selectable>{pairCode ?? '…'}</Text>
+      {stats && (
+        <View style={styles.profileSection}>
+          <Text style={styles.sectionLabel}>Activity</Text>
+          <Text style={styles.statText}>{stats.listens} listens · {fmtTime(stats.seconds)} listened</Text>
+          <Text style={styles.statText}>{stats.qmRounds} QM rounds · {stats.streakDays}-day streak</Text>
+        </View>
+      )}
+
+      <View style={styles.profileSection}>
+        <Text style={styles.sectionLabel}>Live Tracker</Text>
+        <View style={[styles.codeBox, { borderColor: accent }]}>
+          <Text style={styles.code} selectable>{pairCode ?? '…'}</Text>
+        </View>
+        <Text style={styles.codeHint}>
+          {sessionCount > 0
+            ? `Linked · ${sessionCount} session${sessionCount > 1 ? 's' : ''} synced.`
+            : 'Paste this code in the Live Meditation Tracker → Settings → AllHere sync to link your sessions.'}
+        </Text>
       </View>
-      <Text style={styles.codeHint}>
-        Paste this in the Live Meditation Tracker → Settings → AllHere sync to link your sessions.
-      </Text>
+
+      <View style={styles.profileActions}>
+        <Pressable onPress={onReset} hitSlop={8}>
+          <Text style={[styles.footerLink, confirmReset && styles.footerLinkDanger]}>
+            {confirmReset ? 'Tap again to reset progress' : 'Reset progress'}
+          </Text>
+        </Pressable>
+        {user && (
+          <Pressable onPress={onLogout} hitSlop={8}>
+            <Text style={styles.footerLink}>Log out</Text>
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }
@@ -808,7 +823,8 @@ const styles = StyleSheet.create({
 
   empty: { ...type.body, color: colors.textDim, marginTop: spacing.md },
 
-  codeHead: { marginTop: spacing.xl },
+  profileSection: { marginTop: spacing.xl, gap: 2 },
+  profileActions: { marginTop: spacing.xxl, gap: spacing.md, alignItems: 'flex-start' },
   codeBox: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: radius.sm,
@@ -862,15 +878,7 @@ const styles = StyleSheet.create({
   scoreValue: { ...type.h3, color: colors.text, fontSize: 15 },
   scoreLabel: { ...type.caption, color: colors.textDim, fontSize: 10, marginTop: 1 },
 
-  footer: {
-    backgroundColor: colors.bgDeep,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
-    paddingHorizontal: spacing.lg, paddingTop: spacing.md, gap: spacing.sm,
-  },
-  statsBlock: { marginTop: spacing.xl, gap: 2 },
   statText: { ...type.caption, color: colors.textDim, fontSize: 12 },
-  resetBtn: { marginTop: spacing.xl, alignSelf: 'flex-start' },
-  logoutBtn: { alignSelf: 'center' },
   footerLink: { ...type.caption, color: colors.textDim, textDecorationLine: 'underline' },
   footerLinkDanger: { color: '#FF6B6B' },
 });
