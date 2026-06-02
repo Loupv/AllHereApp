@@ -25,6 +25,12 @@ const TAB = { sm: 0, live: 1, qm: 2 } as const;
 
 const CHART_H = 130; // taller charts — more room for the curve detail
 
+// Vertical completion bar — mirrors the Silent Mind tree's journey hues
+// (dawn gold → Earth green → Sky blue → Space purple), listed top→bottom so
+// the fill reveals the journey from the bottom up.
+const SM_BAR_H = 168;
+const JOURNEY_HUES = ['#9B6FDD', '#3D6BBA', '#3D8E5E', '#C9A66B'] as const;
+
 // Per-pane identity colour — magenta (Silent Mind Profile), indigo (Live
 // Tracker), teal (QM reports). Each tints its pane bg + active tab rail.
 const PANE_THEME = [
@@ -74,15 +80,25 @@ const sessionTypeLabel = (s: LmtSession): string => {
   const steps = parseSteps(s.protocol);
   const rounds = steps?.filter(st => st.kind === 'round') ?? [];
   const dur = s.participants[0]?.duration_ms;
-  const mins = dur ? Math.round(dur / 60000) : null;
   // A genuine rounds session (rounds mode, or a multi-round protocol).
   const isRounds = s.mode === 'rounds' || rounds.length > 1;
   if (isRounds && rounds.length) {
     const sec = rounds[0].durationSec;
     return sec ? `${rounds.length} × ${Math.round(sec / 60)} min` : `${rounds.length} rounds`;
   }
-  // Infinite / intensity / guided → no fixed rounds.
-  return mins ? `Free format · ${mins} min` : 'Free format';
+  // Infinite / intensity / guided → no fixed rounds; show the total time.
+  return dur ? `Free format · ${fmtDuration(dur)}` : 'Free format';
+};
+
+/** Total duration as a clock (h:mm:ss / m:ss), seconds included, no "min". */
+const fmtDuration = (ms: number): string => {
+  const s = Math.round(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return h
+    ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+    : `${m}:${String(sec).padStart(2, '0')}`;
 };
 
 /** mm:ss clock for the chart time axis. */
@@ -322,17 +338,29 @@ function SilentMindProfilePane({
         style={styles.smCard}
       >
         <Text style={styles.smCardLabel}>Silent Mind program</Text>
-        <View style={styles.smPctRow}>
-          <Text style={styles.bigStat}>{pct}<Text style={styles.bigStatDim}>%</Text></Text>
-          <Text style={styles.smPctMeta}>{done} / {total} audios</Text>
-        </View>
-        <View style={styles.list}>
-          {parts.map(p => (
-            <View key={p.id} style={styles.smRow}>
-              <Text style={styles.rowTitle}>{p.title}</Text>
-              <Text style={styles.rowMeta}>{p.done} / {p.total}</Text>
+        <View style={styles.smBody}>
+          {/* Vertical completion bar — fills bottom-up through the journey hues */}
+          <View style={styles.smBar}>
+            <LinearGradient colors={JOURNEY_HUES} style={styles.smBarTrack} />
+            <View style={[styles.smBarClip, { height: (SM_BAR_H * pct) / 100 }]}>
+              <LinearGradient colors={JOURNEY_HUES} style={styles.smBarFill} />
             </View>
-          ))}
+          </View>
+
+          <View style={styles.smBodyMain}>
+            <View style={styles.smPctRow}>
+              <Text style={styles.bigStat}>{pct}<Text style={styles.bigStatDim}>%</Text></Text>
+              <Text style={styles.smPctMeta}>{done} / {total} audios</Text>
+            </View>
+            <View style={styles.list}>
+              {parts.map(p => (
+                <View key={p.id} style={styles.smRow}>
+                  <Text style={styles.rowTitle}>{p.title}</Text>
+                  <Text style={styles.rowMeta}>{p.done} / {p.total}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
         </View>
       </LinearGradient>
 
@@ -820,7 +848,16 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(158,54,148,0.45)',
     overflow: 'hidden',
   },
-  smCardLabel: { ...type.sectionLabel, color: colors.text, marginBottom: spacing.xs },
+  smCardLabel: { ...type.sectionLabel, color: colors.text, marginBottom: spacing.sm },
+  smBody: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
+  smBodyMain: { flex: 1 },
+  smBar: {
+    width: 8, height: SM_BAR_H, borderRadius: 4, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  smBarTrack: { ...StyleSheet.absoluteFillObject, opacity: 0.22 },
+  smBarClip: { position: 'absolute', left: 0, right: 0, bottom: 0, overflow: 'hidden' },
+  smBarFill: { position: 'absolute', left: 0, right: 0, bottom: 0, height: SM_BAR_H },
   smPctRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
   smPctMeta: { ...type.caption, color: colors.textMuted, fontSize: 12 },
   smRow: {
