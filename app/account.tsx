@@ -64,7 +64,7 @@ const fmtScore = (v: number | null): string => (v == null ? '—' : v.toFixed(1)
 const scoreColor = (v: number | null, lo: number, hi: number): string => {
   if (v == null) return colors.textDim;
   const t = hi > lo ? Math.max(0, Math.min(1, (v - lo) / (hi - lo))) : 1;
-  return `hsl(140, ${Math.round(8 + t * 58)}%, ${Math.round(48 + t * 8)}%)`;
+  return `hsl(140, ${Math.round(t * 68)}%, ${Math.round(52 + t * 6)}%)`;
 };
 
 const fmtSessionDate = (ms: number): string =>
