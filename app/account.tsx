@@ -361,6 +361,30 @@ function LiveTrackerPane({
   // reads clearly even when two sessions look alike.
   const slide = useSharedValue(0);
   const slideStyle = useAnimatedStyle(() => ({ transform: [{ translateX: slide.value }] }));
+
+  // Permanently delete a session (used by the report's Delete link and a
+  // long-press on a list row), behind a destructive confirm.
+  const requestDelete = (id: string) => {
+    Alert.alert(
+      'Delete this session?',
+      'This permanently removes the session and its data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            setOpenId(null);
+            void deleteSession(id).then(ok => {
+              onReload();
+              if (!ok) Alert.alert('Could not delete', 'Please try again when you’re online.');
+            });
+          },
+        },
+      ],
+    );
+  };
+
   if (!user) return <Text style={styles.empty}>Sign in to connect the Live Meditation Tracker.</Text>;
 
   const list = sessions ?? [];
@@ -396,28 +420,6 @@ function LiveTrackerPane({
       .failOffsetY([-16, 16])
       .onEnd(e => runOnJS(onSwipeEnd)(e.translationX, e.velocityX));
 
-    const confirmDelete = () => {
-      Alert.alert(
-        'Delete this session?',
-        'This permanently removes the session and its data. This cannot be undone.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: () => {
-              const id = open.id;
-              setOpenId(null);
-              void deleteSession(id).then(ok => {
-                onReload();
-                if (!ok) Alert.alert('Could not delete', 'Please try again when you’re online.');
-              });
-            },
-          },
-        ],
-      );
-    };
-
     return (
       <GestureDetector gesture={swipe}>
         <View>
@@ -438,7 +440,7 @@ function LiveTrackerPane({
           <Animated.View style={slideStyle}>
             <SessionReport session={open} chartWidth={chartWidth} />
           </Animated.View>
-          <Pressable onPress={confirmDelete} hitSlop={8} style={styles.deleteBtn}>
+          <Pressable onPress={() => requestDelete(open.id)} hitSlop={8} style={styles.deleteBtn}>
             <Text style={styles.deleteLabel}>Delete session</Text>
           </Pressable>
         </View>
@@ -459,6 +461,8 @@ function LiveTrackerPane({
             <Pressable
               key={s.id}
               onPress={() => setOpenId(s.id)}
+              onLongPress={() => requestDelete(s.id)}
+              delayLongPress={400}
               style={({ pressed }) => [styles.listRow, pressed && styles.rowPressed]}
             >
               <View style={{ flex: 1 }}>
