@@ -87,23 +87,6 @@ const sessionTypeLabel = (s: LmtSession): string => {
 const fmtClock = (sec: number): string =>
   `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, '0')}`;
 
-/** Round-number markers (R1, R2, …) at the fractional centre of each round
- *  window, for labelling the time axis. */
-const roundMarkers = (protocol: string | null): { frac: number; label: string }[] => {
-  const steps = parseSteps(protocol);
-  if (!steps) return [];
-  const durs = steps.map(st => st.durationSec ?? 0);
-  const total = durs.reduce((a, b) => a + b, 0);
-  if (total <= 0) return [];
-  const out: { frac: number; label: string }[] = [];
-  let cum = 0;
-  steps.forEach((st, i) => {
-    if (st.kind === 'round') out.push({ frac: (cum + durs[i] / 2) / total, label: `R${st.roundIdx}` });
-    cum += durs[i];
-  });
-  return out;
-};
-
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -500,7 +483,6 @@ function ProfilePane({ user, pairCode, accent }: { user: User | null; pairCode: 
 // inline inside the Live Tracker pane when a session is tapped.
 function SessionReport({ session, chartWidth }: { session: LmtSession; chartWidth: number }) {
   const steps = useMemo(() => parseSteps(session.protocol), [session.protocol]);
-  const markers = useMemo(() => roundMarkers(session.protocol), [session.protocol]);
   return (
     <View>
       <Text style={styles.reportTitle}>{sessionTypeLabel(session)}</Text>
@@ -510,7 +492,6 @@ function SessionReport({ session, chartWidth }: { session: LmtSession; chartWidt
           key={p.participant}
           p={p}
           steps={steps}
-          markers={markers}
           chartWidth={chartWidth}
           showName={session.participants.length > 1}
         />
@@ -527,40 +508,59 @@ const seriesRange = (xs: (number | null)[]): { min: number; max: number } | null
 const fmtPct1 = (v: number): string => `${v > 0 ? '+' : ''}${v.toFixed(1)}%`;
 const fmtAlpha = (v: number | null): string => (v == null ? '—' : `${v.toFixed(1)}%`);
 
-// Break time ranges (seconds) from the protocol — used to blank the curve
-// between rounds so each round renders as its own segment.
-const breakRanges = (steps: PlanStep[] | null): [number, number][] => {
-  if (!steps) return [];
-  const out: [number, number][] = [];
+// Map a time (s) to its round number, or -1 for breaks / out-of-plan. With no
+// protocol, everything is one round (id 1) — no transitions, so no gaps.
+const roundSegmenter = (steps: PlanStep[] | null): ((t: number) => number) => {
+  if (!steps || steps.length === 0) return () => 1;
+  const ranges: { lo: number; hi: number; seg: number }[] = [];
   let cum = 0;
   for (const st of steps) {
     const d = st.durationSec ?? 0;
-    if (st.kind === 'break') out.push([cum, cum + d]);
+    ranges.push({ lo: cum, hi: cum + d, seg: st.kind === 'round' ? st.roundIdx : -1 });
     cum += d;
   }
-  return out;
+  return (t: number) => {
+    for (const r of ranges) if (t >= r.lo && t < r.hi) return r.seg;
+    return ranges[ranges.length - 1].seg; // past the end → last segment
+  };
 };
 
 function ParticipantReport({
-  p, steps, markers, chartWidth, showName,
+  p, steps, chartWidth, showName,
 }: {
   p: SessionParticipant;
   steps: PlanStep[] | null;
-  markers: { frac: number; label: string }[];
   chartWidth: number;
   showName: boolean;
 }) {
-  // Cut the curve between rounds: blank samples that fall in a break, so each
-  // round shows as its own segment with a gap.
-  const { index, alpha } = useMemo(() => {
-    const breaks = breakRanges(steps);
-    const inBreak = (t: number) => breaks.some(([a, b]) => t >= a && t < b);
-    return {
-      index: p.curve.map(c => (inBreak(c.t) ? null : c.index)),
-      alpha: p.curve.map(c => (inBreak(c.t) ? null : c.alpha)),
-    };
+  // Cut the curve between rounds: drop break samples and insert a single null
+  // slot at each round → round transition, so the line breaks with a tiny
+  // (one-sample, few-px) gap that shows the background. Works whether or not
+  // the source curve has samples during the breaks.
+  const { index, alpha, times, roundCenters } = useMemo(() => {
+    const segAt = roundSegmenter(steps);
+    const idx: (number | null)[] = [];
+    const alp: (number | null)[] = [];
+    const ts: (number | null)[] = [];
+    const spans = new Map<number, [number, number]>();
+    let prevSeg: number | null = null;
+    for (const c of p.curve) {
+      const seg = segAt(c.t);
+      if (seg === -1) continue;              // drop break samples
+      if (prevSeg !== null && seg !== prevSeg) { idx.push(null); alp.push(null); ts.push(null); }
+      const oi = idx.length;
+      idx.push(c.index); alp.push(c.alpha); ts.push(c.t);
+      const sp = spans.get(seg);
+      if (sp) sp[1] = oi; else spans.set(seg, [oi, oi]);
+      prevSeg = seg;
+    }
+    const len = idx.length || 1;
+    const centers = [...spans.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([id, [s, e]]) => ({ frac: ((s + e) / 2) / (len - 1 || 1), label: `R${id}` }));
+    return { index: idx, alpha: alp, times: ts, roundCenters: centers };
   }, [p.curve, steps]);
-  const n = p.curve.length;
+  const n = index.length;
   const hasCurve = n > 1;
 
   // Windowed zoom/pan: only the visible slice renders horizontally. The Y
@@ -585,17 +585,18 @@ function ParticipantReport({
   const aR = seriesRange(alpha);
   const aMin = aR ? Math.min(aR.min, 0) : 0; // include 0 so the baseline shows
 
-  const tStart = hasCurve ? p.curve[start].t : 0;
-  const tEnd = hasCurve ? p.curve[Math.max(start, end - 1)].t : 0;
-  // Map round markers into the visible window.
+  const winTimes = times.slice(start, end).filter((t): t is number => t != null);
+  const tStart = winTimes.length ? winTimes[0] : 0;
+  const tEnd = winTimes.length ? winTimes[winTimes.length - 1] : 0;
+  // Map round-centre labels into the visible window.
   const denom = n - 1 || 1;
   const g0 = start / denom;
   const g1 = (end - 1) / denom;
   const gSpan = g1 - g0 || 1;
-  const localMarkers = markers
+  const localMarkers = roundCenters
     .map(m => ({ frac: (m.frac - g0) / gSpan, label: m.label }))
     .filter(m => m.frac >= 0 && m.frac <= 1);
-  const showRounds = markers.length > 1; // only label rounds when there's > 1
+  const showRounds = roundCenters.length > 1; // only label rounds when there's > 1
 
   const pinchBegin = () => { baseZoom.current = zoom; };
   const pinchMove = (scale: number) => setZoomClamped(baseZoom.current * scale);
